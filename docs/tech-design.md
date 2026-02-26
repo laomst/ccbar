@@ -1,4 +1,4 @@
-# CCTab - 技术选型与架构设计
+# CCBar - 技术选型与架构设计
 
 ## 1. 技术栈总览
 
@@ -15,32 +15,32 @@
 ## 2. 项目结构
 
 ```
-cctab/
+ccbar/
 ├── build.gradle.kts
 ├── gradle.properties
 ├── settings.gradle.kts
 ├── src/
 │   └── main/
-│       ├── kotlin/com/github/cctab/
+│       ├── kotlin/com/github/ccbar/
 │       │   ├── actions/                    # Action 相关
-│       │   │   ├── CCTabToolbarAction.kt       # 工具栏按钮 Action
-│       │   │   └── CCTabPopupBuilder.kt        # 自定义弹出菜单构建
+│       │   │   ├── CCBarToolbarAction.kt       # 工具栏按钮 Action
+│       │   │   └── CCBarPopupBuilder.kt        # 自定义弹出菜单构建
 │       │   ├── terminal/                   # 终端相关
-│       │   │   ├── CCTabVirtualFile.kt         # 自定义 VirtualFile
-│       │   │   ├── CCTabFileType.kt            # 自定义 FileType（控制图标）
-│       │   │   ├── CCTabTerminalEditor.kt      # 自定义 FileEditor（嵌入终端）
-│       │   │   ├── CCTabTerminalEditorProvider.kt  # FileEditorProvider
-│       │   │   └── CCTabTerminalService.kt     # 终端创建服务
+│       │   │   ├── CCBarVirtualFile.kt         # 自定义 VirtualFile
+│       │   │   ├── CCBarFileType.kt            # 自定义 FileType（控制图标）
+│       │   │   ├── CCBarTerminalEditor.kt      # 自定义 FileEditor（嵌入终端）
+│       │   │   ├── CCBarTerminalEditorProvider.kt  # FileEditorProvider
+│       │   │   └── CCBarTerminalService.kt     # 终端创建服务
 │       │   ├── settings/                   # 设置相关
-│       │   │   ├── CCTabSettings.kt            # PersistentStateComponent
-│       │   │   ├── CCTabSettingsConfigurable.kt # Configurable 入口
+│       │   │   ├── CCBarSettings.kt            # PersistentStateComponent
+│       │   │   ├── CCBarSettingsConfigurable.kt # Configurable 入口
 │       │   │   └── ui/                     # 设置界面组件
-│       │   │       ├── CCTabSettingsPanel.kt       # 主设置面板
+│       │   │       ├── CCBarSettingsPanel.kt       # 主设置面板
 │       │   │       ├── ButtonListPanel.kt          # 按钮列表面板
 │       │   │       ├── OptionDetailPanel.kt        # Option 详情面板
 │       │   │       └── SubButtonTablePanel.kt      # 子按钮表格面板
 │       │   └── icons/                      # 图标工具
-│       │       └── CCTabIcons.kt               # 图标加载与管理
+│       │       └── CCBarIcons.kt               # 图标加载与管理
 │       └── resources/
 │           └── META-INF/
 │               └── plugin.xml              # 插件描述文件
@@ -56,8 +56,8 @@ cctab/
 ### 3.1 `gradle.properties`
 
 ```properties
-pluginGroup = com.github.cctab
-pluginName = CCTab
+pluginGroup = com.github.ccbar
+pluginName = CCBar
 pluginVersion = 1.0.0
 
 platformType = IC
@@ -121,9 +121,9 @@ intellijPlatform {
 
 ```xml
 <idea-plugin>
-    <id>com.github.cctab</id>
-    <name>CCTab</name>
-    <vendor>cctab</vendor>
+    <id>com.github.ccbar</id>
+    <name>CCBar</name>
+    <vendor>ccbar</vendor>
     <description>Quick Command Launcher for IDEA Toolbar</description>
 
     <depends>com.intellij.modules.platform</depends>
@@ -132,25 +132,25 @@ intellijPlatform {
     <extensions defaultExtensionNs="com.intellij">
         <!-- 配置持久化 -->
         <applicationService
-            serviceImplementation="com.github.cctab.settings.CCTabSettings"/>
+            serviceImplementation="com.github.ccbar.settings.CCBarSettings"/>
 
         <!-- 设置页面 -->
         <applicationConfigurable
             parentId="tools"
-            instance="com.github.cctab.settings.CCTabSettingsConfigurable"
-            id="com.github.cctab.settings"
-            displayName="CCTab"/>
+            instance="com.github.ccbar.settings.CCBarSettingsConfigurable"
+            id="com.github.ccbar.settings"
+            displayName="CCBar"/>
 
         <!-- 终端编辑器 -->
         <fileEditorProvider
-            implementation="com.github.cctab.terminal.CCTabTerminalEditorProvider"/>
+            implementation="com.github.ccbar.terminal.CCBarTerminalEditorProvider"/>
     </extensions>
 
     <actions>
         <!-- 动态注册：工具栏按钮通过 DynamicActionGroup 在运行时根据配置创建 -->
-        <group id="CCTab.ToolbarGroup"
-               class="com.github.cctab.actions.CCTabToolbarActionGroup"
-               text="CCTab" description="CCTab Quick Command Launcher">
+        <group id="CCBar.ToolbarGroup"
+               class="com.github.ccbar.actions.CCBarToolbarActionGroup"
+               text="CCBar" description="CCBar Quick Command Launcher">
             <add-to-group group-id="MainToolbarRight" anchor="first"/>
         </group>
     </actions>
@@ -168,14 +168,14 @@ intellijPlatform {
 工具栏按钮数量由用户配置决定，使用 `ActionGroup` 动态生成子 Action。
 
 ```
-CCTabToolbarActionGroup (ActionGroup, 注册到 MainToolbarRight)
-  ├── CCTabButtonAction("Claude Code")   ← 动态生成，每个 Button 对应一个
-  ├── CCTabButtonAction("Dev Tools")
+CCBarToolbarActionGroup (ActionGroup, 注册到 MainToolbarRight)
+  ├── CCBarButtonAction("Claude Code")   ← 动态生成，每个 Button 对应一个
+  ├── CCBarButtonAction("Dev Tools")
   └── ...
 ```
 
-- `CCTabToolbarActionGroup` 继承 `ActionGroup`，重写 `getChildren()` 根据配置动态返回按钮 Action
-- 每个 `CCTabButtonAction` 是一个独立的 toolbar 按钮
+- `CCBarToolbarActionGroup` 继承 `ActionGroup`，重写 `getChildren()` 根据配置动态返回按钮 Action
+- 每个 `CCBarButtonAction` 是一个独立的 toolbar 按钮
 - 点击按钮时通过 `JBPopup` 弹出自定义菜单（见 4.2）
 - 按钮图标通过配置的 `icon` 字段加载（支持内置图标和自定义文件）
 
@@ -263,10 +263,10 @@ if (terminalName != null) {
 **核心流程：**
 
 ```
-用户点击 → 命名对话框 → 创建 CCTabVirtualFile
+用户点击 → 命名对话框 → 创建 CCBarVirtualFile
     → FileEditorManager.openFile()
-    → CCTabTerminalEditorProvider.createEditor()
-    → CCTabTerminalEditor 内部：
+    → CCBarTerminalEditorProvider.createEditor()
+    → CCBarTerminalEditor 内部：
         1. LocalTerminalDirectRunner 创建 PtyProcess
         2. PtyProcessTtyConnector 连接进程
         3. JBTerminalWidget 渲染终端 UI
@@ -276,16 +276,16 @@ if (terminalName != null) {
 
 **关键组件说明：**
 
-#### 4.4.1 CCTabVirtualFile
+#### 4.4.1 CCBarVirtualFile
 
 继承 `LightVirtualFile`（内存虚拟文件），携带终端所需的元数据。
 
 ```kotlin
-class CCTabVirtualFile(
+class CCBarVirtualFile(
     name: String,                    // 标签页显示名称
     val command: String,             // 要执行的命令
     val workingDirectory: String     // 工作目录
-) : LightVirtualFile(name, CCTabFileType.INSTANCE, "") {
+) : LightVirtualFile(name, CCBarFileType.INSTANCE, "") {
 
     override fun isWritable(): Boolean = false
     override fun isValid(): Boolean = true
@@ -296,48 +296,48 @@ class CCTabVirtualFile(
 }
 ```
 
-#### 4.4.2 CCTabFileType
+#### 4.4.2 CCBarFileType
 
 自定义 FileType，控制编辑器标签的图标。
 
 ```kotlin
-class CCTabFileType private constructor() : FileType {
+class CCBarFileType private constructor() : FileType {
     companion object {
-        val INSTANCE = CCTabFileType()
+        val INSTANCE = CCBarFileType()
     }
-    override fun getName(): String = "CCTab Terminal"
-    override fun getDefaultExtension(): String = "cctab"
+    override fun getName(): String = "CCBar Terminal"
+    override fun getDefaultExtension(): String = "ccbar"
     override fun getIcon(): Icon = AllIcons.Nodes.Console
     override fun isBinary(): Boolean = true
     override fun isReadOnly(): Boolean = true
 }
 ```
 
-#### 4.4.3 CCTabTerminalEditorProvider
+#### 4.4.3 CCBarTerminalEditorProvider
 
 判断 VirtualFile 类型并创建对应的 FileEditor。
 
 ```kotlin
-class CCTabTerminalEditorProvider : FileEditorProvider, DumbAware {
+class CCBarTerminalEditorProvider : FileEditorProvider, DumbAware {
     override fun accept(project: Project, file: VirtualFile): Boolean =
-        file is CCTabVirtualFile
+        file is CCBarVirtualFile
 
     override fun createEditor(project: Project, file: VirtualFile): FileEditor =
-        CCTabTerminalEditor(project, file as CCTabVirtualFile)
+        CCBarTerminalEditor(project, file as CCBarVirtualFile)
 
-    override fun getEditorTypeId(): String = "CCTabTerminalEditor"
+    override fun getEditorTypeId(): String = "CCBarTerminalEditor"
     override fun getPolicy(): FileEditorPolicy = FileEditorPolicy.HIDE_DEFAULT_EDITOR
 }
 ```
 
-#### 4.4.4 CCTabTerminalEditor
+#### 4.4.4 CCBarTerminalEditor
 
 核心组件，在 FileEditor 内嵌入终端 Widget。
 
 ```kotlin
-class CCTabTerminalEditor(
+class CCBarTerminalEditor(
     private val project: Project,
-    private val file: CCTabVirtualFile
+    private val file: CCBarVirtualFile
 ) : FileEditor, Disposable {
 
     private val mainPanel = JPanel(BorderLayout())
@@ -377,7 +377,7 @@ class CCTabTerminalEditor(
 
     override fun getComponent(): JComponent = mainPanel
     override fun getPreferredFocusedComponent(): JComponent = mainPanel
-    override fun getName(): String = "CCTab Terminal"
+    override fun getName(): String = "CCBar Terminal"
     override fun getFile(): VirtualFile = file
     override fun isValid(): Boolean = true
     override fun isModified(): Boolean = false
@@ -388,13 +388,13 @@ class CCTabTerminalEditor(
 #### 4.4.5 标签页固定
 
 ```kotlin
-fun openAndPinTerminal(project: Project, file: CCTabVirtualFile) {
+fun openAndPinTerminal(project: Project, file: CCBarVirtualFile) {
     ApplicationManager.getApplication().invokeLater {
         // 打开编辑器标签
         FileEditorManager.getInstance(project).openFile(file, true)
 
         // 根据全局设置决定是否固定
-        val settings = CCTabSettings.getInstance()
+        val settings = CCBarSettings.getInstance()
         if (settings.state.globalSettings.pinTerminalTab) {
             val managerEx = FileEditorManagerEx.getInstanceEx(project)
             managerEx.currentWindow?.setFilePinned(file, true)
@@ -422,10 +422,10 @@ fun openAndPinTerminal(project: Project, file: CCTabVirtualFile) {
 
 ```kotlin
 @State(
-    name = "com.github.cctab.settings.CCTabSettings",
-    storages = [Storage("cctab.xml")]
+    name = "com.github.ccbar.settings.CCBarSettings",
+    storages = [Storage("ccbar.xml")]
 )
-class CCTabSettings : PersistentStateComponent<CCTabSettings.State> {
+class CCBarSettings : PersistentStateComponent<CCBarSettings.State> {
 
     data class State(
         var buttons: MutableList<ButtonConfig> = mutableListOf(),
@@ -438,8 +438,8 @@ class CCTabSettings : PersistentStateComponent<CCTabSettings.State> {
     override fun loadState(state: State) { myState = state }
 
     companion object {
-        fun getInstance(): CCTabSettings =
-            ApplicationManager.getApplication().getService(CCTabSettings::class.java)
+        fun getInstance(): CCBarSettings =
+            ApplicationManager.getApplication().getService(CCBarSettings::class.java)
     }
 }
 ```
@@ -448,7 +448,7 @@ class CCTabSettings : PersistentStateComponent<CCTabSettings.State> {
 - 所有 data class 必须有无参构造函数（所有属性有默认值）
 - 使用 `var`（非 `val`）以支持 XML 序列化
 - 集合使用 `MutableList`
-- 存储文件路径：`<IDEA_CONFIG>/options/cctab.xml`
+- 存储文件路径：`<IDEA_CONFIG>/options/ccbar.xml`
 
 **导入/导出：** 使用 `Gson` 进行 JSON 序列化/反序列化，通过 `FileChooser` / `FileSaverDescriptor` 选择文件。
 
@@ -463,7 +463,7 @@ class CCTabSettings : PersistentStateComponent<CCTabSettings.State> {
 **界面组件映射：**
 
 ```
-CCTabSettingsPanel (Configurable + NoScroll)
+CCBarSettingsPanel (Configurable + NoScroll)
 ├── JBSplitter (左右分割)
 │   ├── 左侧：ButtonListPanel
 │   │   └── JBList<ButtonConfig> + ToolbarDecorator [+][-][↑][↓]

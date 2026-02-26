@@ -1,4 +1,4 @@
-# CCTab - IDEA Quick Command Launcher 插件需求文档
+# CCBar - IDEA Quick Command Launcher 插件需求文档
 
 ## 1. 项目背景
 
@@ -279,13 +279,13 @@ Button（工具栏按钮，纯容器，用于分类）
 
 ### 6.1 设置入口
 
-**Settings → Tools → CCTab**
+**Settings → Tools → CCBar**
 
 ### 6.2 界面布局
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
-│  Settings: CCTab                                                                │
+│  Settings: CCBar                                                                │
 ├─────────────────────────────────────────────────────────────────────────────────┤
 │  ┌─────────────────────┐  ┌───────────────────────────────────────────────────┐ │
 │  │ Toolbar Buttons     │  │ Button Details                                  │ │
@@ -392,7 +392,7 @@ Button（工具栏按钮，纯容器，用于分类）
 
 使用 IDEA 的 `PersistentStateComponent` 实现配置持久化。配置为**应用级全局**，存储在：
 ```
-<IDEA_CONFIG>/options/cctab.xml
+<IDEA_CONFIG>/options/ccbar.xml
 ```
 
 ### 7.2 数据模型
