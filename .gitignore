@@ -1,9 +1,11 @@
+# IDE
 /.idea/
-/build/
-/gradle/
-gradlew
-gradlew.bat
 *.iml
 out/
+
+# Build
+/build/
 .gradle/
+
+# Gradle (保留 wrapper)
 local.properties

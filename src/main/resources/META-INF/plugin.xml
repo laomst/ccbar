@@ -1,0 +1,40 @@
+<idea-plugin>
+    <id>com.github.ccbar</id>
+    <name>CCBar</name>
+    <vendor>ccbar</vendor>
+    <description>Quick Command Launcher for IDEA Toolbar</description>
+
+    <depends>com.intellij.modules.platform</depends>
+    <depends>org.jetbrains.plugins.terminal</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <!-- 配置持久化 -->
+        <applicationService
+            serviceImplementation="com.github.ccbar.settings.CCBarSettings"/>
+
+        <!-- 设置页面 -->
+        <applicationConfigurable
+            parentId="tools"
+            instance="com.github.ccbar.settings.CCBarSettingsConfigurable"
+            id="com.github.ccbar.settings"
+            displayName="CCBar"/>
+
+        <!-- 通知组 -->
+        <notificationGroup id="CCBar" displayType="BALLOON"/>
+    </extensions>
+
+    <actions>
+        <!-- 动态注册：工具栏按钮通过 DynamicActionGroup 在运行时根据配置创建 -->
+        <group id="CCBar.ToolbarGroup"
+               class="com.github.ccbar.actions.CCBarToolbarActionGroup"
+               text="CCBar"
+               popup="false"
+               description="CCBar Quick Command Launcher"
+               icon="AllIcons.Actions.Execute">
+            <!-- New UI 工具栏右侧（2022.3+ 默认界面） -->
+            <add-to-group group-id="MainToolbarRight" anchor="last"/>
+            <!-- Classic UI 工具栏（旧界面兼容） -->
+            <add-to-group group-id="MainToolBar" anchor="last"/>
+        </group>
+    </actions>
+</idea-plugin>
