@@ -45,7 +45,7 @@ Phase 1: 基础框架
 | 1.1.1 | 创建 `settings.gradle.kts`，配置项目名称和插件仓库 | `[ ]` | 无 | `settings.gradle.kts` |
 | 1.1.2 | 创建 `gradle.properties`，配置插件元信息和平台版本 | `[ ]` | 无 | `gradle.properties` |
 | 1.1.3 | 创建 `build.gradle.kts`，配置 IntelliJ Platform Gradle Plugin 2.x、Kotlin、依赖 Terminal 捆绑插件 | `[ ]` | 1.1.1, 1.1.2 | `build.gradle.kts` |
-| 1.1.4 | 创建 `plugin.xml`，声明插件 ID、名称、依赖（platform + terminal） | `[ ]` | 1.1.3 | `src/main/resources/META-INF/plugin.xml` |
+| 1.1.4 | 创建 `plugin.xml`，声明插件 ID、名称、依赖（platform + terminal）、通知组 | `[ ]` | 1.1.3 | `src/main/resources/META-INF/plugin.xml` |
 | 1.1.5 | 配置 Gradle Wrapper（gradlew），确保 `./gradlew build` 可通过 | `[ ]` | 1.1.3 | `gradle/wrapper/*`, `gradlew`, `gradlew.bat` |
 | 1.1.6 | 更新 `.gitignore`，排除 build 产物和 IDE 文件 | `[ ]` | 无 | `.gitignore` |
 
@@ -55,12 +55,11 @@ Phase 1: 基础框架
 
 | ID | 任务 | 状态 | 依赖 | 产出文件 |
 |----|------|------|------|---------|
-| 1.2.1 | 定义 `GlobalSettingsConfig` data class（openInEditorArea, pinTerminalTab） | `[ ]` | 1.1.4 | `settings/CCBarSettings.kt` |
-| 1.2.2 | 定义 `SubButtonConfig` data class（id, name, params, icon） | `[ ]` | 1.1.4 | `settings/CCBarSettings.kt` |
-| 1.2.3 | 定义 `OptionConfig` data class（id, name, baseCommand, workingDirectory, defaultTerminalName, subButtons） | `[ ]` | 1.2.2 | `settings/CCBarSettings.kt` |
-| 1.2.4 | 定义 `ButtonConfig` data class（id, name, icon, options） | `[ ]` | 1.2.3 | `settings/CCBarSettings.kt` |
-| 1.2.5 | 定义 `State` data class（buttons, globalSettings），作为 PersistentStateComponent 的状态容器 | `[ ]` | 1.2.1, 1.2.4 | `settings/CCBarSettings.kt` |
-| 1.2.6 | 实现各 data class 的 `deepCopy()` 扩展方法，用于设置界面的编辑隔离 | `[ ]` | 1.2.5 | `settings/CCBarSettings.kt` |
+| 1.2.1 | 定义 `SubButtonConfig` data class（id, name, params, icon） | `[ ]` | 1.1.4 | `settings/CCBarSettings.kt` |
+| 1.2.2 | 定义 `OptionConfig` data class（id, name, baseCommand, workingDirectory, defaultTerminalName, subButtons） | `[ ]` | 1.2.1 | `settings/CCBarSettings.kt` |
+| 1.2.3 | 定义 `ButtonConfig` data class（id, name, icon, options） | `[ ]` | 1.2.2 | `settings/CCBarSettings.kt` |
+| 1.2.4 | 定义 `State` data class（buttons），作为 PersistentStateComponent 的状态容器 | `[ ]` | 1.2.3 | `settings/CCBarSettings.kt` |
+| 1.2.5 | 实现各 data class 的 `deepCopy()` 扩展方法，用于设置界面的编辑隔离 | `[ ]` | 1.2.4 | `settings/CCBarSettings.kt` |
 
 **验收标准：** 所有 data class 有无参构造函数，属性均为 `var` 且有默认值，集合类型为 `MutableList`。
 
@@ -124,37 +123,27 @@ Phase 1: 基础框架
 
 **验收标准：** 弹出对话框显示默认名称，用户可编辑后确认或取消。
 
-### 2.4 终端创建（自定义 FileEditor）
+### 2.4 终端创建（Terminal 工具窗口 API）
 
 | ID | 任务 | 状态 | 依赖 | 产出文件 |
 |----|------|------|------|---------|
-| 2.4.1 | 实现 `CCBarFileType`，定义终端标签的默认图标 | `[ ]` | 1.1.4 | `terminal/CCBarFileType.kt` |
-| 2.4.2 | 实现 `CCBarVirtualFile`，继承 `LightVirtualFile`，携带 command、workingDirectory 元数据，重写 `equals`/`hashCode` 保证每次新建 | `[ ]` | 2.4.1 | `terminal/CCBarVirtualFile.kt` |
-| 2.4.3 | 实现 `CCBarTerminalEditor`，在 FileEditor 中创建 PTY 进程（`LocalTerminalDirectRunner`）并嵌入 `JBTerminalWidget` | `[ ]` | 2.4.2 | `terminal/CCBarTerminalEditor.kt` |
-| 2.4.4 | 实现终端命令执行：终端 shell 就绪后调用 `executeCommand()` 发送命令 | `[ ]` | 2.4.3 | `terminal/CCBarTerminalEditor.kt` |
-| 2.4.5 | 实现 `CCBarTerminalEditorProvider`，注册到 `plugin.xml`，关联 `CCBarVirtualFile` 与 `CCBarTerminalEditor` | `[ ]` | 2.4.3 | `terminal/CCBarTerminalEditorProvider.kt`, `plugin.xml` |
-| 2.4.6 | 实现工作目录解析：优先使用 `OptionConfig.workingDirectory`，为空时使用当前项目根目录 | `[ ]` | 2.4.3 | `terminal/CCBarTerminalService.kt` |
+| 2.4.1 | 实现 Terminal API 版本检测：通过 `Class.forName()` 判断 Reworked Terminal API 是否可用 | `[ ]` | 1.1.4 | `terminal/CCBarTerminalService.kt` |
+| 2.4.2 | 实现 Classic Terminal 创建方式：使用 `TerminalView.createLocalShellWidget(workingDir, tabName)` 创建终端标签 | `[ ]` | 2.4.1 | `terminal/CCBarTerminalService.kt` |
+| 2.4.3 | 实现 Classic Terminal 命令执行：通过 `ShellTerminalWidget.executeCommand(command)` 发送命令 | `[ ]` | 2.4.2 | `terminal/CCBarTerminalService.kt` |
+| 2.4.4 | 实现 Reworked Terminal 创建方式：使用 `TerminalToolWindowTabsManager.createTabBuilder()` 创建终端标签 | `[ ]` | 2.4.1 | `terminal/CCBarTerminalService.kt` |
+| 2.4.5 | 实现 Reworked Terminal 命令执行：通过 `TerminalView.createSendTextBuilder().shouldExecute()` 发送命令 | `[ ]` | 2.4.4 | `terminal/CCBarTerminalService.kt` |
+| 2.4.6 | 实现工作目录解析：优先使用 `OptionConfig.workingDirectory`，为空时使用当前项目根目录 | `[ ]` | 2.4.2 | `terminal/CCBarTerminalService.kt` |
 
-**验收标准：** 创建 `CCBarVirtualFile` 并通过 `FileEditorManager.openFile()` 打开后，编辑器区域出现终端标签，终端中自动执行指定命令。
+**验收标准：** 调用 `CCBarTerminalService.openTerminal()` 后，Terminal 工具窗口中出现新标签页，终端中自动执行指定命令。Classic 和 Reworked 两种路径均可正常工作。
 
-### 2.5 终端标签固定
-
-| ID | 任务 | 状态 | 依赖 | 产出文件 |
-|----|------|------|------|---------|
-| 2.5.1 | 实现标签固定逻辑：通过 `FileEditorManagerEx.getInstanceEx()` 获取 `EditorWindow`，调用 `setFilePinned()` | `[ ]` | 2.4.5 | `terminal/CCBarTerminalService.kt` |
-| 2.5.2 | 根据全局设置 `pinTerminalTab` 决定是否自动固定 | `[ ]` | 2.5.1, 1.3 | `terminal/CCBarTerminalService.kt` |
-
-**验收标准：** 终端标签打开后自动显示固定图标（🔒），全局设置关闭时不固定。
-
-### 2.6 完整链路集成
+### 2.5 完整链路集成
 
 | ID | 任务 | 状态 | 依赖 | 产出文件 |
 |----|------|------|------|---------|
-| 2.6.1 | 实现 `CCBarTerminalService.openTerminal(project, option, subButton?)`，串联完整流程：命令拼接 → 命名对话框 → 创建 VirtualFile → 打开编辑器 → 固定标签 | `[ ]` | 2.3, 2.4, 2.5 | `terminal/CCBarTerminalService.kt` |
-| 2.6.2 | 在弹出菜单中绑定点击事件：点击 Option 名称调用 `openTerminal(option, null)`，点击 SubButton 调用 `openTerminal(option, subButton)` | `[ ]` | 2.2.6, 2.6.1 | `actions/CCBarPopupBuilder.kt` |
-| 2.6.3 | 根据全局设置 `openInEditorArea` 决定终端打开位置（编辑器区域 vs 默认行为） | `[ ]` | 2.6.1, 1.3 | `terminal/CCBarTerminalService.kt` |
+| 2.5.1 | 实现 `CCBarTerminalService.openTerminal(project, option, subButton?)`，串联完整流程：命令拼接 → 命名对话框 → 创建终端标签 → 执行命令 | `[ ]` | 2.3, 2.4 | `terminal/CCBarTerminalService.kt` |
+| 2.5.2 | 在弹出菜单中绑定点击事件：点击 Option 名称调用 `openTerminal(option, null)`，点击 SubButton 调用 `openTerminal(option, subButton)` | `[ ]` | 2.2.6, 2.5.1 | `actions/CCBarPopupBuilder.kt` |
 
-**验收标准：** 从工具栏点击到终端执行命令的完整流程可走通——点击按钮 → 弹出菜单 → 选择 Option/SubButton → 命名对话框 → 终端在编辑器区域打开并执行命令 → 标签固定。
+**验收标准：** 从工具栏点击到终端执行命令的完整流程可走通——点击按钮 → 弹出菜单 → 选择 Option/SubButton → 命名对话框 → Terminal 工具窗口中新建终端标签 → 执行命令。
 
 ---
 
@@ -186,11 +175,11 @@ Phase 1: 基础框架
 
 | ID | 任务 | 状态 | 依赖 | 产出文件 |
 |----|------|------|------|---------|
-| 3.3.1 | 实现 `ButtonListPanel`，使用 `JBList` + `CollectionListModel<ButtonConfig>` + `ToolbarDecorator` 构建按钮列表，支持增删和上下排序 | `[ ]` | 3.2.1 | `settings/ui/ButtonListPanel.kt` |
-| 3.3.2 | 实现自定义 `ColoredListCellRenderer`，显示 Button 名称 | `[ ]` | 3.3.1 | `settings/ui/ButtonListPanel.kt` |
+| 3.3.1 | 实现 `ButtonListPanel`，使用 `JBList` + `CollectionListModel<ButtonConfig>` + `ToolbarDecorator` 构建按钮列表，支持增删和上下排序 | `[ ]` | 3.2.1 | `settings/ui/CCBarSettingsPanel.kt` |
+| 3.3.2 | 实现自定义 `ColoredListCellRenderer`，显示 Button 名称 | `[ ]` | 3.3.1 | `settings/ui/CCBarSettingsPanel.kt` |
 | 3.3.3 | 实现列表选中事件监听：选中 Button 时右侧面板切换显示对应 Button 的详情 | `[ ]` | 3.3.1, 3.2.1 | `settings/ui/CCBarSettingsPanel.kt` |
-| 3.3.4 | 添加按钮时自动生成 UUID 作为 id，设置默认名称 "New Button" | `[ ]` | 3.3.1 | `settings/ui/ButtonListPanel.kt` |
-| 3.3.5 | 删除按钮时弹出确认对话框（`Messages.showYesNoDialog`） | `[ ]` | 3.3.1 | `settings/ui/ButtonListPanel.kt` |
+| 3.3.4 | 添加按钮时自动生成 UUID 作为 id，设置默认名称 "New Button" | `[ ]` | 3.3.1 | `settings/ui/CCBarSettingsPanel.kt` |
+| 3.3.5 | 删除按钮时弹出确认对话框（`Messages.showYesNoDialog`） | `[ ]` | 3.3.1 | `settings/ui/CCBarSettingsPanel.kt` |
 
 **验收标准：** 左侧列表可增删、排序 Button，选中后右侧联动显示详情。
 
@@ -207,11 +196,11 @@ Phase 1: 基础框架
 
 | ID | 任务 | 状态 | 依赖 | 产出文件 |
 |----|------|------|------|---------|
-| 3.5.1 | 在 Button 详情面板下方构建 Option 列表，使用 `JBList` + `CollectionListModel<OptionConfig>` + `ToolbarDecorator`，支持增删和排序 | `[ ]` | 3.4.1 | `settings/ui/OptionDetailPanel.kt` |
+| 3.5.1 | 在 Button 详情面板下方构建 Option 列表，使用 `JBList` + `CollectionListModel<OptionConfig>` + `ToolbarDecorator`，支持增删和排序 | `[ ]` | 3.4.1 | `settings/ui/CCBarSettingsPanel.kt` |
 | 3.5.2 | 选中 Button 时刷新 Option 列表内容为该 Button 的 options | `[ ]` | 3.5.1, 3.3.3 | `settings/ui/CCBarSettingsPanel.kt` |
-| 3.5.3 | 使用 Kotlin UI DSL v2 构建 Option 详情表单：Name、Base Command、Working Directory、Default Terminal Name | `[ ]` | 3.5.1 | `settings/ui/OptionDetailPanel.kt` |
-| 3.5.4 | 实现 Option 详情字段的双向绑定，选中 Option 时刷新表单 | `[ ]` | 3.5.3 | `settings/ui/OptionDetailPanel.kt` |
-| 3.5.5 | Working Directory 字段添加目录浏览功能（`TextFieldWithBrowseButton` + `FileChooserDescriptorFactory.createSingleFolderDescriptor()`） | `[ ]` | 3.5.3 | `settings/ui/OptionDetailPanel.kt` |
+| 3.5.3 | 使用 Kotlin UI DSL v2 构建 Option 详情表单：Name、Base Command、Working Directory、Default Terminal Name | `[ ]` | 3.5.1 | `settings/ui/CCBarSettingsPanel.kt` |
+| 3.5.4 | 实现 Option 详情字段的双向绑定，选中 Option 时刷新表单 | `[ ]` | 3.5.3 | `settings/ui/CCBarSettingsPanel.kt` |
+| 3.5.5 | Working Directory 字段添加目录浏览功能（`TextFieldWithBrowseButton` + `FileChooserDescriptorFactory.createSingleFolderDescriptor()`） | `[ ]` | 3.5.3 | `settings/ui/CCBarSettingsPanel.kt` |
 
 **验收标准：** 选中 Button 后显示其 Option 列表，选中 Option 后显示其详情表单，所有字段可编辑。
 
@@ -219,32 +208,23 @@ Phase 1: 基础框架
 
 | ID | 任务 | 状态 | 依赖 | 产出文件 |
 |----|------|------|------|---------|
-| 3.6.1 | 实现 `SubButtonTablePanel`，使用 `TableView` + `ListTableModel` + `ColumnInfo` 构建可编辑表格，列为 Name 和 Params | `[ ]` | 3.5.3 | `settings/ui/SubButtonTablePanel.kt` |
-| 3.6.2 | 使用 `ToolbarDecorator` 包装表格，提供增删和排序按钮 | `[ ]` | 3.6.1 | `settings/ui/SubButtonTablePanel.kt` |
-| 3.6.3 | 实现表格行内编辑：点击单元格直接编辑 Name 和 Params | `[ ]` | 3.6.1 | `settings/ui/SubButtonTablePanel.kt` |
+| 3.6.1 | 实现 `SubButtonTablePanel`，使用 `TableView` + `ListTableModel` + `ColumnInfo` 构建可编辑表格，列为 Name 和 Params | `[ ]` | 3.5.3 | `settings/ui/CCBarSettingsPanel.kt` |
+| 3.6.2 | 使用 `ToolbarDecorator` 包装表格，提供增删和排序按钮 | `[ ]` | 3.6.1 | `settings/ui/CCBarSettingsPanel.kt` |
+| 3.6.3 | 实现表格行内编辑：点击单元格直接编辑 Name 和 Params | `[ ]` | 3.6.1 | `settings/ui/CCBarSettingsPanel.kt` |
 | 3.6.4 | 选中 Option 时刷新 SubButton 表格内容 | `[ ]` | 3.6.1, 3.5.4 | `settings/ui/CCBarSettingsPanel.kt` |
 
 **验收标准：** Option 详情下方显示 SubButton 表格，可增删、排序、行内编辑。
 
-### 3.7 全局设置面板
-
-| ID | 任务 | 状态 | 依赖 | 产出文件 |
-|----|------|------|------|---------|
-| 3.7.1 | 使用 Kotlin UI DSL v2 构建全局设置区域：`[✓] Open in editor area`、`[✓] Pin terminal tab` 复选框 | `[ ]` | 3.2.1 | `settings/ui/CCBarSettingsPanel.kt` |
-| 3.7.2 | 绑定复选框到 `GlobalSettingsConfig` 的对应属性 | `[ ]` | 3.7.1, 1.2.1 | `settings/ui/CCBarSettingsPanel.kt` |
-
-**验收标准：** 全局设置复选框状态正确显示和保存。
-
-### 3.8 数据验证
+### 3.7 数据验证
 
 | ID | 任务 | 状态 | 依赖 | 产出文件 |
 |----|------|------|------|---------|
 | 3.8.1 | Button Name 验证：必填，全局唯一 | `[ ]` | 3.4.2 | `settings/ui/CCBarSettingsPanel.kt` |
-| 3.8.2 | Option Name 验证：必填，同一 Button 下唯一 | `[ ]` | 3.5.4 | `settings/ui/OptionDetailPanel.kt` |
-| 3.8.3 | Base Command 验证：必填 | `[ ]` | 3.5.4 | `settings/ui/OptionDetailPanel.kt` |
-| 3.8.4 | Default Terminal Name 验证：必填 | `[ ]` | 3.5.4 | `settings/ui/OptionDetailPanel.kt` |
-| 3.8.5 | SubButton Name 验证：必填，同一 Option 下唯一 | `[ ]` | 3.6.3 | `settings/ui/SubButtonTablePanel.kt` |
-| 3.8.6 | Working Directory 验证：如填写须为有效路径 | `[ ]` | 3.5.5 | `settings/ui/OptionDetailPanel.kt` |
+| 3.8.2 | Option Name 验证：必填，同一 Button 下唯一 | `[ ]` | 3.5.4 | `settings/ui/CCBarSettingsPanel.kt` |
+| 3.8.3 | Base Command 验证：必填 | `[ ]` | 3.5.4 | `settings/ui/CCBarSettingsPanel.kt` |
+| 3.8.4 | Default Terminal Name 验证：必填 | `[ ]` | 3.5.4 | `settings/ui/CCBarSettingsPanel.kt` |
+| 3.8.5 | SubButton Name 验证：必填，同一 Option 下唯一 | `[ ]` | 3.6.3 | `settings/ui/CCBarSettingsPanel.kt` |
+| 3.8.6 | Working Directory 验证：如填写须为有效路径 | `[ ]` | 3.5.5 | `settings/ui/CCBarSettingsPanel.kt` |
 | 3.8.7 | 验证不通过时在 `ConfigurationException` 中给出明确错误提示 | `[ ]` | 3.8.1 ~ 3.8.6 | `settings/CCBarSettingsConfigurable.kt` |
 
 **验收标准：** Apply 时自动执行验证，不合法数据弹出错误提示并阻止保存。
@@ -298,10 +278,10 @@ Phase 1: 基础框架
 
 | ID | 任务 | 状态 | 依赖 | 产出文件 |
 |----|------|------|------|---------|
-| 4.5.1 | 终端创建失败时弹出 IDEA Notification 提示错误原因 | `[ ]` | 2.4.3 | `terminal/CCBarTerminalService.kt` |
+| 4.5.1 | 终端创建失败时弹出 IDEA Notification 提示错误原因 | `[ ]` | 2.4.2 | `terminal/CCBarTerminalService.kt` |
 | 4.5.2 | 自定义工作目录不存在时回退到项目根目录，弹出 Notification 通知 | `[ ]` | 2.4.6 | `terminal/CCBarTerminalService.kt` |
 | 4.5.3 | 配置文件损坏时自动回退到默认配置，弹出 Notification 告知用户 | `[ ]` | 1.3, 1.4.2 | `settings/CCBarSettings.kt` |
-| 4.5.4 | 创建统一的 `NotificationGroup` 用于所有插件通知 | `[ ]` | 1.1.4 | `CCBarNotification.kt`, `plugin.xml` |
+| 4.5.4 | 创建统一的 `NotificationGroup` 用于所有插件通知 | `[ ]` | 1.1.4 | `plugin.xml` |
 
 **验收标准：** 各异常场景有明确的通知提示，不会静默失败或抛出未捕获异常。
 
@@ -316,17 +296,16 @@ Phase 1: 基础框架
 
 | ID | 任务 | 状态 | 依赖 | 产出文件 |
 |----|------|------|------|---------|
-| 5.1.1 | IntelliJ IDEA 2023.1（最低版本）功能测试 | `[ ]` | Phase 2~4 | - |
-| 5.1.2 | IntelliJ IDEA 2024.x 功能测试 | `[ ]` | Phase 2~4 | - |
-| 5.1.3 | IntelliJ IDEA 2025.x 功能测试（重点验证 Terminal API 兼容性） | `[ ]` | Phase 2~4 | - |
+| 5.1.1 | IntelliJ IDEA 2024.2（最低版本）功能测试 | `[ ]` | Phase 2~4 | - |
+| 5.1.2 | IntelliJ IDEA 2024.3 功能测试 | `[ ]` | Phase 2~4 | - |
+| 5.1.3 | IntelliJ IDEA 2025.x 功能测试（重点验证 Reworked Terminal 路径） | `[ ]` | Phase 2~4 | - |
 | 5.1.4 | New UI 模式下的 UI 显示测试（工具栏按钮、弹出菜单、设置面板） | `[ ]` | Phase 2~4 | - |
-| 5.1.5 | Classic UI 模式下的 UI 显示测试 | `[ ]` | Phase 2~4 | - |
 
 ### 5.2 功能回归测试
 
 | ID | 任务 | 状态 | 依赖 | 产出文件 |
 |----|------|------|------|---------|
-| 5.2.1 | 测试完整流程：工具栏 → 弹出菜单 → 命名对话框 → 终端创建 → 命令执行 → 标签固定 | `[ ]` | Phase 2 | - |
+| 5.2.1 | 测试完整流程：工具栏 → 弹出菜单 → 命名对话框 → 终端创建 → 命令执行 | `[ ]` | Phase 2 | - |
 | 5.2.2 | 测试设置界面：Button/Option/SubButton 的增删改排序、Apply/Cancel 行为 | `[ ]` | Phase 3 | - |
 | 5.2.3 | 测试配置导入/导出/重置 | `[ ]` | Phase 4 | - |
 | 5.2.4 | 测试错误场景：无效命令、不存在的工作目录、损坏的配置文件、无效的 JSON 导入 | `[ ]` | Phase 4 | - |
@@ -348,9 +327,9 @@ Phase 1: 基础框架
 
 | 阶段 | 任务数 | 状态 |
 |------|--------|------|
-| Phase 1: 基础框架 | 18 | `[ ]` |
-| Phase 2: 核心功能 | 21 | `[ ]` |
-| Phase 3: 设置界面 | 23 | `[ ]` |
+| Phase 1: 基础框架 | 16 | `[ ]` |
+| Phase 2: 核心功能 | 16 | `[ ]` |
+| Phase 3: 设置界面 | 18 | `[ ]` |
 | Phase 4: 完善功能 | 13 | `[ ]` |
-| Phase 5: 测试与发布 | 15 | `[ ]` |
-| **合计** | **90** | |
+| Phase 5: 测试与发布 | 14 | `[ ]` |
+| **合计** | **77** | |

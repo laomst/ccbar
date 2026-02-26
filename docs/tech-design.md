@@ -7,7 +7,7 @@
 | 开发语言 | **Kotlin** | JetBrains 官方推荐，支持 UI DSL v2、data class、协程 |
 | 构建工具 | **Gradle + Kotlin DSL** | `build.gradle.kts`，IntelliJ 插件开发标准 |
 | Gradle 插件 | **IntelliJ Platform Gradle Plugin 2.x** | `org.jetbrains.intellij.platform`，新项目推荐 |
-| 最低兼容版本 | **IntelliJ IDEA 2023.1** (Build 231) | 覆盖近 3 年版本，Terminal API 稳定可用 |
+| 最低兼容版本 | **IntelliJ IDEA 2024.2** (Build 242) | 兼容 New UI，Classic Terminal API 可用 |
 | JDK | **JDK 17** | IntelliJ 2023.1+ 的运行时要求 |
 
 ---
@@ -23,22 +23,16 @@ ccbar/
 │   └── main/
 │       ├── kotlin/com/github/ccbar/
 │       │   ├── actions/                    # Action 相关
-│       │   │   ├── CCBarToolbarAction.kt       # 工具栏按钮 Action
+│       │   │   ├── CCBarToolbarActionGroup.kt  # 工具栏动态 ActionGroup
+│       │   │   ├── CCBarButtonAction.kt        # 工具栏按钮 Action
 │       │   │   └── CCBarPopupBuilder.kt        # 自定义弹出菜单构建
 │       │   ├── terminal/                   # 终端相关
-│       │   │   ├── CCBarVirtualFile.kt         # 自定义 VirtualFile
-│       │   │   ├── CCBarFileType.kt            # 自定义 FileType（控制图标）
-│       │   │   ├── CCBarTerminalEditor.kt      # 自定义 FileEditor（嵌入终端）
-│       │   │   ├── CCBarTerminalEditorProvider.kt  # FileEditorProvider
-│       │   │   └── CCBarTerminalService.kt     # 终端创建服务
+│       │   │   └── CCBarTerminalService.kt     # 终端创建服务（工具窗口 API）
 │       │   ├── settings/                   # 设置相关
 │       │   │   ├── CCBarSettings.kt            # PersistentStateComponent
 │       │   │   ├── CCBarSettingsConfigurable.kt # Configurable 入口
 │       │   │   └── ui/                     # 设置界面组件
-│       │   │       ├── CCBarSettingsPanel.kt       # 主设置面板
-│       │   │       ├── ButtonListPanel.kt          # 按钮列表面板
-│       │   │       ├── OptionDetailPanel.kt        # Option 详情面板
-│       │   │       └── SubButtonTablePanel.kt      # 子按钮表格面板
+│       │   │       └── CCBarSettingsPanel.kt       # 主设置面板
 │       │   └── icons/                      # 图标工具
 │       │       └── CCBarIcons.kt               # 图标加载与管理
 │       └── resources/
@@ -46,7 +40,8 @@ ccbar/
 │               └── plugin.xml              # 插件描述文件
 └── docs/
     ├── spec.md                             # 需求文档
-    └── tech-design.md                      # 本文档
+    ├── tech-design.md                      # 本文档
+    └── dev-plan.md                         # 开发计划
 ```
 
 ---
@@ -61,7 +56,7 @@ pluginName = CCBar
 pluginVersion = 1.0.0
 
 platformType = IC
-platformVersion = 2023.1
+platformVersion = 2024.2
 platformBundledPlugins = org.jetbrains.plugins.terminal
 
 kotlin.stdlib.default.dependency = false
@@ -92,7 +87,6 @@ dependencies {
         intellijIdeaCommunity(providers.gradleProperty("platformVersion"))
         bundledPlugin("org.jetbrains.plugins.terminal")
         pluginVerifier()
-        instrumentationTools()
     }
 }
 
@@ -105,7 +99,7 @@ intellijPlatform {
         name = providers.gradleProperty("pluginName")
         version = providers.gradleProperty("pluginVersion")
         ideaVersion {
-            sinceBuild = "231"
+            sinceBuild = "242"
             untilBuild = provider { null }  // 不限制上限，兼容未来版本
         }
     }
@@ -141,9 +135,8 @@ intellijPlatform {
             id="com.github.ccbar.settings"
             displayName="CCBar"/>
 
-        <!-- 终端编辑器 -->
-        <fileEditorProvider
-            implementation="com.github.ccbar.terminal.CCBarTerminalEditorProvider"/>
+        <!-- 通知组 -->
+        <notificationGroup id="CCBar" displayType="BALLOON"/>
     </extensions>
 
     <actions>
@@ -256,165 +249,103 @@ if (terminalName != null) {
 
 ### 4.4 终端创建与管理
 
-**方案：自定义 FileEditor 嵌入终端 Widget**
+**方案：Terminal 工具窗口 API（Reworked Terminal 优先，Classic 回退）**
 
-不使用 `TerminalToolWindowManager`（终端工具窗口 API），而是直接创建 PTY 进程并嵌入自定义 FileEditor，这样终端天然就在编辑器区域打开。
+使用 IntelliJ 内置的 Terminal 工具窗口 API 创建终端标签页。终端在底部 Terminal 工具窗口中打开（而非编辑器区域）。
+
+针对不同 IntelliJ 版本，采用两套 API 方案：
+
+- **2025.2+（Reworked Terminal）**：使用 `TerminalToolWindowTabsManager.createTabBuilder()` 创建终端标签
+- **2024.2 - 2025.1（Classic Terminal）**：使用 `TerminalView.createLocalShellWidget()` 创建终端标签
+
+通过运行时检测可用 API 来决定使用哪套方案。
 
 **核心流程：**
 
 ```
-用户点击 → 命名对话框 → 创建 CCBarVirtualFile
-    → FileEditorManager.openFile()
-    → CCBarTerminalEditorProvider.createEditor()
-    → CCBarTerminalEditor 内部：
-        1. LocalTerminalDirectRunner 创建 PtyProcess
-        2. PtyProcessTtyConnector 连接进程
-        3. JBTerminalWidget 渲染终端 UI
-        4. executeCommand() 执行命令
-    → EditorWindow.setFilePinned() 固定标签页
+用户点击 → 命名对话框 → CCBarTerminalService.openTerminal()
+    → 检测 Terminal API 版本
+    ├── Reworked Terminal（2025.2+）：
+    │   1. TerminalToolWindowTabsManager.createTabBuilder()
+    │   2. .withWorkingDirectory(dir)
+    │   3. .withTabName(name)
+    │   4. .withShellCommand(ShellStartupOptions)
+    │   5. .build()
+    │   6. TerminalView.sendText() / createSendTextBuilder().shouldExecute() 发送命令
+    └── Classic Terminal（2024.2 - 2025.1）：
+        1. TerminalView.createLocalShellWidget(dir, name)
+        2. ShellTerminalWidget.executeCommand(command)
 ```
 
-**关键组件说明：**
-
-#### 4.4.1 CCBarVirtualFile
-
-继承 `LightVirtualFile`（内存虚拟文件），携带终端所需的元数据。
+#### 4.4.1 版本检测与 API 分发
 
 ```kotlin
-class CCBarVirtualFile(
-    name: String,                    // 标签页显示名称
-    val command: String,             // 要执行的命令
-    val workingDirectory: String     // 工作目录
-) : LightVirtualFile(name, CCBarFileType.INSTANCE, "") {
+object CCBarTerminalService {
 
-    override fun isWritable(): Boolean = false
-    override fun isValid(): Boolean = true
+    fun openTerminal(project: Project, option: OptionConfig, subButton: SubButtonConfig?) {
+        val command = buildCommand(option, subButton)
+        val terminalName = showNameDialog(project, option) ?: return
+        val workingDir = resolveWorkingDirectory(project, option)
 
-    // 每次创建都是新实例，确保不复用编辑器标签
-    override fun equals(other: Any?): Boolean = this === other
-    override fun hashCode(): Int = System.identityHashCode(this)
-}
-```
-
-#### 4.4.2 CCBarFileType
-
-自定义 FileType，控制编辑器标签的图标。
-
-```kotlin
-class CCBarFileType private constructor() : FileType {
-    companion object {
-        val INSTANCE = CCBarFileType()
-    }
-    override fun getName(): String = "CCBar Terminal"
-    override fun getDefaultExtension(): String = "ccbar"
-    override fun getIcon(): Icon = AllIcons.Nodes.Console
-    override fun isBinary(): Boolean = true
-    override fun isReadOnly(): Boolean = true
-}
-```
-
-#### 4.4.3 CCBarTerminalEditorProvider
-
-判断 VirtualFile 类型并创建对应的 FileEditor。
-
-```kotlin
-class CCBarTerminalEditorProvider : FileEditorProvider, DumbAware {
-    override fun accept(project: Project, file: VirtualFile): Boolean =
-        file is CCBarVirtualFile
-
-    override fun createEditor(project: Project, file: VirtualFile): FileEditor =
-        CCBarTerminalEditor(project, file as CCBarVirtualFile)
-
-    override fun getEditorTypeId(): String = "CCBarTerminalEditor"
-    override fun getPolicy(): FileEditorPolicy = FileEditorPolicy.HIDE_DEFAULT_EDITOR
-}
-```
-
-#### 4.4.4 CCBarTerminalEditor
-
-核心组件，在 FileEditor 内嵌入终端 Widget。
-
-```kotlin
-class CCBarTerminalEditor(
-    private val project: Project,
-    private val file: CCBarVirtualFile
-) : FileEditor, Disposable {
-
-    private val mainPanel = JPanel(BorderLayout())
-
-    init {
-        createTerminal()
-    }
-
-    private fun createTerminal() {
-        // 1. 创建终端设置
-        val settingsProvider = JBTerminalSystemSettingsProvider()
-
-        // 2. 创建终端 Widget
-        val widget = JBTerminalWidget(project, settingsProvider, this)
-
-        // 3. 创建 PTY 进程
-        val runner = LocalTerminalDirectRunner.createTerminalRunner(project)
-        val process = runner.createProcess(
-            ShellStartupOptions.Builder()
-                .workingDirectory(file.workingDirectory)
-                .build()
-        )
-
-        // 4. 连接进程到终端
-        val connector = PtyProcessTtyConnector(process, Charsets.UTF_8)
-        widget.createTerminalSession(connector)
-        widget.start()
-
-        // 5. 添加到面板
-        mainPanel.add(widget.component, BorderLayout.CENTER)
-
-        // 6. 延迟执行命令（等终端 shell 就绪）
-        if (file.command.isNotBlank()) {
-            widget.executeCommand(file.command)
+        if (isReworkedTerminalAvailable()) {
+            openWithReworkedTerminal(project, command, terminalName, workingDir)
+        } else {
+            openWithClassicTerminal(project, command, terminalName, workingDir)
         }
     }
 
-    override fun getComponent(): JComponent = mainPanel
-    override fun getPreferredFocusedComponent(): JComponent = mainPanel
-    override fun getName(): String = "CCBar Terminal"
-    override fun getFile(): VirtualFile = file
-    override fun isValid(): Boolean = true
-    override fun isModified(): Boolean = false
-    // ... 其他 FileEditor 方法
+    private fun isReworkedTerminalAvailable(): Boolean {
+        return try {
+            Class.forName("org.jetbrains.plugins.terminal.TerminalToolWindowTabsManager")
+            true
+        } catch (_: ClassNotFoundException) {
+            false
+        }
+    }
 }
 ```
 
-#### 4.4.5 标签页固定
+#### 4.4.2 Reworked Terminal 方式（2025.2+）
 
 ```kotlin
-fun openAndPinTerminal(project: Project, file: CCBarVirtualFile) {
+private fun openWithReworkedTerminal(
+    project: Project, command: String, tabName: String, workingDir: String
+) {
+    val tabsManager = TerminalToolWindowTabsManager.getInstance(project)
+    val tab = tabsManager.createTabBuilder()
+        .withTabName(tabName)
+        .withWorkingDirectory(workingDir)
+        .build()
+
+    // 发送命令
+    val terminalView = TerminalView.getInstance(project)
+    terminalView.createSendTextBuilder(command)
+        .shouldExecute(true)
+        .sendTo(tab)
+}
+```
+
+#### 4.4.3 Classic Terminal 方式（2024.2 - 2025.1）
+
+```kotlin
+private fun openWithClassicTerminal(
+    project: Project, command: String, tabName: String, workingDir: String
+) {
     ApplicationManager.getApplication().invokeLater {
-        // 打开编辑器标签
-        FileEditorManager.getInstance(project).openFile(file, true)
-
-        // 根据全局设置决定是否固定
-        val settings = CCBarSettings.getInstance()
-        if (settings.state.globalSettings.pinTerminalTab) {
-            val managerEx = FileEditorManagerEx.getInstanceEx(project)
-            managerEx.currentWindow?.setFilePinned(file, true)
-        }
+        val terminalView = TerminalView.getInstance(project)
+        val widget = terminalView.createLocalShellWidget(workingDir, tabName)
+        widget.executeCommand(command)
     }
 }
 ```
 
 **关键依赖类：**
 
-| 类名 | 包 | 用途 |
-|------|-----|------|
-| `JBTerminalWidget` | `com.intellij.terminal` | 终端 UI 组件 |
-| `JBTerminalSystemSettingsProvider` | `com.intellij.terminal` | 终端设置 |
-| `LocalTerminalDirectRunner` | `org.jetbrains.plugins.terminal` | 创建 PTY 进程 |
-| `ShellStartupOptions` | `org.jetbrains.plugins.terminal` | Shell 启动配置 |
-| `PtyProcessTtyConnector` | `com.jediterm.terminal` | 进程与终端的连接器 |
-| `LightVirtualFile` | `com.intellij.testFramework` | 内存虚拟文件 |
-| `FileEditorManager` | `com.intellij.openapi.fileEditor` | 编辑器管理 |
-| `FileEditorManagerEx` | `com.intellij.openapi.fileEditor.ex` | 扩展编辑器管理（支持固定标签） |
+| 类名 | 包 | 用途 | 可用版本 |
+|------|-----|------|---------|
+| `TerminalView` | `org.jetbrains.plugins.terminal` | 终端工具窗口视图 | 2024.2+ |
+| `ShellTerminalWidget` | `org.jetbrains.plugins.terminal` | Classic Terminal Widget | 2024.2 - 2025.1 |
+| `TerminalToolWindowTabsManager` | `org.jetbrains.plugins.terminal` | Reworked Terminal 标签管理 | 2025.2+ |
 
 ### 4.5 配置持久化
 
@@ -428,8 +359,7 @@ fun openAndPinTerminal(project: Project, file: CCBarVirtualFile) {
 class CCBarSettings : PersistentStateComponent<CCBarSettings.State> {
 
     data class State(
-        var buttons: MutableList<ButtonConfig> = mutableListOf(),
-        var globalSettings: GlobalSettingsConfig = GlobalSettingsConfig()
+        var buttons: MutableList<ButtonConfig> = mutableListOf()
     )
 
     private var myState = State()
@@ -482,9 +412,6 @@ CCBarSettingsPanel (Configurable + NoScroll)
 │           └── TableView<SubButtonConfig> + ToolbarDecorator [+][-][↑][↓]
 │               ├── 列: Name (可编辑)
 │               └── 列: Params (可编辑)
-├── GlobalSettingsPanel (Kotlin UI DSL v2 panel)
-│   ├── [✓] Open in editor area
-│   └── [✓] Pin terminal tab
 └── ActionButtonsPanel
     ├── [Import] [Export] [Reset]
     └── FileChooser / FileSaverDescriptor
@@ -508,7 +435,7 @@ CCBarSettingsPanel (Configurable + NoScroll)
 | 图标类型 | 存储格式 | 加载方式 |
 |---------|---------|---------|
 | IDEA 内置图标 | `builtin:AllIcons.Actions.Execute` | 反射加载 `AllIcons` 类的静态字段 |
-| 自定义 SVG/PNG | `file:/path/to/icon.svg` | `IconLoader.findIcon(path)` 或 `ImageIcon` |
+| 自定义 SVG/PNG | `file:/path/to/icon.svg` | `IconLoader.findIcon(url)` 或 `ImageIcon` |
 
 ```kotlin
 fun loadIcon(iconPath: String): Icon {
@@ -520,7 +447,12 @@ fun loadIcon(iconPath: String): Icon {
         }
         iconPath.startsWith("file:") -> {
             val filePath = iconPath.removePrefix("file:")
-            IconLoader.findIcon(Path.of(filePath)) ?: AllIcons.Actions.Execute
+            val file = File(filePath)
+            if (file.exists()) {
+                IconLoader.findIcon(file.toURI().toURL()) ?: AllIcons.Actions.Execute
+            } else {
+                AllIcons.Actions.Execute
+            }
         }
         else -> AllIcons.Actions.Execute  // 降级默认图标
     }
@@ -533,13 +465,12 @@ fun loadIcon(iconPath: String): Icon {
 
 ### 5.1 Terminal API 演进
 
-| 版本范围 | API 状态 | 影响 |
-|---------|---------|------|
-| 2023.1 - 2024.x | `ShellTerminalWidget.executeCommand()` 可用 | 本插件的主要支持范围 |
-| 2025.2+ | Classic Terminal API deprecated，Reworked Terminal 成为默认 | `JBTerminalWidget` 仍然可用 |
-| 2025.3+ | 新 `TerminalToolWindowTabsManager` API | 不影响本插件（未使用工具窗口 API） |
+| 版本范围 | API 状态 | 本插件策略 |
+|---------|---------|-----------|
+| 2024.2 - 2025.1 | Classic Terminal：`TerminalView.createLocalShellWidget()` + `ShellTerminalWidget.executeCommand()` | 使用 Classic API 创建终端并执行命令 |
+| 2025.2+ | Reworked Terminal 成为默认，Classic API deprecated | 优先使用 Reworked API（`TerminalToolWindowTabsManager`），运行时检测后回退 Classic |
 
-**兼容策略：** 本插件采用自定义 FileEditor + 直接创建 PTY 进程的方式，不依赖 `TerminalToolWindowManager`（工具窗口 API），因此对 Terminal API 的版本变更有较好的抗性。核心依赖的 `JBTerminalWidget`（来自 JediTerm 库）在各版本中保持稳定。
+**兼容策略：** 本插件通过运行时 `Class.forName()` 检测 Reworked Terminal API 是否可用。2025.2+ 优先使用 Reworked Terminal API，2024.2 - 2025.1 回退使用 Classic Terminal API。两套方案均在 Terminal 工具窗口中创建标签页。
 
 ### 5.2 New UI 兼容
 
@@ -554,7 +485,7 @@ IntelliJ 2024.2+ 默认启用 New UI。本插件需要确保：
 | 依赖 | 类型 | 说明 |
 |------|------|------|
 | `com.intellij.modules.platform` | 平台插件 | IntelliJ 平台核心 |
-| `org.jetbrains.plugins.terminal` | 捆绑插件 | Terminal 功能（JBTerminalWidget、LocalTerminalDirectRunner） |
+| `org.jetbrains.plugins.terminal` | 捆绑插件 | Terminal 功能（TerminalView、ShellTerminalWidget、TerminalToolWindowTabsManager） |
 | `com.google.code.gson:gson` | 第三方库 | JSON 导入/导出（可选，也可用 kotlinx.serialization） |
 
 > 注意：IntelliJ Platform 已内置 Gson，无需额外声明依赖。
@@ -565,10 +496,9 @@ IntelliJ 2024.2+ 默认启用 New UI。本插件需要确保：
 
 | 风险 | 等级 | 缓解措施 |
 |------|------|---------|
-| Terminal API 在 2025.2+ 发生重大变更 | 中 | 采用自定义 FileEditor 方案，不依赖 TerminalToolWindowManager |
-| JBTerminalWidget 内部 API 变更 | 中 | 关注 JetBrains Platform 发布日志，必要时通过版本条件分支适配 |
+| Reworked Terminal API 在 2025.2 尚不稳定或接口变更 | 中 | 运行时检测 + Classic 回退，两套方案互为备份 |
+| Classic Terminal API 在未来版本被移除 | 低 | 关注 JetBrains 废弃计划，及时迁移到 Reworked API |
 | 自定义弹出菜单在 New UI 下样式不一致 | 低 | 使用 JBUI API 获取主题颜色和边距 |
-| 编辑器标签固定 API（EditorWindow）属于 impl 包 | 低 | 该 API 多年稳定，且无替代公共 API |
 
 ---
 
@@ -583,13 +513,11 @@ IntelliJ 2024.2+ 默认启用 New UI。本插件需要确保：
 - 工具栏动态按钮（DynamicActionGroup）
 - 自定义 JBPopup 弹出菜单
 - 终端命名对话框
-- 终端创建（FileEditor + JBTerminalWidget）
-- 终端标签固定
+- 终端创建（Terminal 工具窗口 API，Reworked + Classic 双路径）
 
 ### Phase 3: 设置界面
 - 设置面板主框架（JBSplitter + JBList）
 - Button / Option / SubButton 的 CRUD 操作
-- 全局设置（Open in editor area / Pin terminal tab）
 - 数据验证
 
 ### Phase 4: 完善功能
@@ -599,7 +527,7 @@ IntelliJ 2024.2+ 默认启用 New UI。本插件需要确保：
 - 错误处理与通知
 
 ### Phase 5: 测试与发布
-- 多版本兼容测试（2023.1 / 2024.x / 2025.x）
+- 多版本兼容测试（2024.2 / 2025.x）
 - New UI 兼容测试
 - Plugin Verifier 检查
 - JetBrains Marketplace 发布
