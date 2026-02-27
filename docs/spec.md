@@ -474,7 +474,8 @@ data class OptionConfig(
     var baseCommand: String = "",
     var workingDirectory: String = "",  // 可选，留空则使用当前项目根目录
     var defaultTerminalName: String = "",  // 命名弹窗中的默认终端名称
-    var subButtons: List<SubButtonConfig> = emptyList()
+    var subButtons: List<SubButtonConfig> = emptyList(),
+    var type: String = ""  // 可选，空值或"option"=普通选项, "separator"=分割线
 )
 
 data class SubButtonConfig(

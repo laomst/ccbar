@@ -123,8 +123,17 @@ data class SubButtonConfig(
 }
 
 /**
+ * 选项类型常量
+ */
+object OptionType {
+    const val OPTION = "option"
+    const val SEPARATOR = "separator"
+}
+
+/**
  * 选项配置
  * 绑定基础命令（baseCommand）和可选的工作目录
+ * 支持两种类型：普通选项（type 为空或 "option"）和分割线（type = "separator"）
  */
 data class OptionConfig(
     var id: String = "",
@@ -132,7 +141,8 @@ data class OptionConfig(
     var baseCommand: String = "",
     var workingDirectory: String = "",
     var defaultTerminalName: String = "",
-    var subButtons: MutableList<SubButtonConfig> = mutableListOf()
+    var subButtons: MutableList<SubButtonConfig> = mutableListOf(),
+    var type: String = ""  // 空值或"option"=普通选项, "separator"=分割线
 ) {
     /**
      * 深拷贝
@@ -143,8 +153,19 @@ data class OptionConfig(
         baseCommand = baseCommand,
         workingDirectory = workingDirectory,
         defaultTerminalName = defaultTerminalName,
-        subButtons = subButtons.map { it.deepCopy() }.toMutableList()
+        subButtons = subButtons.map { it.deepCopy() }.toMutableList(),
+        type = type
     )
+
+    /**
+     * 判断是否为分割线类型
+     */
+    fun isSeparator(): Boolean = type == OptionType.SEPARATOR
+
+    /**
+     * 判断是否为普通选项类型（默认）
+     */
+    fun isOption(): Boolean = type != OptionType.SEPARATOR
 }
 
 /**

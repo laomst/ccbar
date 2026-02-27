@@ -2,6 +2,7 @@ package com.github.ccbar.actions
 
 import com.github.ccbar.settings.ButtonConfig
 import com.github.ccbar.settings.OptionConfig
+import com.github.ccbar.settings.OptionType
 import com.github.ccbar.settings.SubButtonConfig
 import com.github.ccbar.terminal.CCBarTerminalService
 import com.intellij.openapi.project.Project
@@ -10,6 +11,7 @@ import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.JBUI
 import com.intellij.openapi.ui.popup.JBPopup
 import com.intellij.openapi.ui.popup.JBPopupFactory
+import java.awt.BorderLayout
 import java.awt.Color
 import java.awt.Cursor
 import java.awt.Dimension
@@ -22,7 +24,10 @@ import java.awt.event.MouseEvent
 import javax.swing.BorderFactory
 import javax.swing.Box
 import javax.swing.JButton
+import javax.swing.JComponent
+import javax.swing.JLabel
 import javax.swing.JPanel
+import javax.swing.JSeparator
 import javax.swing.JTextField
 import javax.swing.BoxLayout
 import javax.swing.SwingConstants
@@ -73,8 +78,14 @@ object CCBarPopupBuilder {
 
         // 为每个 Option 创建一行
         for (option in buttonConfig.options) {
-            val optionRow = createOptionRow(project, option) { popup.closeOk(null) }
-            mainPanel.add(optionRow)
+            if (option.isSeparator()) {
+                // 分割线渲染
+                mainPanel.add(createSeparatorRow(option))
+            } else {
+                // 普通选项渲染
+                val optionRow = createOptionRow(project, option) { popup.closeOk(null) }
+                mainPanel.add(optionRow)
+            }
             // 添加行间距
             mainPanel.add(Box.createVerticalStrut(8))
         }
@@ -91,6 +102,70 @@ object CCBarPopupBuilder {
             .createPopup()
 
         return popup
+    }
+
+    /**
+     * 创建分割线行
+     */
+    private fun createSeparatorRow(option: OptionConfig): JComponent {
+        val panel = JPanel(BorderLayout()).apply {
+            isOpaque = false
+            border = BorderFactory.createEmptyBorder(4, 0, 4, 0)
+        }
+
+        if (option.name.isNotBlank()) {
+            // 带标题的分割线：──── 标题 ────
+            // 使用自定义绘制
+            val innerPanel = object : JPanel() {
+                override fun paintComponent(g: java.awt.Graphics) {
+                    super.paintComponent(g)
+                    val g2d = g as java.awt.Graphics2D
+                    g2d.color = JBColor.GRAY
+                    g2d.stroke = java.awt.BasicStroke(1f)
+
+                    val labelWidth = graphics.getFontMetrics(font).stringWidth(option.name) + 16
+                    val centerY = height / 2
+                    val leftEnd = (width - labelWidth) / 2
+                    val rightStart = leftEnd + labelWidth
+
+                    // 左侧线
+                    if (leftEnd > 0) {
+                        g2d.drawLine(0, centerY, leftEnd, centerY)
+                    }
+                    // 右侧线
+                    if (rightStart < width) {
+                        g2d.drawLine(rightStart, centerY, width, centerY)
+                    }
+                }
+            }
+            innerPanel.layout = BorderLayout()
+            innerPanel.isOpaque = false
+
+            val label = JLabel(option.name).apply {
+                foreground = JBColor.GRAY
+                horizontalAlignment = SwingConstants.CENTER
+            }
+            innerPanel.add(label, BorderLayout.CENTER)
+            innerPanel.preferredSize = Dimension(innerPanel.preferredSize.width, 24)
+            panel.add(innerPanel, BorderLayout.CENTER)
+        } else {
+            // 无标题分割线：使用自定义绘制确保垂直居中
+            val separatorPanel = object : JPanel() {
+                override fun paintComponent(g: java.awt.Graphics) {
+                    super.paintComponent(g)
+                    val g2d = g as java.awt.Graphics2D
+                    g2d.color = JBColor.GRAY
+                    g2d.stroke = java.awt.BasicStroke(1f)
+                    val centerY = height / 2
+                    g2d.drawLine(0, centerY, width, centerY)
+                }
+            }
+            separatorPanel.isOpaque = false
+            separatorPanel.preferredSize = Dimension(separatorPanel.preferredSize.width, 24)
+            panel.add(separatorPanel, BorderLayout.CENTER)
+        }
+
+        return panel
     }
 
     /**

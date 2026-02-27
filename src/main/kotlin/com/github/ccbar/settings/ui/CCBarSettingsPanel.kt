@@ -14,6 +14,7 @@ import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.components.BorderLayoutPanel
 import java.awt.BorderLayout
 import java.awt.CardLayout
+import java.awt.Dimension
 import java.util.*
 import javax.swing.*
 import javax.swing.event.DocumentEvent
@@ -70,6 +71,19 @@ class CCBarSettingsPanel {
 
     // Option 提示标签（用于动态更新文字）
     private lateinit var optionWorkDirHintLabel: JLabel
+
+    // Option 详情面板和 SubButton 面板（用于控制显示/隐藏）
+    private lateinit var optionDetailOuterPanel: JComponent
+    private lateinit var subButtonOuterPanel: JComponent
+
+    // Option 详情面板中各个字段的容器（用于控制分割线时只显示名称）
+    private lateinit var optionCommandPanel: JPanel
+    private lateinit var optionDirPanel: JPanel
+    private lateinit var optionDirHintPanel: JPanel
+    private lateinit var optionTerminalNamePanel: JPanel
+
+    // Option 详情面板的边框（用于动态更新标题）
+    private lateinit var optionDetailTitledBorder: javax.swing.border.TitledBorder
 
     // 当前选中的 Button 和 Option
     private var selectedButton: ButtonConfig? = null
@@ -321,22 +335,25 @@ class CCBarSettingsPanel {
 
         val listPanel = BorderLayoutPanel()
         val decorator = com.intellij.ui.ToolbarDecorator.createDecorator(optionList)
-            .setAddAction { addOption() }
+            .setAddAction {
+                // 显示下拉菜单，让用户选择添加选项或分割线
+                showAddOptionPopup()
+            }
             .setRemoveAction { removeOption() }
             .setMoveUpAction { moveOptionUp() }
             .setMoveDownAction { moveOptionDown() }
         listPanel.addToCenter(decorator.createPanel())
 
         // Option 详情
-        val optionDetailPanel = createOptionDetailPanel()
+        optionDetailOuterPanel = createOptionDetailPanel()
 
         // SubButton 表格
-        val subButtonPanel = createSubButtonPanel()
+        subButtonOuterPanel = createSubButtonPanel()
 
         // 组合布局
         val rightPanel = JPanel(BorderLayout())
-        rightPanel.add(optionDetailPanel, BorderLayout.NORTH)
-        rightPanel.add(subButtonPanel, BorderLayout.CENTER)
+        rightPanel.add(optionDetailOuterPanel, BorderLayout.NORTH)
+        rightPanel.add(subButtonOuterPanel, BorderLayout.CENTER)
 
         val splitter = OnePixelSplitter(false, 0.25f).apply {
             firstComponent = listPanel
@@ -352,12 +369,13 @@ class CCBarSettingsPanel {
      */
     private fun createOptionDetailPanel(): JComponent {
         val outerPanel = JPanel(BorderLayout())
+        optionDetailTitledBorder = BorderFactory.createTitledBorder("Option 详情")
         val panel = JPanel().apply {
             layout = BoxLayout(this, BoxLayout.Y_AXIS)
-            border = BorderFactory.createTitledBorder("Option 详情")
+            border = optionDetailTitledBorder
         }
 
-        // Name
+        // Name（始终显示）
         val namePanel = JPanel(BorderLayout())
         namePanel.add(JLabel("名称:"), BorderLayout.WEST)
         optionNameField = JBTextField().apply {
@@ -370,9 +388,9 @@ class CCBarSettingsPanel {
         namePanel.add(optionNameField, BorderLayout.CENTER)
         panel.add(namePanel)
 
-        // Base Command
-        val commandPanel = JPanel(BorderLayout())
-        commandPanel.add(JLabel("基础命令:"), BorderLayout.WEST)
+        // Base Command（仅普通选项显示）
+        optionCommandPanel = JPanel(BorderLayout())
+        optionCommandPanel.add(JLabel("基础命令:"), BorderLayout.WEST)
         baseCommandField = JBTextField().apply {
             document.addDocumentListener(object : DocumentListener {
                 override fun insertUpdate(e: DocumentEvent?) = updateOptionCommand()
@@ -380,12 +398,12 @@ class CCBarSettingsPanel {
                 override fun changedUpdate(e: DocumentEvent?) = updateOptionCommand()
             })
         }
-        commandPanel.add(baseCommandField, BorderLayout.CENTER)
-        panel.add(commandPanel)
+        optionCommandPanel.add(baseCommandField, BorderLayout.CENTER)
+        panel.add(optionCommandPanel)
 
-        // Working Directory
-        val dirPanel = JPanel(BorderLayout())
-        dirPanel.add(JLabel("工作目录:"), BorderLayout.WEST)
+        // Working Directory（仅普通选项显示）
+        optionDirPanel = JPanel(BorderLayout())
+        optionDirPanel.add(JLabel("工作目录:"), BorderLayout.WEST)
         val optionProjectPath = getCurrentProjectPath()
         optionWorkDirHintLabel = JLabel("留空时使用项目根路径").apply {
             foreground = com.intellij.ui.JBColor.GRAY
@@ -414,17 +432,17 @@ class CCBarSettingsPanel {
                 }
             })
         }
-        dirPanel.add(workingDirectoryField, BorderLayout.CENTER)
-        panel.add(dirPanel)
+        optionDirPanel.add(workingDirectoryField, BorderLayout.CENTER)
+        panel.add(optionDirPanel)
         // 添加提示标签（单独一行，与输入框左对齐）
-        val dirHintPanel = JPanel(BorderLayout())
-        dirHintPanel.add(Box.createHorizontalStrut(JLabel("工作目录:").preferredSize.width), BorderLayout.WEST)
-        dirHintPanel.add(optionWorkDirHintLabel, BorderLayout.CENTER)
-        panel.add(dirHintPanel)
+        optionDirHintPanel = JPanel(BorderLayout())
+        optionDirHintPanel.add(Box.createHorizontalStrut(JLabel("工作目录:").preferredSize.width), BorderLayout.WEST)
+        optionDirHintPanel.add(optionWorkDirHintLabel, BorderLayout.CENTER)
+        panel.add(optionDirHintPanel)
 
-        // Default Terminal Name
-        val terminalNamePanel = JPanel(BorderLayout())
-        terminalNamePanel.add(JLabel("默认终端窗口名称:"), BorderLayout.WEST)
+        // Default Terminal Name（仅普通选项显示）
+        optionTerminalNamePanel = JPanel(BorderLayout())
+        optionTerminalNamePanel.add(JLabel("默认终端窗口名称:"), BorderLayout.WEST)
         defaultTerminalNameField = JBTextField().apply {
             document.addDocumentListener(object : DocumentListener {
                 override fun insertUpdate(e: DocumentEvent?) = updateOptionTerminalName()
@@ -432,8 +450,8 @@ class CCBarSettingsPanel {
                 override fun changedUpdate(e: DocumentEvent?) = updateOptionTerminalName()
             })
         }
-        terminalNamePanel.add(defaultTerminalNameField, BorderLayout.CENTER)
-        panel.add(terminalNamePanel)
+        optionTerminalNamePanel.add(defaultTerminalNameField, BorderLayout.CENTER)
+        panel.add(optionTerminalNamePanel)
 
         outerPanel.add(panel, BorderLayout.NORTH)
         return outerPanel
@@ -717,6 +735,40 @@ class CCBarSettingsPanel {
         optionList.selectedIndex = optionListModel.size - 1
     }
 
+    /**
+     * 显示添加 Option 的下拉菜单
+     */
+    private fun showAddOptionPopup() {
+        val options = arrayOf("添加选项", "添加分割线")
+        val selected = Messages.showEditableChooseDialog(
+            "请选择要添加的类型：",
+            "添加",
+            Messages.getQuestionIcon(),
+            options,
+            options[0],
+            null
+        )
+        when (selected) {
+            "添加选项" -> addOption()
+            "添加分割线" -> addSeparator()
+        }
+    }
+
+    /**
+     * 添加分割线
+     */
+    private fun addSeparator() {
+        val button = selectedButton ?: return
+        val newSeparator = OptionConfig(
+            id = UUID.randomUUID().toString(),
+            name = "",
+            type = OptionType.SEPARATOR
+        )
+        button.options.add(newSeparator)
+        optionListModel.add(newSeparator)
+        optionList.selectedIndex = optionListModel.size - 1
+    }
+
     private fun removeOption() {
         val button = selectedButton ?: return
         val index = optionList.selectedIndex
@@ -766,13 +818,78 @@ class CCBarSettingsPanel {
         val index = optionList.selectedIndex
         if (index >= 0 && selectedButton != null) {
             selectedOption = selectedButton!!.options[index]
+
+            // 先更新表单数据
             updateOptionDetail()
-            updateSubButtonTable()
+
+            if (selectedOption!!.isSeparator()) {
+                // 分割线：隐藏不需要的字段
+                hideOptionDetailForSeparator()
+            } else {
+                // 普通选项：显示所有字段
+                showOptionDetail()
+                updateSubButtonTable()
+            }
         } else {
             selectedOption = null
             clearOptionDetail()
             updateSubButtonTable()
+            showOptionDetail()
         }
+    }
+
+    /**
+     * 隐藏分割线选中时的详情面板（只显示名称字段）
+     */
+    private fun hideOptionDetailForSeparator() {
+        // 只在需要时更新可见性
+        if (!optionDetailOuterPanel.isVisible) {
+            optionDetailOuterPanel.isVisible = true
+        }
+        if (optionCommandPanel.isVisible) {
+            optionCommandPanel.isVisible = false
+        }
+        if (optionDirPanel.isVisible) {
+            optionDirPanel.isVisible = false
+        }
+        if (optionDirHintPanel.isVisible) {
+            optionDirHintPanel.isVisible = false
+        }
+        if (optionTerminalNamePanel.isVisible) {
+            optionTerminalNamePanel.isVisible = false
+        }
+        if (subButtonOuterPanel.isVisible) {
+            subButtonOuterPanel.isVisible = false
+        }
+        // 更新标题
+        optionDetailTitledBorder.title = "分割线详情"
+    }
+
+    /**
+     * 显示普通选项的详情面板（显示所有字段）
+     */
+    private fun showOptionDetail() {
+        // 只在需要时更新可见性，避免不必要的面板刷新
+        if (!optionDetailOuterPanel.isVisible) {
+            optionDetailOuterPanel.isVisible = true
+        }
+        if (!optionCommandPanel.isVisible) {
+            optionCommandPanel.isVisible = true
+        }
+        if (!optionDirPanel.isVisible) {
+            optionDirPanel.isVisible = true
+        }
+        if (!optionDirHintPanel.isVisible) {
+            optionDirHintPanel.isVisible = true
+        }
+        if (!optionTerminalNamePanel.isVisible) {
+            optionTerminalNamePanel.isVisible = true
+        }
+        if (!subButtonOuterPanel.isVisible) {
+            subButtonOuterPanel.isVisible = true
+        }
+        // 更新标题
+        optionDetailTitledBorder.title = "Option 详情"
     }
 
     private fun updateOptionDetail() {
@@ -1041,15 +1158,21 @@ class CCBarSettingsPanel {
                 // 直接命令模式下不验证 Options
             } else {
                 // 选项列表模式验证
-                if (button.options.isEmpty()) {
-                    errors.add("Button '${button.name}': 未配置直接命令时，必须至少有一个 Option")
+                // 过滤掉分割线，只计算普通选项
+                val normalOptions = button.options.filter { !it.isSeparator() }
+                if (normalOptions.isEmpty()) {
+                    errors.add("Button '${button.name}': 未配置直接命令时，必须至少有一个普通选项")
                 }
 
                 for ((optionIndex, option) in button.options.withIndex()) {
+                    // 跳过分割线类型的验证
+                    if (option.isSeparator()) continue
+
                     if (option.name.isBlank()) {
                         errors.add("Button '${button.name}' Option ${optionIndex + 1}: 名称不能为空")
                     }
-                    if (button.options.count { it.name == option.name } > 1) {
+                    // 只检查普通选项的名称重复
+                    if (normalOptions.count { it.name == option.name } > 1) {
                         errors.add("Button '${button.name}' Option '${option.name}': 名称重复")
                     }
                     if (option.baseCommand.isBlank()) {
@@ -1126,11 +1249,88 @@ class CCBarSettingsPanel {
             isSelected: Boolean,
             cellHasFocus: Boolean
         ): JComponent {
+            // 处理分割线类型
+            if (value is OptionConfig && value.isSeparator()) {
+                return createSeparatorRenderer(list, value, isSelected)
+            }
+
+            // 普通选项渲染
             val component = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus)
             if (value is OptionConfig) {
                 text = value.name
             }
             return component as JComponent
+        }
+
+        private fun createSeparatorRenderer(
+            list: JList<*>?,
+            option: OptionConfig,
+            isSelected: Boolean
+        ): JComponent {
+            val panel = JPanel(BorderLayout()).apply {
+                isOpaque = true
+                background = if (isSelected) {
+                    list?.selectionBackground ?: com.intellij.ui.JBColor.PanelBackground
+                } else {
+                    list?.background ?: com.intellij.ui.JBColor.PanelBackground
+                }
+                border = JBUI.Borders.empty(4, 8)
+            }
+
+            if (option.name.isNotBlank()) {
+                // 带标题的分割线：──── 标题 ────
+                // 使用自定义绘制
+                val innerPanel = object : JPanel() {
+                    override fun paintComponent(g: java.awt.Graphics) {
+                        super.paintComponent(g)
+                        val g2d = g as java.awt.Graphics2D
+                        g2d.color = com.intellij.ui.JBColor.GRAY
+                        g2d.stroke = java.awt.BasicStroke(1f)
+
+                        val labelWidth = graphics.getFontMetrics(font).stringWidth(option.name) + 16
+                        val centerY = height / 2
+                        val leftEnd = (width - labelWidth) / 2
+                        val rightStart = leftEnd + labelWidth
+
+                        // 左侧线
+                        if (leftEnd > 0) {
+                            g2d.drawLine(0, centerY, leftEnd, centerY)
+                        }
+                        // 右侧线
+                        if (rightStart < width) {
+                            g2d.drawLine(rightStart, centerY, width, centerY)
+                        }
+                    }
+                }
+                innerPanel.layout = BorderLayout()
+                innerPanel.isOpaque = false
+
+                val label = JLabel(option.name).apply {
+                    foreground = com.intellij.ui.JBColor.GRAY
+                    horizontalAlignment = SwingConstants.CENTER
+                }
+                innerPanel.add(label, BorderLayout.CENTER)
+                innerPanel.preferredSize = Dimension(innerPanel.preferredSize.width, 24)
+                panel.add(innerPanel, BorderLayout.CENTER)
+            } else {
+                // 无标题分割线：使用自定义绘制确保垂直居中
+                val separatorPanel = object : JPanel() {
+                    override fun paintComponent(g: java.awt.Graphics) {
+                        super.paintComponent(g)
+                        val g2d = g as java.awt.Graphics2D
+                        g2d.color = com.intellij.ui.JBColor.GRAY
+                        g2d.stroke = java.awt.BasicStroke(1f)
+                        val centerY = height / 2
+                        g2d.drawLine(0, centerY, width, centerY)
+                    }
+                }
+                separatorPanel.isOpaque = false
+                separatorPanel.preferredSize = Dimension(separatorPanel.preferredSize.width, 24)
+                panel.add(separatorPanel, BorderLayout.CENTER)
+            }
+
+            panel.preferredSize = Dimension(panel.preferredSize.width, 24)
+            return panel
         }
     }
 }
