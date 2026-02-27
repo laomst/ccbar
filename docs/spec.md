@@ -18,19 +18,33 @@
 插件的配置采用三层结构：
 
 ```
-Button（工具栏按钮，纯容器，用于分类）
-  └── Option（选项，绑定 baseCommand + 可选工作目录）
-        └── SubButton（子按钮，绑定 params 纯文本）
+Button（工具栏按钮）
+  ├── [直接命令模式] 直接执行 Button.command
+  └── [选项列表模式]
+        └── Option（选项，绑定 baseCommand + 可选工作目录）
+              └── SubButton（子按钮，绑定 params 纯文本）
 ```
 
 **命令生成规则：**
 ```
-最终执行命令 = Option.baseCommand + (SubButton.params 不为空 ? " " + SubButton.params : "")
+直接命令模式：最终执行命令 = Button.command
+选项列表模式：最终执行命令 = Option.baseCommand + (SubButton.params 不为空 ? " " + SubButton.params : "")
 ```
 
-- **Button**：工具栏上的入口按钮，纯分类容器，不绑定命令。有名称和图标。
+- **Button**：工具栏上的入口按钮。支持两种模式：
+  - **直接命令模式**：Button 绑定 command 字段，点击后直接执行命令（不弹出菜单）
+  - **选项列表模式**：Button 不绑定 command，点击后弹出 Option 列表
 - **Option**：按钮下的选项分组，绑定基础命令（baseCommand）和可选的工作目录。**点击 Option 本身直接执行 baseCommand（不带参数）**。
 - **SubButton**：选项下的子按钮，绑定参数文本（params）。点击后执行 Option.baseCommand + params。params 为纯文本，第一阶段不支持变量替换。
+
+### 2.2 Button 模式切换
+
+| 模式 | 触发条件 | 点击行为 |
+|------|----------|----------|
+| 直接命令模式 | `Button.command` 不为空 | 直接执行命令 + 命名弹窗 |
+| 选项列表模式 | `Button.command` 为空 | 弹出 Option 列表 |
+
+**按钮启用条件**：`command` 不为空 OR `options` 不为空
 
 ---
 
@@ -41,7 +55,14 @@ Button（工具栏按钮，纯容器，用于分类）
 - 每个按钮代表一个命令类别（如 "Claude Code"、"Dev Tools" 等）
 - 每个按钮可自定义图标（支持 IDEA 内置图标和自定义 SVG/PNG 文件）和标签
 
-### 3.2 下拉菜单与命令预览
+### 3.2 按钮点击行为
+
+**直接命令模式**（Button.command 不为空）：
+- 点击 Button 后直接弹出终端命名对话框
+- 用户确认名称后执行 Button.command
+- 工作目录：优先使用 Button.workingDirectory，否则使用项目根目录
+
+**选项列表模式**（Button.command 为空）：
 - 点击快捷按钮后弹出选项菜单
 - 每个 Option 行采用**三列布局**：选项名称 | 命令预览输入框 | 子按钮列表
 - **命令预览输入框**：
@@ -184,9 +205,21 @@ Button（工具栏按钮，纯容器，用于分类）
 {
   "buttons": [
     {
+      "id": "quick-npm-test",
+      "name": "NPM Test",
+      "icon": "TOOLS_ICON",
+      "command": "npm test",
+      "workingDirectory": "",
+      "defaultTerminalName": "NPM Test",
+      "options": []
+    },
+    {
       "id": "claude-code",
       "name": "Claude Code",
       "icon": "AI_ICON",
+      "command": "",
+      "workingDirectory": "",
+      "defaultTerminalName": "",
       "options": [
         {
           "id": "model",
@@ -294,6 +327,8 @@ Button（工具栏按钮，纯容器，用于分类）
 
 ### 6.2 界面布局
 
+**选项列表模式**（Button.command 为空）：
+
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
 │  Settings: CCBar                                                                │
@@ -303,32 +338,42 @@ Button（工具栏按钮，纯容器，用于分类）
 │  │                     │  │                                                   │ │
 │  │ ▶ Claude Code       │  │ Name:       [Claude Code                    ]   │ │
 │  │   Dev Tools         │  │ Icon:       [Browse...                      ]   │ │
-│  │                     │  │             (支持 IDEA 内置图标 / 自定义 SVG/PNG)  │ │
-│  │ [+][-][↑][↓]       │  │                                                   │ │
-│  └─────────────────────┘  │ ─────────────────────────────────────────────────  │ │
-│                           │ Options (分组)                                   │ │
-│  ┌─────────────────────┐  │                                                   │ │
-│  │ Options             │  │ ┌──────────────────────────────────────────────┐ │ │
-│  │                     │  │ │ Option: Model                                │ │ │
-│  │ ▶ Model             │  │ │ Base Command:      [claude              ]   │ │ │
-│  │   Workspace         │  │ │ Working Directory: [                    ]   │ │ │
-│  │   System            │  │ │ (留空则使用当前项目根目录)                     │ │ │
-│  │                     │  │ │ Default Terminal Name: [Claude - Model  ]   │ │ │
-│  │                     │  │ │                                              │ │ │
-│  │ [+][-][↑][↓]       │  │ │ Sub Buttons:                                 │ │ │
-│  └─────────────────────┘  │ │ ┌────────────┬──────────────────┐           │ │ │
-│                           │ │ │ Name       │ Params            │           │ │ │
-│                           │ │ ├────────────┼──────────────────┤           │ │ │
-│                           │ │ │ Sonnet     │ --model sonnet    │ [x]      │ │ │
-│                           │ │ │ Opus       │ --model opus      │ [x]      │ │ │
-│                           │ │ └────────────┴──────────────────┘           │ │ │
-│                           │ │ [+][-][↑][↓]                                │ │ │
+│  │                     │  │ Command:    [                              ]   │ │
+│  │ [+][-][↑][↓]       │  │ Work Dir:   [                              ]   │ │
+│  └─────────────────────┘  │ Term Name:  [                              ]   │ │
+│                           │                                                   │ │
+│  ┌─────────────────────┐  │ ─────────────────────────────────────────────────  │ │
+│  │ Options             │  │ Options (分组)                                   │ │
+│  │                     │  │                                                   │ │
+│  │ ▶ Model             │  │ ┌──────────────────────────────────────────────┐ │ │
+│  │   Workspace         │  │ │ Option: Model                                │ │ │
+│  │                     │  │ │ Base Command:      [claude              ]   │ │ │
+│  │ [+][-][↑][↓]       │  │ │ Working Directory: [                    ]   │ │ │
+│  └─────────────────────┘  │ │ Default Terminal Name: [Claude - Model  ]   │ │ │
+│                           │ │ Sub Buttons: ...                             │ │ │
 │                           │ └──────────────────────────────────────────────┘ │ │
-│                           │                                                   │ │
+│                           └───────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
+
+**直接命令模式**（Button.command 不为空）：
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│  Settings: CCBar                                                                │
+├─────────────────────────────────────────────────────────────────────────────────┤
+│  ┌─────────────────────┐  ┌───────────────────────────────────────────────────┐ │
+│  │ Toolbar Buttons     │  │ Button Details                                  │ │
+│  │                     │  │                                                   │ │
+│  │   Claude Code       │  │ Name:       [NPM Test                       ]   │ │
+│  │ ▶ NPM Test          │  │ Icon:       [Browse...                      ]   │ │
+│  │   Dev Tools         │  │ Command:    [npm test                       ]   │ │
+│  │                     │  │ Work Dir:   [                              ]   │ │
+│  │ [+][-][↑][↓]       │  │ Term Name:  [NPM Test                       ]   │ │
+│  └─────────────────────┘  │                                                   │ │
 │                           │ ─────────────────────────────────────────────────  │ │
-│                           │ [ Import ] [ Export ] [ Reset ]                  │ │
+│                           │ ℹ️ 直接命令模式下，Options 配置不可用              │ │
 │                           │                                                   │ │
-│                           │ [ Apply ] [ Cancel ]                             │ │
 │                           └───────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -380,12 +425,19 @@ Button（工具栏按钮，纯容器，用于分类）
 |------|----------|
 | Button Name | 必填，唯一 |
 | Button Icon | 必填，内置图标名称或有效的文件路径 |
+| Button Command | 可选，为空时必须配置 Options |
+| Button Work Dir | 可选，留空表示使用当前项目根目录；如填写须为有效路径 |
+| Button Term Name | 直接命令模式下必填 |
 | Option Name | 必填，同一按钮下唯一 |
 | Base Command | 必填 |
 | Working Directory | 可选，留空表示使用当前项目根目录；如填写须为有效路径 |
 | Default Terminal Name | 必填，命名弹窗中的默认终端名称 |
 | Sub Button Name | 必填，同一 Option 下唯一 |
 | Params | 可选，允许空字符串 |
+
+**模式互斥规则**：
+- 直接命令模式（Button.command 不为空）：Options 配置被忽略
+- 选项列表模式（Button.command 为空）：必须至少有一个 Option
 
 ---
 
@@ -409,6 +461,10 @@ data class ButtonConfig(
     var id: String = "",
     var name: String = "",
     var icon: String = "",  // 内置图标名称或自定义图标文件路径
+    // 直接命令模式字段
+    var command: String = "",  // 直接命令，为空则使用选项列表模式
+    var workingDirectory: String = "",  // 工作目录，留空使用项目根目录
+    var defaultTerminalName: String = "",  // 直接命令模式的默认终端名称
     var options: List<OptionConfig> = emptyList()
 )
 
@@ -506,14 +562,15 @@ private val defaultConfig = PluginConfig(
 | 功能 | 优先级 | 说明 |
 |------|--------|------|
 | 多快捷按钮 | P0 | 支持添加多个工具栏按钮 |
+| Button 直接命令模式 | P0 | Button 可绑定直接命令，点击后直接执行（不弹出菜单） |
 | 下拉选项菜单（内联子按钮） | P0 | 点击弹出菜单，子按钮内联显示在 Option 行右侧 |
 | Option 可点击 | P0 | 点击 Option 名称执行 baseCommand（不带参数） |
 | 命令配置面板 | P0 | 可视化配置按钮、选项、子按钮，支持排序 |
 | 终端始终新建 | P0 | 每次执行都新建终端 Tab |
-| 终端命名弹窗 | P0 | 每次执行前弹出命名对话框，默认名称来自 Option 配置 |
+| 终端命名弹窗 | P0 | 每次执行前弹出命名对话框，默认名称来自 Option/Button 配置 |
 | 终端打开到工具窗口 | P0 | 在 Terminal 工具窗口中新建终端标签页 |
 | 自定义图标 | P0 | 支持 IDEA 内置图标和自定义 SVG/PNG |
-| Option 工作目录 | P0 | 支持 Option 级自定义工作目录，默认项目根目录 |
+| Option/Button 工作目录 | P0 | 支持 Option/Button 级自定义工作目录，默认项目根目录 |
 | 导入/导出配置 | P1 | 支持 JSON 格式配置导入导出 |
 | 命令编辑支持 | P2 | 支持命令模板/变量替换 |
 | 环境变量配置 | P2 | 支持为 Option/SubButton 配置环境变量 |

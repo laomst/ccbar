@@ -1,5 +1,6 @@
 package com.github.ccbar.terminal
 
+import com.github.ccbar.settings.ButtonConfig
 import com.github.ccbar.settings.OptionConfig
 import com.github.ccbar.settings.SubButtonConfig
 import com.intellij.notification.Notification
@@ -20,10 +21,23 @@ object CCBarTerminalService {
     private const val NOTIFICATION_GROUP_ID = "CCBar"
     private val LOG = Logger.getInstance(CCBarTerminalService::class.java)
 
+    /**
+     * 为 Option 打开终端（选项列表模式）
+     */
     fun openTerminal(project: Project, option: OptionConfig, subButton: SubButtonConfig?) {
         val terminalName = showNameDialog(project, option) ?: return
         val command = buildCommand(option, subButton)
         val workingDir = resolveWorkingDirectory(project, option)
+        createTerminalAndExecute(project, command, terminalName, workingDir)
+    }
+
+    /**
+     * 为 Button 直接命令模式打开终端
+     */
+    fun openTerminalForButton(project: Project, button: ButtonConfig) {
+        val terminalName = showNameDialogForButton(project, button) ?: return
+        val command = button.command
+        val workingDir = resolveWorkingDirectoryForButton(project, button)
         createTerminalAndExecute(project, command, terminalName, workingDir)
     }
 
@@ -38,6 +52,18 @@ object CCBarTerminalService {
         )
     }
 
+    private fun showNameDialogForButton(project: Project, button: ButtonConfig): String? {
+        val defaultName = button.defaultTerminalName.ifBlank { button.name }
+        return Messages.showInputDialog(
+            project,
+            "请输入终端标签名称：",
+            "终端命名",
+            null,
+            defaultName,
+            null
+        )
+    }
+
     private fun buildCommand(option: OptionConfig, subButton: SubButtonConfig?): String {
         val baseCommand = option.baseCommand
         val params = subButton?.params?.trim() ?: ""
@@ -46,6 +72,26 @@ object CCBarTerminalService {
 
     private fun resolveWorkingDirectory(project: Project, option: OptionConfig): String {
         val configuredDir = option.workingDirectory.trim()
+
+        if (configuredDir.isNotEmpty()) {
+            val dir = File(configuredDir)
+            if (dir.exists() && dir.isDirectory) {
+                return dir.absolutePath
+            } else {
+                showNotification(
+                    project,
+                    "工作目录不存在",
+                    "配置的工作目录 '$configuredDir' 不存在，已回退到项目根目录",
+                    NotificationType.WARNING
+                )
+            }
+        }
+
+        return project.basePath ?: System.getProperty("user.home")
+    }
+
+    private fun resolveWorkingDirectoryForButton(project: Project, button: ButtonConfig): String {
+        val configuredDir = button.workingDirectory.trim()
 
         if (configuredDir.isNotEmpty()) {
             val dir = File(configuredDir)

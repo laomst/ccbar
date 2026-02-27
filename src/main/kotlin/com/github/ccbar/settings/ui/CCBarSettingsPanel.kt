@@ -38,6 +38,12 @@ class CCBarSettingsPanel {
     // Button 详情字段
     private lateinit var buttonNameField: JBTextField
     private lateinit var buttonIconField: TextFieldWithBrowseButton
+    private lateinit var buttonCommandField: JBTextField
+    private lateinit var buttonWorkingDirectoryField: TextFieldWithBrowseButton
+    private lateinit var buttonTerminalNameField: JBTextField
+
+    // Options 面板引用（用于控制显示/隐藏）
+    private lateinit var optionPanel: JComponent
 
     // Option 详情字段
     private lateinit var optionNameField: JBTextField
@@ -112,12 +118,12 @@ class CCBarSettingsPanel {
         val buttonDetailPanel = createButtonDetailPanel()
 
         // Option 列表和详情
-        val optionPanel = createOptionPanel()
+        optionPanel = createOptionPanel()
 
         // 使用垂直分割
         val splitter = JSplitPane(JSplitPane.VERTICAL_SPLIT)
         splitter.dividerSize = JBUI.scale(8)
-        splitter.dividerLocation = 150
+        splitter.dividerLocation = 180
         splitter.topComponent = buttonDetailPanel
         splitter.bottomComponent = optionPanel
 
@@ -166,6 +172,51 @@ class CCBarSettingsPanel {
         }
         iconPanel.add(buttonIconField, BorderLayout.CENTER)
         panel.add(iconPanel)
+
+        // Command 字段（新增）
+        val commandPanel = JPanel(BorderLayout())
+        commandPanel.add(JLabel("直接命令:"), BorderLayout.WEST)
+        buttonCommandField = JBTextField().apply {
+            document.addDocumentListener(object : DocumentListener {
+                override fun insertUpdate(e: DocumentEvent?) = updateButtonCommand()
+                override fun removeUpdate(e: DocumentEvent?) = updateButtonCommand()
+                override fun changedUpdate(e: DocumentEvent?) = updateButtonCommand()
+            })
+        }
+        commandPanel.add(buttonCommandField, BorderLayout.CENTER)
+        panel.add(commandPanel)
+
+        // Working Directory 字段（新增）
+        val workDirPanel = JPanel(BorderLayout())
+        workDirPanel.add(JLabel("工作目录:"), BorderLayout.WEST)
+        buttonWorkingDirectoryField = TextFieldWithBrowseButton().apply {
+            addBrowseFolderListener(
+                "选择工作目录",
+                "选择终端的工作目录",
+                null,
+                FileChooserDescriptorFactory.createSingleFolderDescriptor()
+            )
+            textField.document.addDocumentListener(object : DocumentListener {
+                override fun insertUpdate(e: DocumentEvent?) = updateButtonWorkingDirectory()
+                override fun removeUpdate(e: DocumentEvent?) = updateButtonWorkingDirectory()
+                override fun changedUpdate(e: DocumentEvent?) = updateButtonWorkingDirectory()
+            })
+        }
+        workDirPanel.add(buttonWorkingDirectoryField, BorderLayout.CENTER)
+        panel.add(workDirPanel)
+
+        // Terminal Name 字段（新增）
+        val terminalNamePanel = JPanel(BorderLayout())
+        terminalNamePanel.add(JLabel("终端名称:"), BorderLayout.WEST)
+        buttonTerminalNameField = JBTextField().apply {
+            document.addDocumentListener(object : DocumentListener {
+                override fun insertUpdate(e: DocumentEvent?) = updateButtonTerminalName()
+                override fun removeUpdate(e: DocumentEvent?) = updateButtonTerminalName()
+                override fun changedUpdate(e: DocumentEvent?) = updateButtonTerminalName()
+            })
+        }
+        terminalNamePanel.add(buttonTerminalNameField, BorderLayout.CENTER)
+        panel.add(terminalNamePanel)
 
         outerPanel.add(panel, BorderLayout.NORTH)
         return outerPanel
@@ -412,6 +463,11 @@ class CCBarSettingsPanel {
             val button = selectedButton ?: return
             buttonNameField.text = button.name
             buttonIconField.text = button.icon
+            buttonCommandField.text = button.command
+            buttonWorkingDirectoryField.text = button.workingDirectory
+            buttonTerminalNameField.text = button.defaultTerminalName
+            // 更新 Options 面板显示状态
+            updateOptionPanelVisibility()
         } finally {
             ignoreUpdate = false
         }
@@ -422,6 +478,11 @@ class CCBarSettingsPanel {
         try {
             buttonNameField.text = ""
             buttonIconField.text = ""
+            buttonCommandField.text = ""
+            buttonWorkingDirectoryField.text = ""
+            buttonTerminalNameField.text = ""
+            // 显示 Options 面板
+            optionPanel.isVisible = true
         } finally {
             ignoreUpdate = false
         }
@@ -436,6 +497,28 @@ class CCBarSettingsPanel {
     private fun updateButtonIcon() {
         if (ignoreUpdate) return
         selectedButton?.icon = buttonIconField.text
+    }
+
+    private fun updateButtonCommand() {
+        if (ignoreUpdate) return
+        selectedButton?.command = buttonCommandField.text
+        // 切换 Options 面板显示状态
+        updateOptionPanelVisibility()
+    }
+
+    private fun updateButtonWorkingDirectory() {
+        if (ignoreUpdate) return
+        selectedButton?.workingDirectory = buttonWorkingDirectoryField.text
+    }
+
+    private fun updateButtonTerminalName() {
+        if (ignoreUpdate) return
+        selectedButton?.defaultTerminalName = buttonTerminalNameField.text
+    }
+
+    private fun updateOptionPanelVisibility() {
+        val isDirectMode = selectedButton?.isDirectCommandMode() == true
+        optionPanel.isVisible = !isDirectMode
     }
 
     // ==================== Option 列表操作 ====================
@@ -768,26 +851,39 @@ class CCBarSettingsPanel {
                 errors.add("Button '${button.name}': 名称重复")
             }
 
-            for ((optionIndex, option) in button.options.withIndex()) {
-                if (option.name.isBlank()) {
-                    errors.add("Button '${button.name}' Option ${optionIndex + 1}: 名称不能为空")
+            // 直接命令模式验证
+            if (button.isDirectCommandMode()) {
+                if (button.defaultTerminalName.isBlank()) {
+                    errors.add("Button '${button.name}': 直接命令模式下，终端名称不能为空")
                 }
-                if (button.options.count { it.name == option.name } > 1) {
-                    errors.add("Button '${button.name}' Option '${option.name}': 名称重复")
-                }
-                if (option.baseCommand.isBlank()) {
-                    errors.add("Button '${button.name}' Option '${option.name}': 基础命令不能为空")
-                }
-                if (option.defaultTerminalName.isBlank()) {
-                    errors.add("Button '${button.name}' Option '${option.name}': 终端名称不能为空")
+                // 直接命令模式下不验证 Options
+            } else {
+                // 选项列表模式验证
+                if (button.options.isEmpty()) {
+                    errors.add("Button '${button.name}': 未配置直接命令时，必须至少有一个 Option")
                 }
 
-                for ((subButtonIndex, subButton) in option.subButtons.withIndex()) {
-                    if (subButton.name.isBlank()) {
-                        errors.add("Button '${button.name}' Option '${option.name}' SubButton ${subButtonIndex + 1}: 名称不能为空")
+                for ((optionIndex, option) in button.options.withIndex()) {
+                    if (option.name.isBlank()) {
+                        errors.add("Button '${button.name}' Option ${optionIndex + 1}: 名称不能为空")
                     }
-                    if (option.subButtons.count { it.name == subButton.name } > 1) {
-                        errors.add("Button '${button.name}' Option '${option.name}' SubButton '${subButton.name}': 名称重复")
+                    if (button.options.count { it.name == option.name } > 1) {
+                        errors.add("Button '${button.name}' Option '${option.name}': 名称重复")
+                    }
+                    if (option.baseCommand.isBlank()) {
+                        errors.add("Button '${button.name}' Option '${option.name}': 基础命令不能为空")
+                    }
+                    if (option.defaultTerminalName.isBlank()) {
+                        errors.add("Button '${button.name}' Option '${option.name}': 终端名称不能为空")
+                    }
+
+                    for ((subButtonIndex, subButton) in option.subButtons.withIndex()) {
+                        if (subButton.name.isBlank()) {
+                            errors.add("Button '${button.name}' Option '${option.name}' SubButton ${subButtonIndex + 1}: 名称不能为空")
+                        }
+                        if (option.subButtons.count { it.name == subButton.name } > 1) {
+                            errors.add("Button '${button.name}' Option '${option.name}' SubButton '${subButton.name}': 名称重复")
+                        }
                     }
                 }
             }

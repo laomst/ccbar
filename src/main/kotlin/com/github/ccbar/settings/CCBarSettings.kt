@@ -149,12 +149,18 @@ data class OptionConfig(
 
 /**
  * 工具栏按钮配置
- * 纯分类容器，不绑定命令
+ * 支持两种模式：
+ * - 直接命令模式：command 不为空，点击后直接执行命令
+ * - 选项列表模式：command 为空，点击后弹出选项列表
  */
 data class ButtonConfig(
     var id: String = "",
     var name: String = "",
     var icon: String = "",
+    // 直接命令模式字段
+    var command: String = "",  // 直接命令，为空则使用选项列表模式
+    var workingDirectory: String = "",  // 工作目录，留空使用项目根目录
+    var defaultTerminalName: String = "",  // 直接命令模式的默认终端名称
     var options: MutableList<OptionConfig> = mutableListOf()
 ) {
     /**
@@ -164,8 +170,16 @@ data class ButtonConfig(
         id = id,
         name = name,
         icon = icon,
+        command = command,
+        workingDirectory = workingDirectory,
+        defaultTerminalName = defaultTerminalName,
         options = options.map { it.deepCopy() }.toMutableList()
     )
+
+    /**
+     * 判断是否为直接命令模式
+     */
+    fun isDirectCommandMode(): Boolean = command.isNotBlank()
 }
 
 /**
