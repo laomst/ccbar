@@ -46,6 +46,10 @@ class CCBarSettingsPanel {
     private lateinit var buttonWorkingDirectoryField: TextFieldWithBrowseButton
     private lateinit var buttonTerminalNameField: JBTextField
 
+    // Button 提示标签（用于动态更新文字）
+    private lateinit var buttonCommandHintLabel: JLabel
+    private lateinit var buttonWorkDirHintLabel: JLabel
+
     // Button 工作目录面板（用于控制显示/隐藏）
     private lateinit var buttonWorkingDirectoryPanel: JComponent
 
@@ -63,6 +67,9 @@ class CCBarSettingsPanel {
     private lateinit var baseCommandField: JBTextField
     private lateinit var workingDirectoryField: TextFieldWithBrowseButton
     private lateinit var defaultTerminalNameField: JBTextField
+
+    // Option 提示标签（用于动态更新文字）
+    private lateinit var optionWorkDirHintLabel: JLabel
 
     // 当前选中的 Button 和 Option
     private var selectedButton: ButtonConfig? = null
@@ -211,15 +218,32 @@ class CCBarSettingsPanel {
         // Command 字段（新增）
         val commandPanel = JPanel(BorderLayout())
         commandPanel.add(JLabel("直接命令:"), BorderLayout.WEST)
+        buttonCommandHintLabel = JLabel("输入直接命令后将不支持绑定选项列表").apply {
+            foreground = com.intellij.ui.JBColor.GRAY
+        }
         buttonCommandField = JBTextField().apply {
             document.addDocumentListener(object : DocumentListener {
-                override fun insertUpdate(e: DocumentEvent?) = updateButtonCommand()
-                override fun removeUpdate(e: DocumentEvent?) = updateButtonCommand()
-                override fun changedUpdate(e: DocumentEvent?) = updateButtonCommand()
+                override fun insertUpdate(e: DocumentEvent?) {
+                    updateButtonCommand()
+                    updateCommandHintVisibility()
+                }
+                override fun removeUpdate(e: DocumentEvent?) {
+                    updateButtonCommand()
+                    updateCommandHintVisibility()
+                }
+                override fun changedUpdate(e: DocumentEvent?) {
+                    updateButtonCommand()
+                    updateCommandHintVisibility()
+                }
             })
         }
         commandPanel.add(buttonCommandField, BorderLayout.CENTER)
         panel.add(commandPanel)
+        // 添加提示标签（单独一行，与输入框左对齐）
+        val commandHintPanel = JPanel(BorderLayout())
+        commandHintPanel.add(Box.createHorizontalStrut(JLabel("直接命令:").preferredSize.width), BorderLayout.WEST)
+        commandHintPanel.add(buttonCommandHintLabel, BorderLayout.CENTER)
+        panel.add(commandHintPanel)
 
         // Working Directory 字段（仅直接命令模式时显示）
         buttonWorkingDirectoryPanel = JPanel().apply {
@@ -228,6 +252,9 @@ class CCBarSettingsPanel {
         val workDirPanel = JPanel(BorderLayout())
         workDirPanel.add(JLabel("工作目录:"), BorderLayout.WEST)
         val projectPath = getCurrentProjectPath()
+        buttonWorkDirHintLabel = JLabel("留空时使用项目根路径").apply {
+            foreground = com.intellij.ui.JBColor.GRAY
+        }
         buttonWorkingDirectoryField = TextFieldWithBrowseButton().apply {
             addBrowseFolderListener(
                 "选择工作目录",
@@ -238,9 +265,18 @@ class CCBarSettingsPanel {
             // 设置 placeholder
             (textField as? JBTextField)?.emptyText?.text = projectPath ?: ""
             textField.document.addDocumentListener(object : DocumentListener {
-                override fun insertUpdate(e: DocumentEvent?) = updateButtonWorkingDirectory()
-                override fun removeUpdate(e: DocumentEvent?) = updateButtonWorkingDirectory()
-                override fun changedUpdate(e: DocumentEvent?) = updateButtonWorkingDirectory()
+                override fun insertUpdate(e: DocumentEvent?) {
+                    updateButtonWorkingDirectory()
+                    updateWorkDirHintVisibility()
+                }
+                override fun removeUpdate(e: DocumentEvent?) {
+                    updateButtonWorkingDirectory()
+                    updateWorkDirHintVisibility()
+                }
+                override fun changedUpdate(e: DocumentEvent?) {
+                    updateButtonWorkingDirectory()
+                    updateWorkDirHintVisibility()
+                }
             })
         }
         workDirPanel.add(buttonWorkingDirectoryField, BorderLayout.CENTER)
@@ -248,10 +284,7 @@ class CCBarSettingsPanel {
         // 添加提示标签（单独一行，与输入框左对齐）
         val workDirHintPanel = JPanel(BorderLayout())
         workDirHintPanel.add(Box.createHorizontalStrut(JLabel("工作目录:").preferredSize.width), BorderLayout.WEST)
-        val workDirHint = JLabel("留空时使用项目根路径").apply {
-            foreground = com.intellij.ui.JBColor.GRAY
-        }
-        workDirHintPanel.add(workDirHint, BorderLayout.CENTER)
+        workDirHintPanel.add(buttonWorkDirHintLabel, BorderLayout.CENTER)
         buttonWorkingDirectoryPanel.add(workDirHintPanel)
         panel.add(buttonWorkingDirectoryPanel)
 
@@ -354,6 +387,9 @@ class CCBarSettingsPanel {
         val dirPanel = JPanel(BorderLayout())
         dirPanel.add(JLabel("工作目录:"), BorderLayout.WEST)
         val optionProjectPath = getCurrentProjectPath()
+        optionWorkDirHintLabel = JLabel("留空时使用项目根路径").apply {
+            foreground = com.intellij.ui.JBColor.GRAY
+        }
         workingDirectoryField = TextFieldWithBrowseButton().apply {
             addBrowseFolderListener(
                 "选择工作目录",
@@ -364,9 +400,18 @@ class CCBarSettingsPanel {
             // 设置 placeholder
             (textField as? JBTextField)?.emptyText?.text = optionProjectPath ?: ""
             textField.document.addDocumentListener(object : DocumentListener {
-                override fun insertUpdate(e: DocumentEvent?) = updateOptionDirectory()
-                override fun removeUpdate(e: DocumentEvent?) = updateOptionDirectory()
-                override fun changedUpdate(e: DocumentEvent?) = updateOptionDirectory()
+                override fun insertUpdate(e: DocumentEvent?) {
+                    updateOptionDirectory()
+                    updateOptionWorkDirHintVisibility()
+                }
+                override fun removeUpdate(e: DocumentEvent?) {
+                    updateOptionDirectory()
+                    updateOptionWorkDirHintVisibility()
+                }
+                override fun changedUpdate(e: DocumentEvent?) {
+                    updateOptionDirectory()
+                    updateOptionWorkDirHintVisibility()
+                }
             })
         }
         dirPanel.add(workingDirectoryField, BorderLayout.CENTER)
@@ -374,10 +419,7 @@ class CCBarSettingsPanel {
         // 添加提示标签（单独一行，与输入框左对齐）
         val dirHintPanel = JPanel(BorderLayout())
         dirHintPanel.add(Box.createHorizontalStrut(JLabel("工作目录:").preferredSize.width), BorderLayout.WEST)
-        val dirHint = JLabel("留空时使用项目根路径").apply {
-            foreground = com.intellij.ui.JBColor.GRAY
-        }
-        dirHintPanel.add(dirHint, BorderLayout.CENTER)
+        dirHintPanel.add(optionWorkDirHintLabel, BorderLayout.CENTER)
         panel.add(dirHintPanel)
 
         // Default Terminal Name
@@ -547,6 +589,9 @@ class CCBarSettingsPanel {
             buttonTerminalNameField.text = button.defaultTerminalName
             // 更新直接命令模式相关字段的显示状态
             updateDirectCommandModeVisibility()
+            // 更新提示文字状态
+            updateCommandHintVisibility()
+            updateWorkDirHintVisibility()
         } finally {
             ignoreUpdate = false
         }
@@ -560,6 +605,9 @@ class CCBarSettingsPanel {
             buttonCommandField.text = ""
             buttonWorkingDirectoryField.text = ""
             buttonTerminalNameField.text = ""
+            // 重置提示文字状态
+            updateCommandHintVisibility()
+            updateWorkDirHintVisibility()
         } finally {
             ignoreUpdate = false
         }
@@ -591,6 +639,39 @@ class CCBarSettingsPanel {
     private fun updateButtonTerminalName() {
         if (ignoreUpdate) return
         selectedButton?.defaultTerminalName = buttonTerminalNameField.text
+    }
+
+    /**
+     * 更新直接命令提示文字的显示状态
+     */
+    private fun updateCommandHintVisibility() {
+        buttonCommandHintLabel.text = if (buttonCommandField.text.isBlank()) {
+            "输入直接命令后将不支持绑定选项列表"
+        } else {
+            ""
+        }
+    }
+
+    /**
+     * 更新工作目录提示文字的显示状态
+     */
+    private fun updateWorkDirHintVisibility() {
+        buttonWorkDirHintLabel.text = if (buttonWorkingDirectoryField.text.isBlank()) {
+            "留空时使用项目根路径"
+        } else {
+            ""
+        }
+    }
+
+    /**
+     * 更新 Option 工作目录提示文字的显示状态
+     */
+    private fun updateOptionWorkDirHintVisibility() {
+        optionWorkDirHintLabel.text = if (workingDirectoryField.text.isBlank()) {
+            "留空时使用项目根路径"
+        } else {
+            ""
+        }
     }
 
     /**
@@ -702,6 +783,8 @@ class CCBarSettingsPanel {
             baseCommandField.text = option.baseCommand
             workingDirectoryField.text = option.workingDirectory
             defaultTerminalNameField.text = option.defaultTerminalName
+            // 更新提示文字状态
+            updateOptionWorkDirHintVisibility()
         } finally {
             ignoreUpdate = false
         }
@@ -714,6 +797,8 @@ class CCBarSettingsPanel {
             baseCommandField.text = ""
             workingDirectoryField.text = ""
             defaultTerminalNameField.text = ""
+            // 重置提示文字状态
+            updateOptionWorkDirHintVisibility()
         } finally {
             ignoreUpdate = false
         }
