@@ -46,6 +46,9 @@ class CCBarSettingsPanel {
     private lateinit var buttonWorkingDirectoryField: TextFieldWithBrowseButton
     private lateinit var buttonTerminalNameField: JBTextField
 
+    // Button 工作目录面板（用于控制显示/隐藏）
+    private lateinit var buttonWorkingDirectoryPanel: JComponent
+
     // Button 终端名称面板（用于控制显示/隐藏）
     private lateinit var buttonTerminalNamePanel: JComponent
 
@@ -218,7 +221,10 @@ class CCBarSettingsPanel {
         commandPanel.add(buttonCommandField, BorderLayout.CENTER)
         panel.add(commandPanel)
 
-        // Working Directory 字段（新增）
+        // Working Directory 字段（仅直接命令模式时显示）
+        buttonWorkingDirectoryPanel = JPanel().apply {
+            layout = BoxLayout(this, BoxLayout.Y_AXIS)
+        }
         val workDirPanel = JPanel(BorderLayout())
         workDirPanel.add(JLabel("工作目录:"), BorderLayout.WEST)
         val projectPath = getCurrentProjectPath()
@@ -238,7 +244,7 @@ class CCBarSettingsPanel {
             })
         }
         workDirPanel.add(buttonWorkingDirectoryField, BorderLayout.CENTER)
-        panel.add(workDirPanel)
+        buttonWorkingDirectoryPanel.add(workDirPanel)
         // 添加提示标签（单独一行，与输入框左对齐）
         val workDirHintPanel = JPanel(BorderLayout())
         workDirHintPanel.add(Box.createHorizontalStrut(JLabel("工作目录:").preferredSize.width), BorderLayout.WEST)
@@ -246,7 +252,8 @@ class CCBarSettingsPanel {
             foreground = com.intellij.ui.JBColor.GRAY
         }
         workDirHintPanel.add(workDirHint, BorderLayout.CENTER)
-        panel.add(workDirHintPanel)
+        buttonWorkingDirectoryPanel.add(workDirHintPanel)
+        panel.add(buttonWorkingDirectoryPanel)
 
         // Terminal Name 字段（仅直接命令模式时显示）
         buttonTerminalNamePanel = JPanel(BorderLayout())
@@ -593,6 +600,7 @@ class CCBarSettingsPanel {
      */
     private fun updateDirectCommandModeVisibility() {
         val isDirectMode = selectedButton?.isDirectCommandMode() == true
+        buttonWorkingDirectoryPanel.isVisible = isDirectMode
         buttonTerminalNamePanel.isVisible = isDirectMode
         optionPanel.isVisible = !isDirectMode
     }
