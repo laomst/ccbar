@@ -2,6 +2,7 @@ package com.github.ccbar.settings.ui
 
 import com.github.ccbar.settings.*
 import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
+import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.ui.TextFieldWithBrowseButton
 import com.intellij.ui.CollectionListModel
@@ -71,6 +72,13 @@ class CCBarSettingsPanel {
     private companion object {
         const val CARD_EMPTY = "empty"
         const val CARD_DETAIL = "detail"
+    }
+
+    /**
+     * 获取当前打开项目的根路径
+     */
+    private fun getCurrentProjectPath(): String? {
+        return ProjectManager.getInstance().openProjects.firstOrNull()?.basePath
     }
 
     /**
@@ -213,6 +221,7 @@ class CCBarSettingsPanel {
         // Working Directory 字段（新增）
         val workDirPanel = JPanel(BorderLayout())
         workDirPanel.add(JLabel("工作目录:"), BorderLayout.WEST)
+        val projectPath = getCurrentProjectPath()
         buttonWorkingDirectoryField = TextFieldWithBrowseButton().apply {
             addBrowseFolderListener(
                 "选择工作目录",
@@ -220,6 +229,8 @@ class CCBarSettingsPanel {
                 null,
                 FileChooserDescriptorFactory.createSingleFolderDescriptor()
             )
+            // 设置 placeholder
+            (textField as? JBTextField)?.emptyText?.text = projectPath ?: ""
             textField.document.addDocumentListener(object : DocumentListener {
                 override fun insertUpdate(e: DocumentEvent?) = updateButtonWorkingDirectory()
                 override fun removeUpdate(e: DocumentEvent?) = updateButtonWorkingDirectory()
@@ -228,6 +239,14 @@ class CCBarSettingsPanel {
         }
         workDirPanel.add(buttonWorkingDirectoryField, BorderLayout.CENTER)
         panel.add(workDirPanel)
+        // 添加提示标签（单独一行，与输入框左对齐）
+        val workDirHintPanel = JPanel(BorderLayout())
+        workDirHintPanel.add(Box.createHorizontalStrut(JLabel("工作目录:").preferredSize.width), BorderLayout.WEST)
+        val workDirHint = JLabel("留空时使用项目根路径").apply {
+            foreground = com.intellij.ui.JBColor.GRAY
+        }
+        workDirHintPanel.add(workDirHint, BorderLayout.CENTER)
+        panel.add(workDirHintPanel)
 
         // Terminal Name 字段（仅直接命令模式时显示）
         buttonTerminalNamePanel = JPanel(BorderLayout())
@@ -327,6 +346,7 @@ class CCBarSettingsPanel {
         // Working Directory
         val dirPanel = JPanel(BorderLayout())
         dirPanel.add(JLabel("工作目录:"), BorderLayout.WEST)
+        val optionProjectPath = getCurrentProjectPath()
         workingDirectoryField = TextFieldWithBrowseButton().apply {
             addBrowseFolderListener(
                 "选择工作目录",
@@ -334,6 +354,8 @@ class CCBarSettingsPanel {
                 null,
                 FileChooserDescriptorFactory.createSingleFolderDescriptor()
             )
+            // 设置 placeholder
+            (textField as? JBTextField)?.emptyText?.text = optionProjectPath ?: ""
             textField.document.addDocumentListener(object : DocumentListener {
                 override fun insertUpdate(e: DocumentEvent?) = updateOptionDirectory()
                 override fun removeUpdate(e: DocumentEvent?) = updateOptionDirectory()
@@ -342,6 +364,14 @@ class CCBarSettingsPanel {
         }
         dirPanel.add(workingDirectoryField, BorderLayout.CENTER)
         panel.add(dirPanel)
+        // 添加提示标签（单独一行，与输入框左对齐）
+        val dirHintPanel = JPanel(BorderLayout())
+        dirHintPanel.add(Box.createHorizontalStrut(JLabel("工作目录:").preferredSize.width), BorderLayout.WEST)
+        val dirHint = JLabel("留空时使用项目根路径").apply {
+            foreground = com.intellij.ui.JBColor.GRAY
+        }
+        dirHintPanel.add(dirHint, BorderLayout.CENTER)
+        panel.add(dirHintPanel)
 
         // Default Terminal Name
         val terminalNamePanel = JPanel(BorderLayout())
