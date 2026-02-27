@@ -1130,9 +1130,11 @@ class CCBarSettingsPanel {
     // ==================== Configurable 接口实现 ====================
 
     fun isModified(): Boolean {
-        // 提交正在编辑中的单元格并同步到数据模型
-        subButtonTable.cellEditor?.stopCellEditing()
-        syncSubButtonTableToModel()
+        // 如果表格正在编辑中，不停止编辑，直接返回 true（假设有修改）
+        // 这样可以避免在用户编辑过程中被定期调用的 isModified() 干扰编辑
+        if (subButtonTable.isEditing) {
+            return true
+        }
 
         val settings = CCBarSettings.getInstance()
         val originalState = settings.state
