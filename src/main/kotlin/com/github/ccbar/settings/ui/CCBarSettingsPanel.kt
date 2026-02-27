@@ -11,6 +11,7 @@ import com.intellij.ui.table.JBTable
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.components.BorderLayoutPanel
 import java.awt.BorderLayout
+import java.awt.CardLayout
 import java.io.File
 import java.util.*
 import javax.swing.*
@@ -42,8 +43,14 @@ class CCBarSettingsPanel {
     private lateinit var buttonWorkingDirectoryField: TextFieldWithBrowseButton
     private lateinit var buttonTerminalNameField: JBTextField
 
+    // Button 终端名称面板（用于控制显示/隐藏）
+    private lateinit var buttonTerminalNamePanel: JComponent
+
     // Options 面板引用（用于控制显示/隐藏）
     private lateinit var optionPanel: JComponent
+
+    // 右侧详情容器（用于切换空状态和详情面板）
+    private lateinit var rightContainer: JPanel
 
     // Option 详情字段
     private lateinit var optionNameField: JBTextField
@@ -57,6 +64,12 @@ class CCBarSettingsPanel {
 
     // 忽略更新标志（用于批量更新时避免循环）
     private var ignoreUpdate = false
+
+    // 卡片布局常量
+    private companion object {
+        const val CARD_EMPTY = "empty"
+        const val CARD_DETAIL = "detail"
+    }
 
     /**
      * 创建主面板
@@ -77,13 +90,31 @@ class CCBarSettingsPanel {
         // 左侧：Button 列表
         splitter.leftComponent = createButtonListPanel()
 
-        // 右侧：Button 详情 + Option 列表 + Option 详情
-        splitter.rightComponent = createDetailPanel()
+        // 右侧：使用卡片布局切换空状态和详情面板
+        rightContainer = JPanel(CardLayout())
+        rightContainer.add(createEmptyPanel(), CARD_EMPTY)
+        rightContainer.add(createDetailPanel(), CARD_DETAIL)
+
+        splitter.rightComponent = rightContainer
+
+        // 初始显示空状态面板
+        showEmptyPanel()
 
         mainPanel.add(splitter, BorderLayout.CENTER)
         mainPanel.add(createActionButtonsPanel(), BorderLayout.SOUTH)
 
         return mainPanel
+    }
+
+    /**
+     * 创建空状态面板（未选中按钮时显示）
+     */
+    private fun createEmptyPanel(): JComponent {
+        val panel = JPanel(BorderLayout())
+        val label = JLabel("请从左侧选择一个按钮", SwingConstants.CENTER)
+        label.foreground = com.intellij.ui.JBColor.GRAY
+        panel.add(label, BorderLayout.CENTER)
+        return panel
     }
 
     /**
@@ -205,9 +236,9 @@ class CCBarSettingsPanel {
         workDirPanel.add(buttonWorkingDirectoryField, BorderLayout.CENTER)
         panel.add(workDirPanel)
 
-        // Terminal Name 字段（新增）
-        val terminalNamePanel = JPanel(BorderLayout())
-        terminalNamePanel.add(JLabel("终端名称:"), BorderLayout.WEST)
+        // Terminal Name 字段（仅直接命令模式时显示）
+        buttonTerminalNamePanel = JPanel(BorderLayout())
+        buttonTerminalNamePanel.add(JLabel("终端名称:"), BorderLayout.WEST)
         buttonTerminalNameField = JBTextField().apply {
             document.addDocumentListener(object : DocumentListener {
                 override fun insertUpdate(e: DocumentEvent?) = updateButtonTerminalName()
@@ -215,8 +246,8 @@ class CCBarSettingsPanel {
                 override fun changedUpdate(e: DocumentEvent?) = updateButtonTerminalName()
             })
         }
-        terminalNamePanel.add(buttonTerminalNameField, BorderLayout.CENTER)
-        panel.add(terminalNamePanel)
+        buttonTerminalNamePanel.add(buttonTerminalNameField, BorderLayout.CENTER)
+        panel.add(buttonTerminalNamePanel)
 
         outerPanel.add(panel, BorderLayout.NORTH)
         return outerPanel
@@ -450,11 +481,23 @@ class CCBarSettingsPanel {
             selectedButton = buttonListModel.getElementAt(index)
             updateButtonDetail()
             updateOptionList()
+            showDetailPanel()
         } else {
             selectedButton = null
             clearButtonDetail()
             optionListModel.removeAll()
+            showEmptyPanel()
         }
+    }
+
+    private fun showEmptyPanel() {
+        val layout = rightContainer.layout as CardLayout
+        layout.show(rightContainer, CARD_EMPTY)
+    }
+
+    private fun showDetailPanel() {
+        val layout = rightContainer.layout as CardLayout
+        layout.show(rightContainer, CARD_DETAIL)
     }
 
     private fun updateButtonDetail() {
@@ -466,8 +509,8 @@ class CCBarSettingsPanel {
             buttonCommandField.text = button.command
             buttonWorkingDirectoryField.text = button.workingDirectory
             buttonTerminalNameField.text = button.defaultTerminalName
-            // 更新 Options 面板显示状态
-            updateOptionPanelVisibility()
+            // 更新直接命令模式相关字段的显示状态
+            updateDirectCommandModeVisibility()
         } finally {
             ignoreUpdate = false
         }
@@ -481,8 +524,6 @@ class CCBarSettingsPanel {
             buttonCommandField.text = ""
             buttonWorkingDirectoryField.text = ""
             buttonTerminalNameField.text = ""
-            // 显示 Options 面板
-            optionPanel.isVisible = true
         } finally {
             ignoreUpdate = false
         }
@@ -502,8 +543,8 @@ class CCBarSettingsPanel {
     private fun updateButtonCommand() {
         if (ignoreUpdate) return
         selectedButton?.command = buttonCommandField.text
-        // 切换 Options 面板显示状态
-        updateOptionPanelVisibility()
+        // 切换直接命令模式相关字段的显示状态
+        updateDirectCommandModeVisibility()
     }
 
     private fun updateButtonWorkingDirectory() {
@@ -516,8 +557,14 @@ class CCBarSettingsPanel {
         selectedButton?.defaultTerminalName = buttonTerminalNameField.text
     }
 
-    private fun updateOptionPanelVisibility() {
+    /**
+     * 更新直接命令模式相关字段的显示状态
+     * - 终端名称字段：仅在直接命令模式下显示
+     * - Options 面板：仅在选项列表模式下显示
+     */
+    private fun updateDirectCommandModeVisibility() {
         val isDirectMode = selectedButton?.isDirectCommandMode() == true
+        buttonTerminalNamePanel.isVisible = isDirectMode
         optionPanel.isVisible = !isDirectMode
     }
 
