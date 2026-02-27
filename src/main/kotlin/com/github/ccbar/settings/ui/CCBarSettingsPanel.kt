@@ -151,14 +151,10 @@ class CCBarSettingsPanel {
         // Option 列表和详情
         optionPanel = createOptionPanel()
 
-        // 使用垂直分割
-        val splitter = JSplitPane(JSplitPane.VERTICAL_SPLIT)
-        splitter.dividerSize = JBUI.scale(8)
-        splitter.dividerLocation = 180
-        splitter.topComponent = buttonDetailPanel
-        splitter.bottomComponent = optionPanel
+        // 使用 BorderLayout 替代 JSplitPane，便于控制 optionPanel 的显示/隐藏
+        panel.add(buttonDetailPanel, BorderLayout.NORTH)
+        panel.add(optionPanel, BorderLayout.CENTER)
 
-        panel.add(splitter, BorderLayout.CENTER)
         return panel
     }
 
