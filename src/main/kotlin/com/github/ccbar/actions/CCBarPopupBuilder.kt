@@ -68,15 +68,18 @@ object CCBarPopupBuilder {
             background = JBColor.PanelBackground
         }
 
+        // 先创建 popup，后续在回调中使用
+        lateinit var popup: JBPopup
+
         // 为每个 Option 创建一行
         for (option in buttonConfig.options) {
-            val optionRow = createOptionRow(project, option)
+            val optionRow = createOptionRow(project, option) { popup.closeOk(null) }
             mainPanel.add(optionRow)
             // 添加行间距
             mainPanel.add(Box.createVerticalStrut(8))
         }
 
-        return JBPopupFactory.getInstance()
+        popup = JBPopupFactory.getInstance()
             .createComponentPopupBuilder(mainPanel, null)
             .setRequestFocus(true)
             .setCancelOnClickOutside(true)
@@ -86,28 +89,30 @@ object CCBarPopupBuilder {
             .setShowBorder(true)
             .setTitle(buttonConfig.name)
             .createPopup()
+
+        return popup
     }
 
     /**
      * 创建 Option 行（表单样式）
      * 三列布局：选项名称 | 命令预览输入框 | 子按钮列表
      */
-    private fun createOptionRow(project: Project, option: OptionConfig): JPanel {
+    private fun createOptionRow(project: Project, option: OptionConfig, onClose: () -> Unit): JPanel {
         val rowPanel = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
             isOpaque = false
         }
 
         // 第一列：选项名称标签
-        val optionLabel = createOptionLabel(project, option)
+        val optionLabel = createOptionLabel(project, option, onClose)
         rowPanel.add(optionLabel)
 
         // 第二列：命令预览输入框
-        val commandPreview = createCommandPreviewField(project, option)
+        val commandPreview = createCommandPreviewField(project, option, onClose)
         rowPanel.add(commandPreview)
 
         // 第三列：子按钮
         for (subButton in option.subButtons) {
-            val button = createSubButton(project, option, subButton, commandPreview)
+            val button = createSubButton(project, option, subButton, commandPreview, onClose)
             rowPanel.add(button)
         }
 
@@ -120,7 +125,7 @@ object CCBarPopupBuilder {
     /**
      * 创建选项名称标签
      */
-    private fun createOptionLabel(project: Project, option: OptionConfig): JBLabel {
+    private fun createOptionLabel(project: Project, option: OptionConfig, onClose: () -> Unit): JBLabel {
         return JBLabel(option.name).apply {
             preferredSize = Dimension(80, ROW_HEIGHT)
             horizontalAlignment = SwingConstants.LEFT
@@ -131,6 +136,7 @@ object CCBarPopupBuilder {
 
             addMouseListener(object : MouseAdapter() {
                 override fun mouseClicked(e: MouseEvent?) {
+                    onClose()
                     CCBarTerminalService.openTerminal(project, option, null)
                 }
 
@@ -148,7 +154,7 @@ object CCBarPopupBuilder {
     /**
      * 创建命令预览输入框
      */
-    private fun createCommandPreviewField(project: Project, option: OptionConfig): JTextField {
+    private fun createCommandPreviewField(project: Project, option: OptionConfig, onClose: () -> Unit): JTextField {
         return JTextField(option.baseCommand).apply {
             isEditable = false
             preferredSize = Dimension(200, ROW_HEIGHT)
@@ -163,6 +169,7 @@ object CCBarPopupBuilder {
 
             addMouseListener(object : MouseAdapter() {
                 override fun mouseClicked(e: MouseEvent?) {
+                    onClose()
                     CCBarTerminalService.openTerminal(project, option, null)
                 }
 
@@ -190,7 +197,8 @@ object CCBarPopupBuilder {
         project: Project,
         option: OptionConfig,
         subButton: SubButtonConfig,
-        commandPreview: JTextField
+        commandPreview: JTextField,
+        onClose: () -> Unit
     ): JButton {
         val fullCommand = buildFullCommand(option.baseCommand, subButton.params)
 
@@ -218,6 +226,7 @@ object CCBarPopupBuilder {
             })
 
             addActionListener {
+                onClose()
                 CCBarTerminalService.openTerminal(project, option, subButton)
             }
         }
