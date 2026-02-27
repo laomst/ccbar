@@ -17,6 +17,8 @@ import java.util.*
 import javax.swing.*
 import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
+import javax.swing.event.TableModelEvent
+import javax.swing.event.TableModelListener
 import javax.swing.table.DefaultTableModel
 
 /**
@@ -229,7 +231,7 @@ class CCBarSettingsPanel {
 
         // Terminal Name 字段（仅直接命令模式时显示）
         buttonTerminalNamePanel = JPanel(BorderLayout())
-        buttonTerminalNamePanel.add(JLabel("终端名称:"), BorderLayout.WEST)
+        buttonTerminalNamePanel.add(JLabel("默认终端窗口名称:"), BorderLayout.WEST)
         buttonTerminalNameField = JBTextField().apply {
             document.addDocumentListener(object : DocumentListener {
                 override fun insertUpdate(e: DocumentEvent?) = updateButtonTerminalName()
@@ -343,7 +345,7 @@ class CCBarSettingsPanel {
 
         // Default Terminal Name
         val terminalNamePanel = JPanel(BorderLayout())
-        terminalNamePanel.add(JLabel("终端名称:"), BorderLayout.WEST)
+        terminalNamePanel.add(JLabel("默认终端窗口名称:"), BorderLayout.WEST)
         defaultTerminalNameField = JBTextField().apply {
             document.addDocumentListener(object : DocumentListener {
                 override fun insertUpdate(e: DocumentEvent?) = updateOptionTerminalName()
@@ -369,7 +371,14 @@ class CCBarSettingsPanel {
             override fun isCellEditable(row: Int, column: Int): Boolean = true
         }
         subButtonTable = JBTable(subButtonTableModel)
-        subButtonTable.selectionModel.addListSelectionListener { onSubButtonSelected() }
+
+        // 监听表格数据变更，实时同步到数据模型
+        subButtonTableModel.addTableModelListener { e ->
+            if (ignoreUpdate) return@addTableModelListener
+            if (e.type == TableModelEvent.UPDATE) {
+                syncSubButtonTableToModel()
+            }
+        }
 
         val decorator = com.intellij.ui.ToolbarDecorator.createDecorator(subButtonTable)
             .setAddAction { addSubButton() }
@@ -696,9 +705,27 @@ class CCBarSettingsPanel {
     // ==================== SubButton 表格操作 ====================
 
     private fun updateSubButtonTable() {
-        subButtonTableModel.rowCount = 0
-        selectedOption?.subButtons?.forEach { subButton ->
-            subButtonTableModel.addRow(arrayOf(subButton.name, subButton.params))
+        ignoreUpdate = true
+        try {
+            subButtonTableModel.rowCount = 0
+            selectedOption?.subButtons?.forEach { subButton ->
+                subButtonTableModel.addRow(arrayOf(subButton.name, subButton.params))
+            }
+        } finally {
+            ignoreUpdate = false
+        }
+    }
+
+    /**
+     * 将 SubButton 表格中的数据同步回数据模型
+     */
+    private fun syncSubButtonTableToModel() {
+        val option = selectedOption ?: return
+        for (i in 0 until subButtonTableModel.rowCount) {
+            if (i < option.subButtons.size) {
+                option.subButtons[i].name = subButtonTableModel.getValueAt(i, 0) as? String ?: ""
+                option.subButtons[i].params = subButtonTableModel.getValueAt(i, 1) as? String ?: ""
+            }
         }
     }
 
@@ -749,15 +776,6 @@ class CCBarSettingsPanel {
             subButtonTableModel.setValueAt(name, index + 1, 0)
             subButtonTableModel.setValueAt(params, index + 1, 1)
             subButtonTable.setRowSelectionInterval(index + 1, index + 1)
-        }
-    }
-
-    private fun onSubButtonSelected() {
-        val index = subButtonTable.selectedRow
-        if (index >= 0 && selectedOption != null && index < selectedOption!!.subButtons.size) {
-            val subButton = selectedOption!!.subButtons[index]
-            subButton.name = subButtonTableModel.getValueAt(index, 0) as? String ?: ""
-            subButton.params = subButtonTableModel.getValueAt(index, 1) as? String ?: ""
         }
     }
 
@@ -872,6 +890,10 @@ class CCBarSettingsPanel {
     // ==================== Configurable 接口实现 ====================
 
     fun isModified(): Boolean {
+        // 提交正在编辑中的单元格并同步到数据模型
+        subButtonTable.cellEditor?.stopCellEditing()
+        syncSubButtonTableToModel()
+
         val settings = CCBarSettings.getInstance()
         val originalState = settings.state
         return editingState.buttons != originalState.buttons
@@ -930,13 +952,10 @@ class CCBarSettingsPanel {
     }
 
     fun apply() {
+        // 提交正在编辑中的单元格
+        subButtonTable.cellEditor?.stopCellEditing()
         // 同步 SubButton 表格编辑到数据模型
-        for (i in 0 until subButtonTableModel.rowCount) {
-            if (selectedOption != null && i < selectedOption!!.subButtons.size) {
-                selectedOption!!.subButtons[i].name = subButtonTableModel.getValueAt(i, 0) as? String ?: ""
-                selectedOption!!.subButtons[i].params = subButtonTableModel.getValueAt(i, 1) as? String ?: ""
-            }
-        }
+        syncSubButtonTableToModel()
 
         // 保存到持久化层
         val settings = CCBarSettings.getInstance()
