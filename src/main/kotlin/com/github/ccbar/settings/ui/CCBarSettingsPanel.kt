@@ -5,6 +5,7 @@ import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.ui.TextFieldWithBrowseButton
 import com.intellij.ui.CollectionListModel
+import com.intellij.ui.OnePixelSplitter
 import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBTextField
 import com.intellij.ui.table.JBTable
@@ -12,7 +13,6 @@ import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.components.BorderLayoutPanel
 import java.awt.BorderLayout
 import java.awt.CardLayout
-import java.io.File
 import java.util.*
 import javax.swing.*
 import javax.swing.event.DocumentEvent
@@ -83,19 +83,14 @@ class CCBarSettingsPanel {
         val mainPanel = JPanel(BorderLayout())
 
         // 创建左右分割面板
-        val splitter = JSplitPane(JSplitPane.HORIZONTAL_SPLIT)
-        splitter.dividerSize = JBUI.scale(8)
-        splitter.dividerLocation = 200
-
-        // 左侧：Button 列表
-        splitter.leftComponent = createButtonListPanel()
-
-        // 右侧：使用卡片布局切换空状态和详情面板
-        rightContainer = JPanel(CardLayout())
-        rightContainer.add(createEmptyPanel(), CARD_EMPTY)
-        rightContainer.add(createDetailPanel(), CARD_DETAIL)
-
-        splitter.rightComponent = rightContainer
+        val splitter = OnePixelSplitter(false, 0.2f).apply {
+            firstComponent = createButtonListPanel()
+            // 右侧：使用卡片布局切换空状态和详情面板
+            rightContainer = JPanel(CardLayout())
+            rightContainer.add(createEmptyPanel(), CARD_EMPTY)
+            rightContainer.add(createDetailPanel(), CARD_DETAIL)
+            secondComponent = rightContainer
+        }
 
         // 初始显示空状态面板
         showEmptyPanel()
@@ -282,11 +277,10 @@ class CCBarSettingsPanel {
         rightPanel.add(optionDetailPanel, BorderLayout.NORTH)
         rightPanel.add(subButtonPanel, BorderLayout.CENTER)
 
-        val splitter = JSplitPane(JSplitPane.HORIZONTAL_SPLIT)
-        splitter.dividerSize = JBUI.scale(8)
-        splitter.dividerLocation = 150
-        splitter.leftComponent = listPanel
-        splitter.rightComponent = rightPanel
+        val splitter = OnePixelSplitter(false, 0.25f).apply {
+            firstComponent = listPanel
+            secondComponent = rightPanel
+        }
 
         panel.add(splitter, BorderLayout.CENTER)
         return panel
