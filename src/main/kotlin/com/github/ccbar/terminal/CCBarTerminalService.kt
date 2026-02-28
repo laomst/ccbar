@@ -9,7 +9,6 @@ import com.intellij.notification.Notifications
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.ui.Messages
 import java.io.File
 
 /**
@@ -25,8 +24,13 @@ object CCBarTerminalService {
      * 为 Option 打开终端（选项列表模式）
      */
     fun openTerminal(project: Project, option: OptionConfig, subButton: SubButtonConfig?) {
-        val terminalName = showNameDialog(project, option) ?: return
-        val command = buildCommand(option, subButton)
+        val baseCommand = buildCommand(option, subButton)
+        val dialog = CommandPreviewDialog(project, baseCommand, option.defaultTerminalName)
+        if (!dialog.showAndGet()) {
+            return
+        }
+        val terminalName = dialog.terminalName
+        val command = dialog.fullCommand
         val workingDir = resolveWorkingDirectory(project, option)
         createTerminalAndExecute(project, command, terminalName, workingDir)
     }
@@ -35,33 +39,15 @@ object CCBarTerminalService {
      * 为 Button 直接命令模式打开终端
      */
     fun openTerminalForButton(project: Project, button: ButtonConfig) {
-        val terminalName = showNameDialogForButton(project, button) ?: return
-        val command = button.command
+        val defaultName = button.defaultTerminalName.ifBlank { button.name }
+        val dialog = CommandPreviewDialog(project, button.command, defaultName)
+        if (!dialog.showAndGet()) {
+            return
+        }
+        val terminalName = dialog.terminalName
+        val command = dialog.fullCommand
         val workingDir = resolveWorkingDirectoryForButton(project, button)
         createTerminalAndExecute(project, command, terminalName, workingDir)
-    }
-
-    private fun showNameDialog(project: Project, option: OptionConfig): String? {
-        return Messages.showInputDialog(
-            project,
-            "请输入终端标签名称：",
-            "终端命名",
-            null,
-            option.defaultTerminalName,
-            null
-        )
-    }
-
-    private fun showNameDialogForButton(project: Project, button: ButtonConfig): String? {
-        val defaultName = button.defaultTerminalName.ifBlank { button.name }
-        return Messages.showInputDialog(
-            project,
-            "请输入终端标签名称：",
-            "终端命名",
-            null,
-            defaultName,
-            null
-        )
     }
 
     private fun buildCommand(option: OptionConfig, subButton: SubButtonConfig?): String {
