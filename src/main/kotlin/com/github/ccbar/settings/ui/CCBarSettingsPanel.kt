@@ -1246,6 +1246,7 @@ class CCBarSettingsPanel(private val project: Project?) {
             .setRequestFocus(false)
             .setCancelOnClickOutside(true)
             .setCancelOnWindowDeactivation(true)
+            .setBorderColor(java.awt.Color.GRAY)
             .createPopup()
 
         addOptionPopup?.show(point)
@@ -1257,8 +1258,9 @@ class CCBarSettingsPanel(private val project: Project?) {
     private fun createBalloonItem(text: String, onClick: () -> Unit): JLabel {
         return JLabel(text).apply {
             cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
-            border = JBUI.Borders.empty(4, 8)
+            border = JBUI.Borders.empty(6, 12)
             isOpaque = true
+            background = UIManager.getColor("Panel.background")
             alignmentX = 0.0f
             addMouseListener(object : MouseAdapter() {
                 override fun mouseClicked(e: MouseEvent) {

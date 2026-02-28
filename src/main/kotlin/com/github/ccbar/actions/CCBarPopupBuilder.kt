@@ -53,17 +53,25 @@ object CCBarPopupBuilder {
     private val FIELD_BORDER_COLOR: Color
         get() = JBColor(Color(200, 200, 200), Color(85, 85, 85))
 
-    // 按钮背景色
-    private val BUTTON_BACKGROUND: Color
-        get() = JBColor(Color(240, 240, 240), Color(75, 75, 75))
+    // 按钮绿色半透明叠加层 - 中心色（透明度低）
+    private val BUTTON_OVERLAY_CENTER: Color
+        get() = JBColor(Color(0, 140, 0, 8), Color(0, 180, 0, 10))
 
-    // 按钮悬浮背景色
-    private val BUTTON_HOVER_BACKGROUND: Color
-        get() = JBColor(Color(220, 220, 220), Color(90, 90, 90))
+    // 按钮绿色半透明叠加层 - 边缘色（透明度高）
+    private val BUTTON_OVERLAY_EDGE: Color
+        get() = JBColor(Color(0, 140, 0, 35), Color(0, 180, 0, 45))
 
-    // 按钮文字颜色
-    private val BUTTON_FOREGROUND: Color
-        get() = JBColor(Color(60, 60, 60), Color(200, 200, 200))
+    // 按钮绿色半透明叠加层 - 悬浮中心色
+    private val BUTTON_HOVER_OVERLAY_CENTER: Color
+        get() = JBColor(Color(0, 140, 0, 20), Color(0, 180, 0, 25))
+
+    // 按钮绿色半透明叠加层 - 悬浮边缘色
+    private val BUTTON_HOVER_OVERLAY_EDGE: Color
+        get() = JBColor(Color(0, 140, 0, 60), Color(0, 180, 0, 75))
+
+    // 按钮边框颜色（绿色调半透明）
+    private val BUTTON_BORDER_COLOR: Color
+        get() = JBColor(Color(0, 140, 0, 60), Color(0, 180, 0, 70))
 
     // 标签文字颜色
     private val LABEL_FOREGROUND: Color
@@ -173,6 +181,18 @@ object CCBarPopupBuilder {
     }
 
     /**
+     * 创建一个用于测量宽度的临时按钮，样式与实际 SubButton 保持一致
+     */
+    private fun createMeasureButton(name: String): JButton {
+        return JButton(name).apply {
+            border = BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(BUTTON_BORDER_COLOR, 1),
+                JBUI.Borders.empty(4, 12)
+            )
+        }
+    }
+
+    /**
      * 计算所有选项中按钮总宽度的最大值
      */
     private fun calculateMaxButtonsWidth(buttonConfig: ButtonConfig): Int {
@@ -182,9 +202,7 @@ object CCBarPopupBuilder {
             if (!option.isSeparator()) {
                 var rowWidth = 0
                 for (subButton in option.subButtons) {
-                    // 使用按钮的自然宽度
-                    val btn = JButton(subButton.name)
-                    btn.margin = JBUI.insets(4, 12)
+                    val btn = createMeasureButton(subButton.name)
                     rowWidth += btn.preferredSize.width
                 }
                 if (rowWidth > maxWidth) {
@@ -270,19 +288,17 @@ object CCBarPopupBuilder {
 
         val subButtons = option.subButtons
 
-        // 计算当前行按钮总宽度（使用按钮的自然宽度）
+        // 计算当前行按钮总宽度（使用与实际按钮一致的样式测量）
         var currentButtonsWidth = 0
         for (subButton in subButtons) {
-            val btn = JButton(subButton.name)
-            btn.margin = JBUI.insets(4, 12)
+            val btn = createMeasureButton(subButton.name)
             currentButtonsWidth += btn.preferredSize.width
         }
 
-        // 计算预览框宽度：基础宽度 + 补偿宽度
-        // 补偿宽度 = 最大按钮总宽度 - 当前行按钮总宽度
-        // 限制最大宽度，避免文字遮挡；同时确保最小宽度
-        val previewWidth = (basePreviewWidth + (maxButtonsWidth - currentButtonsWidth))
-            .coerceAtMost(MAX_PREVIEW_WIDTH)
+        // 预览框 + 按钮区域的目标总宽度固定为 basePreviewWidth + maxButtonsWidth
+        // 预览框宽度 = 目标总宽度 - 当前行按钮宽度，确保各行右边缘对齐
+        val targetTotalWidth = basePreviewWidth + maxButtonsWidth
+        val previewWidth = (targetTotalWidth - currentButtonsWidth)
             .coerceAtLeast(100)
 
         // 第一列：命令预览输入框
@@ -385,15 +401,40 @@ object CCBarPopupBuilder {
     ): JButton {
         val fullCommand = buildFullCommand(option.baseCommand, subButton.params)
 
-        return JButton(subButton.name).apply {
-            margin = JBUI.insets(4, 12)
-            background = BUTTON_BACKGROUND
-            foreground = BUTTON_FOREGROUND
-            isOpaque = true
-            isBorderPainted = false
+        var hovered = false
+
+        return object : JButton(subButton.name) {
+            override fun paintComponent(g: java.awt.Graphics) {
+                val g2d = g as java.awt.Graphics2D
+                g2d.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON)
+                // 先绘制面板背景
+                g2d.color = parent?.background ?: JBColor.PanelBackground
+                g2d.fillRect(0, 0, width, height)
+                // 叠加径向渐变半透明绿色：中心浅 → 边缘深
+                val cx = width / 2f
+                val cy = height / 2f
+                val radius = Math.max(width, height) / 2f
+                val centerColor = if (hovered) BUTTON_HOVER_OVERLAY_CENTER else BUTTON_OVERLAY_CENTER
+                val edgeColor = if (hovered) BUTTON_HOVER_OVERLAY_EDGE else BUTTON_OVERLAY_EDGE
+                g2d.paint = java.awt.RadialGradientPaint(
+                    cx, cy, radius,
+                    floatArrayOf(0f, 1f),
+                    arrayOf(centerColor, edgeColor)
+                )
+                g2d.fillRect(0, 0, width, height)
+                // 绘制文字
+                super.paintComponent(g)
+            }
+        }.apply {
+            isContentAreaFilled = false
             isFocusPainted = false
+            isOpaque = false
             cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
             toolTipText = "执行: $fullCommand"
+            border = BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(BUTTON_BORDER_COLOR, 1),
+                JBUI.Borders.empty(4, 12)
+            )
 
             // 使用按钮的自然宽度，确保能完整显示文字
             val naturalWidth = preferredSize.width
@@ -401,12 +442,22 @@ object CCBarPopupBuilder {
 
             addMouseListener(object : MouseAdapter() {
                 override fun mouseEntered(e: MouseEvent?) {
-                    background = BUTTON_HOVER_BACKGROUND
+                    hovered = true
+                    border = BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(JBColor.BLUE, 1),
+                        JBUI.Borders.empty(4, 12)
+                    )
+                    repaint()
                     commandPreview.text = fullCommand
                 }
 
                 override fun mouseExited(e: MouseEvent?) {
-                    background = BUTTON_BACKGROUND
+                    hovered = false
+                    border = BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(BUTTON_BORDER_COLOR, 1),
+                        JBUI.Borders.empty(4, 12)
+                    )
+                    repaint()
                     commandPreview.text = option.baseCommand
                 }
             })
