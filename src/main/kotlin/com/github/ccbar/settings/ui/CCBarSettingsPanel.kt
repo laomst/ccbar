@@ -1,6 +1,8 @@
 package com.github.ccbar.settings.ui
 
+import com.github.ccbar.icons.CCBarIcons
 import com.github.ccbar.settings.*
+import com.intellij.icons.AllIcons
 import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
@@ -517,23 +519,54 @@ class CCBarSettingsPanel(private val project: Project?) {
         namePanel.add(buttonNameField, BorderLayout.CENTER)
         panel.add(namePanel)
 
-        // Icon 字段
+        // Icon 字段（包含输入框 + 内置图标下拉按钮 + 文件浏览按钮）
         val iconPanel = JPanel(BorderLayout())
         iconPanel.add(JLabel("图标:"), BorderLayout.WEST)
+
+        // 创建带文件浏览的输入框
         buttonIconField = TextFieldWithBrowseButton().apply {
-            addBrowseFolderListener(
-                "选择图标文件",
-                "选择 SVG 或 PNG 图标文件",
-                null,
-                FileChooserDescriptorFactory.createSingleFileDescriptor()
-            )
             textField.document.addDocumentListener(object : DocumentListener {
                 override fun insertUpdate(e: DocumentEvent?) = updateButtonIcon()
                 override fun removeUpdate(e: DocumentEvent?) = updateButtonIcon()
                 override fun changedUpdate(e: DocumentEvent?) = updateButtonIcon()
             })
+            // 文件浏览功能
+            addBrowseFolderListener(
+                "选择图标文件",
+                "选择 SVG、PNG 或 ICO 图标文件",
+                null,
+                FileChooserDescriptorFactory.createSingleFileDescriptor()
+            )
         }
-        iconPanel.add(buttonIconField, BorderLayout.CENTER)
+
+        // 创建内置图标选择下拉按钮
+        val builtinIconBtn = JButton(AllIcons.General.ArrowDown).apply {
+            toolTipText = "选择内置图标"
+            isBorderPainted = true
+            isFocusPainted = false
+            margin = JBUI.insets(0, 2)
+            cursor = java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR)
+            // 设置为正方形
+            val size = preferredSize.height
+            preferredSize = Dimension(size, size)
+            addActionListener {
+                val popup = BuiltinIconSelector.createPopup(
+                    onIconSelected = { iconPath ->
+                        buttonIconField.text = iconPath
+                    },
+                    currentIconPath = buttonIconField.text
+                )
+                popup.showUnderneathOf(this)
+            }
+        }
+
+        // 创建组合面板（输入框 + 下拉按钮）
+        val iconFieldPanel = JPanel(BorderLayout()).apply {
+            add(buttonIconField, BorderLayout.CENTER)
+            add(builtinIconBtn, BorderLayout.EAST)
+        }
+
+        iconPanel.add(iconFieldPanel, BorderLayout.CENTER)
         panel.add(iconPanel)
 
         // Command 字段（新增）
@@ -999,6 +1032,8 @@ class CCBarSettingsPanel(private val project: Project?) {
     private fun updateButtonIcon() {
         if (ignoreUpdate) return
         selectedButton?.icon = buttonIconField.text
+        // 同步更新列表中的图标显示
+        buttonList.repaint()
     }
 
     private fun updateButtonCommand() {
@@ -1654,6 +1689,7 @@ class CCBarSettingsPanel(private val project: Project?) {
             val component = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus)
             if (value is ButtonConfig) {
                 text = value.name
+                icon = CCBarIcons.loadIcon(value.icon)
             }
             return component as JComponent
         }

@@ -280,7 +280,10 @@ object CCBarPopupBuilder {
 
         // 计算预览框宽度：基础宽度 + 补偿宽度
         // 补偿宽度 = 最大按钮总宽度 - 当前行按钮总宽度
-        val previewWidth = basePreviewWidth + (maxButtonsWidth - currentButtonsWidth)
+        // 限制最大宽度，避免文字遮挡；同时确保最小宽度
+        val previewWidth = (basePreviewWidth + (maxButtonsWidth - currentButtonsWidth))
+            .coerceAtMost(MAX_PREVIEW_WIDTH)
+            .coerceAtLeast(100)
 
         // 第一列：命令预览输入框
         val commandPreview = createCommandPreviewField(project, option, previewWidth, onClose)
@@ -337,7 +340,7 @@ object CCBarPopupBuilder {
         return JTextField(option.baseCommand).apply {
             isEditable = false
             preferredSize = Dimension(previewWidth, ROW_HEIGHT)
-            horizontalAlignment = SwingConstants.RIGHT
+            horizontalAlignment = SwingConstants.LEFT
             cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
             toolTipText = "点击执行: ${option.baseCommand}"
             background = FIELD_BACKGROUND
