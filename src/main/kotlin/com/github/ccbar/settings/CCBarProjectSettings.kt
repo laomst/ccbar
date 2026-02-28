@@ -23,7 +23,15 @@ class CCBarProjectSettings : PersistentStateComponent<CCBarProjectSettings.Proje
     data class ProjectState(
         var enabled: Boolean = false,  // 是否启用项目配置
         var buttons: MutableList<ButtonConfig> = mutableListOf()  // 按钮配置（复用现有数据结构）
-    )
+    ) {
+        /**
+         * 深拷贝
+         */
+        fun deepCopy(): ProjectState = ProjectState(
+            enabled = enabled,
+            buttons = buttons.map { it.deepCopy() }.toMutableList()
+        )
+    }
 
     private var myState = ProjectState()
 

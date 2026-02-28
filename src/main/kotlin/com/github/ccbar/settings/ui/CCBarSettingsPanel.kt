@@ -137,14 +137,14 @@ class CCBarSettingsPanel(private val project: Project?) {
      * 创建主面板
      */
     fun createPanel(): JComponent {
-        // 初始化系统配置编辑状态
+        // 初始化系统配置编辑状态（深拷贝，确保编辑状态和原始状态独立）
         val systemSettings = CCBarSettings.getInstance()
         editingSystemState = systemSettings.state.deepCopy()
 
         // 初始化项目配置编辑状态（如果有项目）
         if (project != null) {
             val projectSettings = CCBarProjectSettings.getInstance(project)
-            editingProjectState = projectSettings.state.copy()
+            editingProjectState = projectSettings.state.deepCopy()
             isProjectConfigEnabled = editingProjectState.enabled
 
             // 如果项目配置已启用，默认显示项目配置
@@ -321,6 +321,9 @@ class CCBarSettingsPanel(private val project: Project?) {
 
     /**
      * 保存当前编辑状态
+     * 注意：由于 buttonListModel 中的元素和 editingState.buttons 中的元素是同一个对象引用，
+     * 用户的修改会直接反映到 editingProjectState 或 editingSystemState 中，
+     * 所以不需要额外的深拷贝操作。
      */
     private fun saveCurrentEditingState() {
         // 提交正在编辑中的单元格
@@ -331,13 +334,7 @@ class CCBarSettingsPanel(private val project: Project?) {
         if (::subButtonTableModel.isInitialized) {
             syncSubButtonTableToModel()
         }
-
-        // 根据当前模式保存编辑状态
-        if (currentConfigMode == ConfigMode.PROJECT) {
-            editingProjectState.buttons = editingState.buttons.map { it.deepCopy() }.toMutableList()
-        } else {
-            editingSystemState = editingState.deepCopy()
-        }
+        // 不需要深拷贝，因为修改已经直接反映到 editingProjectState/editingSystemState 中
     }
 
     /**
@@ -1388,10 +1385,13 @@ class CCBarSettingsPanel(private val project: Project?) {
             .createSingleFileDescriptor()
             .withTitle("导入配置")
             .withDescription("选择要导入的 JSON 配置文件")
+        // 强制使用 IntelliJ 内置文件选择器，避免 macOS 原生对话框在模态窗口中的焦点问题
+        fileChooser.isForcedToUseIdeaFileChooser = true
 
         val file = com.intellij.openapi.fileChooser.FileChooser.chooseFile(
             fileChooser,
-            null,
+            mainPanelRef,
+            project,
             null
         )
 
@@ -1410,9 +1410,16 @@ class CCBarSettingsPanel(private val project: Project?) {
                         null
                     )
                     if (result == Messages.YES) {
-                        editingState.buttons = importedButtons.toMutableList()
+                        // 直接修改对应的配置状态，而不是通过 editingState getter（项目配置模式下会返回临时对象）
+                        val importedList = importedButtons.toMutableList()
+                        if (currentConfigMode == ConfigMode.PROJECT && editingProjectState.enabled) {
+                            editingProjectState.buttons = importedList
+                        } else {
+                            editingSystemState.buttons = importedList
+                        }
+
                         buttonListModel.removeAll()
-                        for (btn in editingState.buttons) {
+                        for (btn in importedList) {
                             buttonListModel.add(btn)
                         }
                         selectedButton = null
@@ -1442,9 +1449,11 @@ class CCBarSettingsPanel(private val project: Project?) {
             "选择保存位置",
             "json"
         )
+        // 强制使用 IntelliJ 内置文件选择器，避免 macOS 原生对话框在模态窗口中的焦点问题
+        fileSaverDescriptor.isForcedToUseIdeaFileChooser = true
 
         val dialog = com.intellij.openapi.fileChooser.FileChooserFactory.getInstance()
-            .createSaveFileDialog(fileSaverDescriptor, null as com.intellij.openapi.project.Project?)
+            .createSaveFileDialog(fileSaverDescriptor, mainPanelRef)
 
         val result = dialog.save(null as com.intellij.openapi.vfs.VirtualFile?, "ccbar-config.json")
 
@@ -1475,9 +1484,16 @@ class CCBarSettingsPanel(private val project: Project?) {
             null
         )
         if (result == Messages.YES) {
-            editingState.buttons = CCBarSettings.createDefaultButtons()
+            // 直接修改对应的配置状态，而不是通过 editingState getter（项目配置模式下会返回临时对象）
+            val defaultButtons = CCBarSettings.createDefaultButtons()
+            if (currentConfigMode == ConfigMode.PROJECT && editingProjectState.enabled) {
+                editingProjectState.buttons = defaultButtons
+            } else {
+                editingSystemState.buttons = defaultButtons
+            }
+
             buttonListModel.removeAll()
-            for (btn in editingState.buttons) {
+            for (btn in defaultButtons) {
                 buttonListModel.add(btn)
             }
             selectedButton = null
@@ -1586,25 +1602,20 @@ class CCBarSettingsPanel(private val project: Project?) {
 
         // 保存项目配置（如果有项目）
         if (project != null) {
-            // 根据当前模式更新对应的状态
-            if (currentConfigMode == ConfigMode.PROJECT) {
-                editingProjectState.buttons = editingState.buttons.map { it.deepCopy() }.toMutableList()
-            }
-
             val projectSettings = CCBarProjectSettings.getInstance(project)
-            projectSettings.loadState(editingProjectState.copy())
+            projectSettings.loadState(editingProjectState.deepCopy())
         }
     }
 
     fun reset() {
-        // 重置系统配置
+        // 重置系统配置（深拷贝，确保编辑状态和原始状态独立）
         val systemSettings = CCBarSettings.getInstance()
         editingSystemState = systemSettings.state.deepCopy()
 
         // 重置项目配置（如果有项目）
         if (project != null) {
             val projectSettings = CCBarProjectSettings.getInstance(project)
-            editingProjectState = projectSettings.state.copy()
+            editingProjectState = projectSettings.state.deepCopy()
             isProjectConfigEnabled = editingProjectState.enabled
 
             if (isProjectConfigEnabled) {
