@@ -7,6 +7,10 @@ import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.project.DumbAware
+import com.intellij.openapi.ui.popup.JBPopup
+import com.intellij.ui.popup.PopupFactoryImpl
+import java.awt.Point
+import java.awt.Component
 
 /**
  * CCBar 工具栏按钮 Action
@@ -31,8 +35,26 @@ class CCBarButtonAction(
             // 选项列表模式：弹出菜单
             val component = e.inputEvent?.component ?: return
             val popup = CCBarPopupBuilder.buildPopup(project, buttonConfig)
-            popup.showUnderneathOf(component)
+            // 弹框右对齐到按钮右边缘
+            showPopupRightAligned(popup, component)
         }
+    }
+
+    /**
+     * 显示弹框，右对齐到组件的右边缘
+     */
+    private fun showPopupRightAligned(popup: JBPopup, component: Component) {
+        val componentBounds = component.bounds
+        val locationOnScreen = component.locationOnScreen
+
+        // 计算弹框尺寸（需要先获取）
+        val popupSize = popup.content?.preferredSize ?: popup.size
+
+        // 计算弹框位置：右对齐到组件右边缘
+        val x = locationOnScreen.x + componentBounds.width - popupSize.width
+        val y = locationOnScreen.y + componentBounds.height
+
+        popup.showInScreenCoordinates(component, Point(x, y))
     }
 
     override fun update(e: AnActionEvent) {

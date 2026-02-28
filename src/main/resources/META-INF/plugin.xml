@@ -11,9 +11,11 @@
         <!-- 配置持久化 -->
         <applicationService
             serviceImplementation="com.github.ccbar.settings.CCBarSettings"/>
+        <projectService
+            serviceImplementation="com.github.ccbar.settings.CCBarProjectSettings"/>
 
         <!-- 设置页面 -->
-        <applicationConfigurable
+        <projectConfigurable
             parentId="tools"
             instance="com.github.ccbar.settings.CCBarSettingsConfigurable"
             id="com.github.ccbar.settings"

@@ -463,10 +463,16 @@ Button（工具栏按钮）
 
 ### 7.1 持久化机制
 
-使用 IDEA 的 `PersistentStateComponent` 实现配置持久化。配置为**应用级全局**，存储在：
-```
-<IDEA_CONFIG>/options/ccbar.xml
-```
+使用 IDEA 的 `PersistentStateComponent` 实现配置持久化。支持两级配置：
+
+| 配置级别 | 存储位置 | 作用域 | 说明 |
+|---------|---------|--------|------|
+| 系统配置 | `<IDEA_CONFIG>/options/ccbar.xml` | 全局 | 所有项目共享，升级 IDEA 时可通过 Toolbox 自动迁移 |
+| 项目配置 | `<PROJECT>/.idea/ccbar.xml` | 项目级 | 仅当前项目使用，跟随项目，可被版本控制 |
+
+**配置加载优先级**：
+1. 如果项目配置已启用 → 使用项目配置
+2. 如果项目配置未启用/不存在 → 使用系统配置
 
 ### 7.2 数据模型
 
@@ -591,6 +597,7 @@ private val defaultConfig = PluginConfig(
 | 自定义图标 | P0 | 支持 IDEA 内置图标和自定义 SVG/PNG |
 | Option/Button 工作目录 | P0 | 支持 Option/Button 级自定义工作目录，默认项目根目录 |
 | 导入/导出配置 | P1 | 支持 JSON 格式配置导入导出 |
+| 项目级配置 | P1 | 支持为每个项目设置独立的按钮配置，存储在 .idea/ccbar.xml |
 | 命令编辑支持 | P2 | 支持命令模板/变量替换 |
 | 环境变量配置 | P2 | 支持为 Option/SubButton 配置环境变量 |
 

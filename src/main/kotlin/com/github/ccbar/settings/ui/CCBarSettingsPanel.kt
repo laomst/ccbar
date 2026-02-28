@@ -2,6 +2,7 @@ package com.github.ccbar.settings.ui
 
 import com.github.ccbar.settings.*
 import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.ui.TextFieldWithBrowseButton
@@ -24,13 +25,40 @@ import javax.swing.event.TableModelListener
 import javax.swing.table.DefaultTableModel
 
 /**
+ * 配置模式
+ */
+private enum class ConfigMode {
+    SYSTEM,   // 系统配置
+    PROJECT   // 项目配置
+}
+
+/**
  * CCBar 设置面板
  * 使用 JBSplitter 构建左右分栏布局
+ * 支持系统配置和项目配置切换
  */
-class CCBarSettingsPanel {
+class CCBarSettingsPanel(private val project: Project?) {
 
-    // 编辑状态（深拷贝）
-    private var editingState: CCBarSettings.State = CCBarSettings.State()
+    // 系统配置编辑状态（深拷贝）
+    private var editingSystemState: CCBarSettings.State = CCBarSettings.State()
+
+    // 项目配置编辑状态（深拷贝）
+    private var editingProjectState: CCBarProjectSettings.ProjectState = CCBarProjectSettings.ProjectState()
+
+    // 当前配置模式
+    private var currentConfigMode: ConfigMode = ConfigMode.SYSTEM
+
+    // 当前编辑状态（根据模式动态切换）
+    private val editingState: CCBarSettings.State
+        get() = if (currentConfigMode == ConfigMode.PROJECT && editingProjectState.enabled) {
+            // 项目配置模式：使用包装器将项目配置伪装成系统配置格式
+            CCBarSettings.State(editingProjectState.buttons)
+        } else {
+            editingSystemState
+        }
+
+    // 项目配置是否启用
+    private var isProjectConfigEnabled: Boolean = false
 
     // UI 组件
     private lateinit var buttonListModel: CollectionListModel<ButtonConfig>
@@ -102,20 +130,179 @@ class CCBarSettingsPanel {
      * 获取当前打开项目的根路径
      */
     private fun getCurrentProjectPath(): String? {
-        return ProjectManager.getInstance().openProjects.firstOrNull()?.basePath
+        return project?.basePath ?: ProjectManager.getInstance().openProjects.firstOrNull()?.basePath
     }
 
     /**
      * 创建主面板
      */
     fun createPanel(): JComponent {
-        // 初始化编辑状态
-        val settings = CCBarSettings.getInstance()
-        editingState = settings.state.deepCopy()
+        // 初始化系统配置编辑状态
+        val systemSettings = CCBarSettings.getInstance()
+        editingSystemState = systemSettings.state.deepCopy()
+
+        // 初始化项目配置编辑状态（如果有项目）
+        if (project != null) {
+            val projectSettings = CCBarProjectSettings.getInstance(project)
+            editingProjectState = projectSettings.state.copy()
+            isProjectConfigEnabled = editingProjectState.enabled
+
+            // 如果项目配置已启用，默认显示项目配置
+            if (isProjectConfigEnabled) {
+                currentConfigMode = ConfigMode.PROJECT
+            }
+        }
 
         // 创建主面板
         val mainPanel = JPanel(BorderLayout())
+        mainPanelRef = mainPanel
 
+        // 如果有项目，添加项目配置控制区域
+        if (project != null) {
+            mainPanel.add(createProjectConfigControlPanel(), BorderLayout.NORTH)
+        }
+
+        // 创建配置内容区域
+        val contentPanel = if (project != null && isProjectConfigEnabled) {
+            // 有项目且启用项目配置：显示 Tab 切换
+            createTabbedConfigPanel()
+        } else {
+            // 无项目或未启用项目配置：直接显示系统配置
+            createSingleConfigPanel()
+        }
+        mainPanel.add(contentPanel, BorderLayout.CENTER)
+
+        // 底部操作按钮
+        mainPanel.add(createActionButtonsPanel(), BorderLayout.SOUTH)
+
+        return mainPanel
+    }
+
+    /**
+     * 创建项目配置控制面板（头部提示区域）
+     */
+    private fun createProjectConfigControlPanel(): JComponent {
+        val panel = JPanel(BorderLayout())
+        panel.border = JBUI.Borders.empty(8, 8, 0, 8)
+
+        // 左侧提示信息
+        val infoLabel = JLabel().apply {
+            icon = com.intellij.icons.AllIcons.General.Information
+            horizontalTextPosition = SwingConstants.RIGHT
+            iconTextGap = JBUI.scale(4)
+        }
+        panel.add(infoLabel, BorderLayout.CENTER)
+
+        // 右侧操作按钮
+        val actionButton = JButton()
+        panel.add(actionButton, BorderLayout.EAST)
+
+        // 更新显示状态
+        updateProjectConfigControlPanel(infoLabel, actionButton)
+
+        return panel
+    }
+
+    /**
+     * 更新项目配置控制面板的显示状态
+     */
+    private fun updateProjectConfigControlPanel(infoLabel: JLabel, actionButton: JButton) {
+        if (isProjectConfigEnabled) {
+            infoLabel.text = "项目配置已启用，系统配置将不会被加载"
+            actionButton.text = "禁用项目配置"
+            actionButton.actionListeners.forEach { actionButton.removeActionListener(it) }
+            actionButton.addActionListener { disableProjectConfig() }
+        } else {
+            infoLabel.text = "启用项目配置后，可以为当前项目设置独立的按钮配置。项目配置存储在 .idea 目录中，跟随项目。"
+            actionButton.text = "启用项目配置"
+            actionButton.actionListeners.forEach { actionButton.removeActionListener(it) }
+            actionButton.addActionListener { enableProjectConfig() }
+        }
+    }
+
+    /**
+     * 创建带 Tab 切换的配置面板
+     */
+    private lateinit var tabbedPaneRef: JTabbedPane
+    private lateinit var sharedConfigPanel: JComponent
+
+    private fun createTabbedConfigPanel(): JComponent {
+        val tabbedPane = JTabbedPane()
+        tabbedPaneRef = tabbedPane
+
+        // 创建共享的配置内容面板
+        sharedConfigPanel = createConfigContentPanel()
+
+        // 创建占位面板
+        val emptyPanel1 = JPanel()
+        val emptyPanel2 = JPanel()
+
+        // 两个 Tab 先用空面板占位
+        tabbedPane.addTab("系统配置", emptyPanel1)
+        tabbedPane.addTab("项目配置", emptyPanel2)
+
+        // 根据当前模式设置初始 Tab 内容
+        val initialIndex = if (currentConfigMode == ConfigMode.PROJECT) 1 else 0
+        tabbedPane.setComponentAt(initialIndex, sharedConfigPanel)
+
+        // 设置默认选中
+        tabbedPane.selectedIndex = initialIndex
+
+        // 监听 Tab 切换
+        tabbedPane.addChangeListener { e ->
+            val source = e.source as JTabbedPane
+            val newIndex = source.selectedIndex
+            val newMode = if (newIndex == 0) ConfigMode.SYSTEM else ConfigMode.PROJECT
+
+            if (newMode != currentConfigMode) {
+                // 切换模式前，保存当前编辑状态
+                saveCurrentEditingState()
+
+                // 切换模式
+                currentConfigMode = newMode
+
+                // 将共享面板移动到新 Tab
+                val oldIndex = if (newMode == ConfigMode.PROJECT) 0 else 1
+                source.setComponentAt(oldIndex, JPanel())  // 旧 Tab 用空面板
+                source.setComponentAt(newIndex, sharedConfigPanel)  // 新 Tab 用共享面板
+
+                // 刷新配置面板数据
+                refreshConfigPanel()
+
+                // 更新底部按钮面板
+                updateActionButtonsPanel()
+            }
+        }
+
+        return tabbedPane
+    }
+
+    /**
+     * 创建单一配置面板（无 Tab 切换）
+     */
+    private fun createSingleConfigPanel(): JComponent {
+        val outerPanel = JPanel(BorderLayout())
+
+        // 如果有项目但未启用项目配置，显示启用提示
+        if (project != null && !isProjectConfigEnabled) {
+            val hintPanel = JPanel(BorderLayout()).apply {
+                border = JBUI.Borders.empty(8)
+                add(JLabel("系统配置（所有项目共享）").apply {
+                    font = font.deriveFont(java.awt.Font.BOLD)
+                }, BorderLayout.WEST)
+            }
+            outerPanel.add(hintPanel, BorderLayout.NORTH)
+        }
+
+        outerPanel.add(createConfigContentPanel(), BorderLayout.CENTER)
+
+        return outerPanel
+    }
+
+    /**
+     * 创建配置内容面板（左右分栏布局）
+     */
+    private fun createConfigContentPanel(): JComponent {
         // 创建左右分割面板
         val splitter = OnePixelSplitter(false, 0.2f).apply {
             firstComponent = createButtonListPanel()
@@ -129,10 +316,133 @@ class CCBarSettingsPanel {
         // 初始显示空状态面板
         showEmptyPanel()
 
-        mainPanel.add(splitter, BorderLayout.CENTER)
-        mainPanel.add(createActionButtonsPanel(), BorderLayout.SOUTH)
+        return splitter
+    }
 
-        return mainPanel
+    /**
+     * 保存当前编辑状态
+     */
+    private fun saveCurrentEditingState() {
+        // 提交正在编辑中的单元格
+        if (::subButtonTable.isInitialized && subButtonTable.isEditing) {
+            subButtonTable.cellEditor?.stopCellEditing()
+        }
+        // 同步 SubButton 表格编辑到数据模型
+        if (::subButtonTableModel.isInitialized) {
+            syncSubButtonTableToModel()
+        }
+
+        // 根据当前模式保存编辑状态
+        if (currentConfigMode == ConfigMode.PROJECT) {
+            editingProjectState.buttons = editingState.buttons.map { it.deepCopy() }.toMutableList()
+        } else {
+            editingSystemState = editingState.deepCopy()
+        }
+    }
+
+    /**
+     * 刷新配置面板
+     */
+    private fun refreshConfigPanel() {
+        // 重新加载按钮列表
+        buttonListModel.removeAll()
+        for (btn in editingState.buttons) {
+            buttonListModel.add(btn)
+        }
+
+        // 清空选中状态
+        selectedButton = null
+        selectedOption = null
+        clearButtonDetail()
+        clearOptionDetail()
+        optionListModel.removeAll()
+        subButtonTableModel.rowCount = 0
+
+        showEmptyPanel()
+    }
+
+    /**
+     * 启用项目配置
+     * - 如果项目配置已有数据（之前禁用过），恢复之前的数据
+     * - 如果项目配置没有数据（首次启用），复制系统配置
+     */
+    private fun enableProjectConfig() {
+        // 如果项目配置没有数据，才复制系统配置
+        if (editingProjectState.buttons.isEmpty()) {
+            editingProjectState.buttons = editingSystemState.deepCopy().buttons
+        }
+
+        editingProjectState.enabled = true
+        isProjectConfigEnabled = true
+        currentConfigMode = ConfigMode.PROJECT
+
+        // 需要重建整个面板
+        rebuildMainPanel()
+    }
+
+    /**
+     * 禁用项目配置
+     */
+    private fun disableProjectConfig() {
+        editingProjectState.enabled = false
+        isProjectConfigEnabled = false
+        currentConfigMode = ConfigMode.SYSTEM
+
+        // 需要重建整个面板
+        rebuildMainPanel()
+    }
+
+    /**
+     * 重置项目配置为系统配置
+     */
+    private fun resetProjectConfigToSystem() {
+        val result = Messages.showYesNoDialog(
+            "确定要将项目配置重置为系统配置吗？当前项目配置将被覆盖。",
+            "确认重置",
+            null
+        )
+        if (result == Messages.YES) {
+            editingProjectState.buttons = editingSystemState.deepCopy().buttons
+            refreshConfigPanel()
+        }
+    }
+
+    /**
+     * 重建主面板（用于启用/禁用项目配置后刷新 UI）
+     */
+    private lateinit var mainPanelRef: JPanel
+
+    private fun rebuildMainPanel() {
+        // 保存当前主面板的引用
+        val parent = mainPanelRef.parent ?: return
+
+        // 创建新的主面板
+        val newMainPanel = JPanel(BorderLayout())
+
+        // 添加项目配置控制区域
+        if (project != null) {
+            newMainPanel.add(createProjectConfigControlPanel(), BorderLayout.NORTH)
+        }
+
+        // 创建配置内容区域
+        val contentPanel = if (isProjectConfigEnabled) {
+            createTabbedConfigPanel()
+        } else {
+            createSingleConfigPanel()
+        }
+        newMainPanel.add(contentPanel, BorderLayout.CENTER)
+
+        // 底部操作按钮
+        newMainPanel.add(createActionButtonsPanel(), BorderLayout.SOUTH)
+
+        // 替换面板
+        parent.layout = BorderLayout()
+        parent.removeAll()
+        parent.add(newMainPanel, BorderLayout.CENTER)
+        parent.revalidate()
+        parent.repaint()
+
+        mainPanelRef = newMainPanel
     }
 
     /**
@@ -489,12 +799,17 @@ class CCBarSettingsPanel {
 
     /**
      * 创建操作按钮面板（Import/Export/Reset）
+     * 系统配置：导入、导出
+     * 项目配置：导入、导出、重置为系统配置
      */
+    private lateinit var actionButtonsPanelRef: JPanel
+
     private fun createActionButtonsPanel(): JComponent {
         val panel = JPanel().apply {
             layout = BoxLayout(this, BoxLayout.X_AXIS)
             border = JBUI.Borders.empty(8)
         }
+        actionButtonsPanelRef = panel
 
         panel.add(Box.createHorizontalGlue())
 
@@ -508,13 +823,60 @@ class CCBarSettingsPanel {
         exportButton.addActionListener { exportConfig() }
         panel.add(exportButton)
 
-        panel.add(Box.createHorizontalStrut(JBUI.scale(8)))
+        // 仅项目配置模式下显示"重置为系统配置"按钮
+        if (project != null && currentConfigMode == ConfigMode.PROJECT) {
+            panel.add(Box.createHorizontalStrut(JBUI.scale(8)))
 
-        val resetButton = JButton("重置")
-        resetButton.addActionListener { resetConfig() }
-        panel.add(resetButton)
+            val resetButton = JButton("重置为系统配置")
+            resetButton.addActionListener { resetProjectConfigToSystem() }
+            panel.add(resetButton)
+        }
 
         return panel
+    }
+
+    /**
+     * 更新底部按钮面板
+     */
+    private fun updateActionButtonsPanel() {
+        if (!::actionButtonsPanelRef.isInitialized) return
+
+        val parent = actionButtonsPanelRef.parent ?: return
+
+        // 创建新的按钮面板
+        val newPanel = JPanel().apply {
+            layout = BoxLayout(this, BoxLayout.X_AXIS)
+            border = JBUI.Borders.empty(8)
+        }
+
+        newPanel.add(Box.createHorizontalGlue())
+
+        val importButton = JButton("导入")
+        importButton.addActionListener { importConfig() }
+        newPanel.add(importButton)
+
+        newPanel.add(Box.createHorizontalStrut(JBUI.scale(8)))
+
+        val exportButton = JButton("导出")
+        exportButton.addActionListener { exportConfig() }
+        newPanel.add(exportButton)
+
+        // 仅项目配置模式下显示"重置为系统配置"按钮
+        if (project != null && currentConfigMode == ConfigMode.PROJECT) {
+            newPanel.add(Box.createHorizontalStrut(JBUI.scale(8)))
+
+            val resetButton = JButton("重置为系统配置")
+            resetButton.addActionListener { resetProjectConfigToSystem() }
+            newPanel.add(resetButton)
+        }
+
+        // 替换面板
+        parent.remove(actionButtonsPanelRef)
+        parent.add(newPanel, BorderLayout.SOUTH)
+        parent.revalidate()
+        parent.repaint()
+
+        actionButtonsPanelRef = newPanel
     }
 
     // ==================== Button 列表操作 ====================
@@ -1132,13 +1494,22 @@ class CCBarSettingsPanel {
     fun isModified(): Boolean {
         // 如果表格正在编辑中，不停止编辑，直接返回 true（假设有修改）
         // 这样可以避免在用户编辑过程中被定期调用的 isModified() 干扰编辑
-        if (subButtonTable.isEditing) {
+        if (::subButtonTable.isInitialized && subButtonTable.isEditing) {
             return true
         }
 
-        val settings = CCBarSettings.getInstance()
-        val originalState = settings.state
-        return editingState.buttons != originalState.buttons
+        // 检查系统配置是否修改
+        val systemSettings = CCBarSettings.getInstance()
+        val systemModified = editingSystemState.buttons != systemSettings.state.buttons
+
+        // 检查项目配置是否修改（如果有项目）
+        var projectModified = false
+        if (project != null) {
+            val projectSettings = CCBarProjectSettings.getInstance(project)
+            projectModified = editingProjectState != projectSettings.state
+        }
+
+        return systemModified || projectModified
     }
 
     fun validate(): List<String> {
@@ -1201,28 +1572,62 @@ class CCBarSettingsPanel {
 
     fun apply() {
         // 提交正在编辑中的单元格
-        subButtonTable.cellEditor?.stopCellEditing()
+        if (::subButtonTable.isInitialized) {
+            subButtonTable.cellEditor?.stopCellEditing()
+        }
         // 同步 SubButton 表格编辑到数据模型
-        syncSubButtonTableToModel()
+        if (::subButtonTableModel.isInitialized) {
+            syncSubButtonTableToModel()
+        }
 
-        // 保存到持久化层
-        val settings = CCBarSettings.getInstance()
-        settings.loadState(editingState.deepCopy())
+        // 保存系统配置
+        val systemSettings = CCBarSettings.getInstance()
+        systemSettings.loadState(editingSystemState.deepCopy())
+
+        // 保存项目配置（如果有项目）
+        if (project != null) {
+            // 根据当前模式更新对应的状态
+            if (currentConfigMode == ConfigMode.PROJECT) {
+                editingProjectState.buttons = editingState.buttons.map { it.deepCopy() }.toMutableList()
+            }
+
+            val projectSettings = CCBarProjectSettings.getInstance(project)
+            projectSettings.loadState(editingProjectState.copy())
+        }
     }
 
     fun reset() {
-        val settings = CCBarSettings.getInstance()
-        editingState = settings.state.deepCopy()
+        // 重置系统配置
+        val systemSettings = CCBarSettings.getInstance()
+        editingSystemState = systemSettings.state.deepCopy()
+
+        // 重置项目配置（如果有项目）
+        if (project != null) {
+            val projectSettings = CCBarProjectSettings.getInstance(project)
+            editingProjectState = projectSettings.state.copy()
+            isProjectConfigEnabled = editingProjectState.enabled
+
+            if (isProjectConfigEnabled) {
+                currentConfigMode = ConfigMode.PROJECT
+            } else {
+                currentConfigMode = ConfigMode.SYSTEM
+            }
+        }
+
+        // 刷新按钮列表
         buttonListModel.removeAll()
         for (btn in editingState.buttons) {
             buttonListModel.add(btn)
         }
+
         selectedButton = null
         selectedOption = null
         clearButtonDetail()
         clearOptionDetail()
         optionListModel.removeAll()
-        subButtonTableModel.rowCount = 0
+        if (::subButtonTableModel.isInitialized) {
+            subButtonTableModel.rowCount = 0
+        }
     }
 
     // ==================== 列表渲染器 ====================
