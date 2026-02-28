@@ -3,13 +3,21 @@ package com.github.ccbar.settings.ui
 import com.github.ccbar.icons.CCBarIcons
 import com.github.ccbar.settings.*
 import com.intellij.icons.AllIcons
+import com.intellij.openapi.actionSystem.AnActionHolder
+import com.intellij.openapi.actionSystem.ActionWithDelegate
 import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.ui.TextFieldWithBrowseButton
+import com.intellij.openapi.ui.popup.JBPopup
+import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.ui.CollectionListModel
+import com.intellij.ui.CommonActionsPanel
 import com.intellij.ui.OnePixelSplitter
+import com.intellij.ui.ToolbarDecorator
+import com.intellij.ui.awt.RelativePoint
+import com.intellij.util.ui.UIUtil
 import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBTextField
 import com.intellij.ui.table.JBTable
@@ -17,7 +25,11 @@ import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.components.BorderLayoutPanel
 import java.awt.BorderLayout
 import java.awt.CardLayout
+import java.awt.Cursor
 import java.awt.Dimension
+import java.awt.Point
+import java.awt.event.MouseAdapter
+import java.awt.event.MouseEvent
 import java.util.*
 import javax.swing.*
 import javax.swing.event.DocumentEvent
@@ -121,6 +133,15 @@ class CCBarSettingsPanel(private val project: Project?) {
 
     // 忽略更新标志（用于批量更新时避免循环）
     private var ignoreUpdate = false
+
+    // 添加选项气泡弹窗
+    private var addOptionPopup: JBPopup? = null
+
+    // 气泡延迟关闭计时器
+    private var popupCloseTimer: javax.swing.Timer? = null
+
+    // 添加按钮的 UI 组件引用（用于气泡锚定）
+    private var addOptionButtonRef: JComponent? = null
 
     // 卡片布局常量
     private companion object {
@@ -674,15 +695,20 @@ class CCBarSettingsPanel(private val project: Project?) {
         }
 
         val listPanel = BorderLayoutPanel()
-        val decorator = com.intellij.ui.ToolbarDecorator.createDecorator(optionList)
-            .setAddAction {
-                // 显示下拉菜单，让用户选择添加选项或分割线
-                showAddOptionPopup()
+        val decorator = ToolbarDecorator.createDecorator(optionList)
+            .setAddAction { anActionButton ->
+                // 点击时也显示气泡（兼容键盘操作），使用 AnActionButton 官方 API 获取按钮位置
+                anActionButton.preferredPopupPoint?.let { showAddOptionBalloon(it) }
             }
             .setRemoveAction { removeOption() }
             .setMoveUpAction { moveOptionUp() }
             .setMoveDownAction { moveOptionDown() }
-        listPanel.addToCenter(decorator.createPanel())
+        val decoratorPanel = decorator.createPanel()
+
+        // 在添加按钮上设置鼠标悬浮监听
+        setupAddButtonHoverListener(decoratorPanel)
+
+        listPanel.addToCenter(decoratorPanel)
 
         // Option 详情
         optionDetailOuterPanel = createOptionDetailPanel()
@@ -1130,22 +1156,150 @@ class CCBarSettingsPanel(private val project: Project?) {
     }
 
     /**
-     * 显示添加 Option 的下拉菜单
+     * 延迟到面板显示后，在 ActionToolbar 中找到添加按钮的视觉组件并绑定鼠标悬浮监听。
+     * ActionToolbar 的子组件（ActionButton）是延迟创建的，
+     * 必须等面板显示后再查找，否则组件尚不存在。
      */
-    private fun showAddOptionPopup() {
-        val options = arrayOf("添加选项", "添加分割线")
-        val selected = Messages.showEditableChooseDialog(
-            "请选择要添加的类型：",
-            "添加",
-            Messages.getQuestionIcon(),
-            options,
-            options[0],
-            null
-        )
-        when (selected) {
-            "添加选项" -> addOption()
-            "添加分割线" -> addSeparator()
+    private fun setupAddButtonHoverListener(decoratorPanel: JPanel) {
+        decoratorPanel.addHierarchyListener {
+            if (addOptionButtonRef != null || !decoratorPanel.isShowing) return@addHierarchyListener
+            SwingUtilities.invokeLater { findAndBindAddButton(decoratorPanel) }
         }
+    }
+
+    /**
+     * 通过 IntelliJ 平台 API 在 ActionToolbar 中精确匹配添加按钮的视觉组件，
+     * 并为其绑定鼠标悬浮事件。
+     */
+    private fun findAndBindAddButton(decoratorPanel: JPanel) {
+        if (addOptionButtonRef != null) return
+
+        // 1. 通过 ToolbarDecorator 官方 API 获取 Add 对应的 AnActionButton（Action 对象）
+        val addAction = ToolbarDecorator.findAddButton(decoratorPanel) ?: return
+
+        // 2. 找到 CommonActionsPanel，获取其内部的 ActionToolbar
+        val actionsPanel = UIUtil.findComponentOfType(decoratorPanel, CommonActionsPanel::class.java) ?: return
+        val toolbarComp = actionsPanel.toolbar.component
+
+        // 3. 遍历 toolbar 子组件，匹配持有 Add Action 的视觉按钮
+        for (comp in toolbarComp.components) {
+            if (comp !is JComponent || comp !is AnActionHolder) continue
+            val action = (comp as AnActionHolder).action
+            if (action == addAction ||
+                (action is ActionWithDelegate<*> && action.delegate == addAction)) {
+                addOptionButtonRef = comp
+                // 禁用按钮的 tooltip，避免与气泡弹窗冲突
+                suppressActionButtonTooltip(comp)
+                comp.addMouseListener(object : MouseAdapter() {
+                    override fun mouseEntered(e: MouseEvent) {
+                        cancelPopupClose()
+                        // ActionToolbar 更新时会重新安装 HelpTooltip，需要每次进入时再次清除
+                        suppressActionButtonTooltip(comp)
+                        val pt = RelativePoint(comp.parent, Point(comp.x, comp.y + comp.height))
+                        showAddOptionBalloon(pt)
+                    }
+                    override fun mouseExited(e: MouseEvent) {
+                        schedulePopupClose()
+                    }
+                })
+                return
+            }
+        }
+    }
+
+    /**
+     * 显示添加选项的气泡弹窗
+     */
+    private fun showAddOptionBalloon(point: RelativePoint) {
+        // 如果已有弹窗正在显示，不重复创建
+        if (addOptionPopup?.isVisible == true) return
+
+        // 气泡内鼠标进出监听：进入取消关闭计时，离开启动关闭计时
+        val hoverListener = object : MouseAdapter() {
+            override fun mouseEntered(e: MouseEvent) = cancelPopupClose()
+            override fun mouseExited(e: MouseEvent) = schedulePopupClose()
+        }
+
+        val panel = JPanel().apply {
+            layout = BoxLayout(this, BoxLayout.Y_AXIS)
+            border = JBUI.Borders.empty(2)
+            addMouseListener(hoverListener)
+
+            add(createBalloonItem("添加选项") {
+                addOptionPopup?.cancel()
+                addOption()
+            }.also {
+                it.maximumSize = Dimension(Int.MAX_VALUE, it.preferredSize.height)
+                it.addMouseListener(hoverListener)
+            })
+            add(createBalloonItem("添加分割线") {
+                addOptionPopup?.cancel()
+                addSeparator()
+            }.also {
+                it.maximumSize = Dimension(Int.MAX_VALUE, it.preferredSize.height)
+                it.addMouseListener(hoverListener)
+            })
+        }
+
+        addOptionPopup = JBPopupFactory.getInstance()
+            .createComponentPopupBuilder(panel, null)
+            .setRequestFocus(false)
+            .setCancelOnClickOutside(true)
+            .setCancelOnWindowDeactivation(true)
+            .createPopup()
+
+        addOptionPopup?.show(point)
+    }
+
+    /**
+     * 创建气泡弹窗中的可点击项
+     */
+    private fun createBalloonItem(text: String, onClick: () -> Unit): JLabel {
+        return JLabel(text).apply {
+            cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+            border = JBUI.Borders.empty(4, 8)
+            isOpaque = true
+            alignmentX = 0.0f
+            addMouseListener(object : MouseAdapter() {
+                override fun mouseClicked(e: MouseEvent) {
+                    onClick()
+                }
+                override fun mouseEntered(e: MouseEvent) {
+                    background = UIManager.getColor("List.selectionBackground")
+                    foreground = UIManager.getColor("List.selectionForeground")
+                }
+                override fun mouseExited(e: MouseEvent) {
+                    background = UIManager.getColor("Panel.background")
+                    foreground = UIManager.getColor("Label.foreground")
+                }
+            })
+        }
+    }
+
+    /**
+     * 延迟关闭气泡弹窗（给用户从按钮移动到气泡的时间）
+     */
+    private fun schedulePopupClose() {
+        popupCloseTimer?.stop()
+        popupCloseTimer = javax.swing.Timer(300) {
+            addOptionPopup?.cancel()
+        }.apply { isRepeats = false; start() }
+    }
+
+    /**
+     * 取消气泡弹窗的延迟关闭
+     */
+    private fun cancelPopupClose() {
+        popupCloseTimer?.stop()
+    }
+
+    /**
+     * 清除 ActionButton 上的 tooltip（包括 IntelliJ 的 HelpTooltip 和 Swing 标准 tooltip）
+     */
+    private fun suppressActionButtonTooltip(comp: JComponent) {
+        comp.toolTipText = null
+        ToolTipManager.sharedInstance().unregisterComponent(comp)
+        com.intellij.ide.HelpTooltip.dispose(comp)
     }
 
     /**
