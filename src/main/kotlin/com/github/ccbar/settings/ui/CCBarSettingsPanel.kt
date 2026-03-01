@@ -22,7 +22,6 @@ import com.intellij.ui.awt.RelativePoint
 import com.intellij.util.ui.UIUtil
 import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBTextField
-import com.intellij.ui.table.JBTable
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.components.BorderLayoutPanel
 import java.awt.BorderLayout
@@ -36,9 +35,6 @@ import java.util.*
 import javax.swing.*
 import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
-import javax.swing.event.TableModelEvent
-import javax.swing.event.TableModelListener
-import javax.swing.table.DefaultTableModel
 
 /**
  * 配置模式
@@ -81,8 +77,7 @@ class CCBarSettingsPanel(private val project: Project?) {
     private lateinit var buttonList: JBList<ButtonConfig>
     private lateinit var optionListModel: CollectionListModel<OptionConfig>
     private lateinit var optionList: JBList<OptionConfig>
-    private lateinit var subButtonTableModel: DefaultTableModel
-    private lateinit var subButtonTable: JTable
+    private lateinit var subButtonSummaryField: JBTextField
 
     // Button 详情字段
     private lateinit var buttonNameField: JBTextField
@@ -107,7 +102,7 @@ class CCBarSettingsPanel(private val project: Project?) {
 
     // Button 终端模式面板和下拉框（仅直接命令模式时显示）
     private lateinit var buttonTerminalModePanel: JComponent
-    private lateinit var buttonTerminalModeCombo: JComboBox<String>
+    private lateinit var buttonTerminalModeCheckbox: JCheckBox
 
     // Button 简易模式复选框（仅选项列表模式时显示）
     private lateinit var simpleModePanel: JComponent
@@ -144,7 +139,7 @@ class CCBarSettingsPanel(private val project: Project?) {
 
     // Option 终端模式面板和下拉框
     private lateinit var optionTerminalModePanel: JPanel
-    private lateinit var optionTerminalModeCombo: JComboBox<String>
+    private lateinit var optionTerminalModeCheckbox: JCheckBox
 
     // Option 详情面板的边框（用于动态更新标题）
     private lateinit var optionDetailTitledBorder: javax.swing.border.TitledBorder
@@ -371,14 +366,7 @@ class CCBarSettingsPanel(private val project: Project?) {
      * 所以不需要额外的深拷贝操作。
      */
     private fun saveCurrentEditingState() {
-        // 提交正在编辑中的单元格
-        if (::subButtonTable.isInitialized && subButtonTable.isEditing) {
-            subButtonTable.cellEditor?.stopCellEditing()
-        }
-        // 同步 SubButton 表格编辑到数据模型
-        if (::subButtonTableModel.isInitialized) {
-            syncSubButtonTableToModel()
-        }
+        // SubButton 数据已通过对话框直接同步到数据模型，无需额外操作
         // 不需要深拷贝，因为修改已经直接反映到 editingProjectState/editingSystemState 中
     }
 
@@ -398,7 +386,7 @@ class CCBarSettingsPanel(private val project: Project?) {
         clearButtonDetail()
         clearOptionDetail()
         optionListModel.removeAll()
-        subButtonTableModel.rowCount = 0
+        updateSubButtonSummary()
 
         showEmptyPanel()
     }
@@ -626,7 +614,7 @@ class CCBarSettingsPanel(private val project: Project?) {
         iconPanel.add(iconFieldPanel, BorderLayout.CENTER)
         panel.add(iconPanel)
 
-        // Command 字段（新增）
+        // Command 字段
         val commandPanel = JPanel(BorderLayout())
         commandPanel.add(JLabel("直接命令:"), BorderLayout.WEST)
         buttonCommandHintLabel = JLabel("输入直接命令后将不支持绑定选项列表").apply {
@@ -656,32 +644,40 @@ class CCBarSettingsPanel(private val project: Project?) {
         commandHintPanel.add(buttonCommandHintLabel, BorderLayout.CENTER)
         panel.add(commandHintPanel)
 
-        // Environment Variables 字段（仅直接命令模式时显示）
-        buttonEnvVariablesPanel = JPanel(BorderLayout())
-        buttonEnvVariablesPanel.add(JLabel("环境变量:"), BorderLayout.WEST)
-        val buttonEnvFieldPanel = JPanel(BorderLayout())
-        buttonEnvVariablesField = JBTextField().apply {
-            emptyText.text = "KEY1=val1;KEY2=val2"
+        // Terminal Name 字段（仅直接命令模式时显示）— 紧跟图标后
+        buttonTerminalNamePanel = JPanel(BorderLayout())
+        buttonTerminalNamePanel.add(JLabel("默认终端窗口名称:"), BorderLayout.WEST)
+        buttonTerminalNameField = JBTextField().apply {
             document.addDocumentListener(object : DocumentListener {
-                override fun insertUpdate(e: DocumentEvent?) = updateButtonEnvVariables()
-                override fun removeUpdate(e: DocumentEvent?) = updateButtonEnvVariables()
-                override fun changedUpdate(e: DocumentEvent?) = updateButtonEnvVariables()
+                override fun insertUpdate(e: DocumentEvent?) = updateButtonTerminalName()
+                override fun removeUpdate(e: DocumentEvent?) = updateButtonTerminalName()
+                override fun changedUpdate(e: DocumentEvent?) = updateButtonTerminalName()
             })
         }
-        buttonEnvFieldPanel.add(buttonEnvVariablesField, BorderLayout.CENTER)
-        val buttonEnvEditButton = JButton("...").apply {
-            toolTipText = "编辑环境变量"
+        buttonTerminalNamePanel.add(buttonTerminalNameField, BorderLayout.CENTER)
+        panel.add(buttonTerminalNamePanel)
+
+        // Terminal Mode 字段（仅直接命令模式时显示）— 紧跟终端名称后
+        buttonTerminalModePanel = JPanel().apply {
+            layout = BoxLayout(this, BoxLayout.Y_AXIS)
+        }
+        val buttonTerminalModeRow = JPanel(BorderLayout())
+        buttonTerminalModeCheckbox = JCheckBox("在编辑器中打开").apply {
             addActionListener {
-                val currentProject = project ?: ProjectManager.getInstance().openProjects.firstOrNull()
-                val dialog = EnvVariablesDialog(currentProject, buttonEnvVariablesField.text)
-                if (dialog.showAndGet()) {
-                    buttonEnvVariablesField.text = dialog.envVariablesText
-                }
+                if (!ignoreUpdate) updateButtonTerminalMode()
             }
         }
-        buttonEnvFieldPanel.add(buttonEnvEditButton, BorderLayout.EAST)
-        buttonEnvVariablesPanel.add(buttonEnvFieldPanel, BorderLayout.CENTER)
-        panel.add(buttonEnvVariablesPanel)
+        buttonTerminalModeRow.add(buttonTerminalModeCheckbox, BorderLayout.WEST)
+        buttonTerminalModePanel.add(buttonTerminalModeRow)
+        val buttonTerminalModeHintPanel = JPanel(BorderLayout())
+        val buttonCheckboxSpacer = Box.createHorizontalStrut(JCheckBox().preferredSize.width)
+        buttonTerminalModeHintPanel.add(buttonCheckboxSpacer, BorderLayout.WEST)
+        buttonTerminalModeHintPanel.add(JLabel("默认通过终端工具窗口打开").apply {
+            foreground = com.intellij.ui.JBColor.GRAY
+            font = font.deriveFont(font.size2D - 1f)
+        }, BorderLayout.CENTER)
+        buttonTerminalModePanel.add(buttonTerminalModeHintPanel)
+        panel.add(buttonTerminalModePanel)
 
         // Working Directory 字段（仅直接命令模式时显示）
         buttonWorkingDirectoryPanel = JPanel().apply {
@@ -726,29 +722,32 @@ class CCBarSettingsPanel(private val project: Project?) {
         buttonWorkingDirectoryPanel.add(workDirHintPanel)
         panel.add(buttonWorkingDirectoryPanel)
 
-        // Terminal Name 字段（仅直接命令模式时显示）
-        buttonTerminalNamePanel = JPanel(BorderLayout())
-        buttonTerminalNamePanel.add(JLabel("默认终端窗口名称:"), BorderLayout.WEST)
-        buttonTerminalNameField = JBTextField().apply {
+        // Environment Variables 字段（仅直接命令模式时显示）
+        buttonEnvVariablesPanel = JPanel(BorderLayout())
+        buttonEnvVariablesPanel.add(JLabel("环境变量:"), BorderLayout.WEST)
+        val buttonEnvFieldPanel = JPanel(BorderLayout())
+        buttonEnvVariablesField = JBTextField().apply {
+            emptyText.text = "KEY1=val1;KEY2=val2"
             document.addDocumentListener(object : DocumentListener {
-                override fun insertUpdate(e: DocumentEvent?) = updateButtonTerminalName()
-                override fun removeUpdate(e: DocumentEvent?) = updateButtonTerminalName()
-                override fun changedUpdate(e: DocumentEvent?) = updateButtonTerminalName()
+                override fun insertUpdate(e: DocumentEvent?) = updateButtonEnvVariables()
+                override fun removeUpdate(e: DocumentEvent?) = updateButtonEnvVariables()
+                override fun changedUpdate(e: DocumentEvent?) = updateButtonEnvVariables()
             })
         }
-        buttonTerminalNamePanel.add(buttonTerminalNameField, BorderLayout.CENTER)
-        panel.add(buttonTerminalNamePanel)
-
-        // Terminal Mode 字段（仅直接命令模式时显示）
-        buttonTerminalModePanel = JPanel(BorderLayout())
-        buttonTerminalModePanel.add(JLabel("终端打开模式:"), BorderLayout.WEST)
-        buttonTerminalModeCombo = JComboBox(arrayOf("终端工具窗口", "编辑器")).apply {
+        buttonEnvFieldPanel.add(buttonEnvVariablesField, BorderLayout.CENTER)
+        val buttonEnvEditButton = JButton("...").apply {
+            toolTipText = "编辑环境变量"
             addActionListener {
-                if (!ignoreUpdate) updateButtonTerminalMode()
+                val currentProject = project ?: ProjectManager.getInstance().openProjects.firstOrNull()
+                val dialog = EnvVariablesDialog(currentProject, buttonEnvVariablesField.text)
+                if (dialog.showAndGet()) {
+                    buttonEnvVariablesField.text = dialog.envVariablesText
+                }
             }
         }
-        buttonTerminalModePanel.add(buttonTerminalModeCombo, BorderLayout.CENTER)
-        panel.add(buttonTerminalModePanel)
+        buttonEnvFieldPanel.add(buttonEnvEditButton, BorderLayout.EAST)
+        buttonEnvVariablesPanel.add(buttonEnvFieldPanel, BorderLayout.CENTER)
+        panel.add(buttonEnvVariablesPanel)
 
         // 简易模式复选框（仅选项列表模式时显示）
         simpleModePanel = JPanel(BorderLayout())
@@ -803,20 +802,12 @@ class CCBarSettingsPanel(private val project: Project?) {
 
         listPanel.addToCenter(decoratorPanel)
 
-        // Option 详情
+        // Option 详情（SubButton 已内嵌在详情面板中）
         optionDetailOuterPanel = createOptionDetailPanel()
-
-        // SubButton 表格
-        subButtonOuterPanel = createSubButtonPanel()
-
-        // 组合布局
-        val rightPanel = JPanel(BorderLayout())
-        rightPanel.add(optionDetailOuterPanel, BorderLayout.NORTH)
-        rightPanel.add(subButtonOuterPanel, BorderLayout.CENTER)
 
         val splitter = OnePixelSplitter(false, 0.25f).apply {
             firstComponent = listPanel
-            secondComponent = rightPanel
+            secondComponent = optionDetailOuterPanel
         }
 
         panel.add(splitter, BorderLayout.CENTER)
@@ -892,7 +883,7 @@ class CCBarSettingsPanel(private val project: Project?) {
         optionIconPanel.add(optionIconFieldPanel, BorderLayout.CENTER)
         panel.add(optionIconPanel)
 
-        // Base Command（仅普通选项显示）
+        // Base Command（仅普通选项显示）— 紧跟图标后
         optionCommandPanel = JPanel(BorderLayout())
         optionCommandPanel.add(JLabel("基础命令:"), BorderLayout.WEST)
         baseCommandField = JBTextField().apply {
@@ -905,32 +896,40 @@ class CCBarSettingsPanel(private val project: Project?) {
         optionCommandPanel.add(baseCommandField, BorderLayout.CENTER)
         panel.add(optionCommandPanel)
 
-        // Environment Variables（仅普通选项显示）
-        optionEnvVariablesPanel = JPanel(BorderLayout())
-        optionEnvVariablesPanel.add(JLabel("环境变量:"), BorderLayout.WEST)
-        val optionEnvFieldPanel = JPanel(BorderLayout())
-        optionEnvVariablesField = JBTextField().apply {
-            emptyText.text = "KEY1=val1;KEY2=val2"
+        // Default Terminal Name（仅普通选项显示）— 紧跟图标后
+        optionTerminalNamePanel = JPanel(BorderLayout())
+        optionTerminalNamePanel.add(JLabel("默认终端窗口名称:"), BorderLayout.WEST)
+        defaultTerminalNameField = JBTextField().apply {
             document.addDocumentListener(object : DocumentListener {
-                override fun insertUpdate(e: DocumentEvent?) = updateOptionEnvVariables()
-                override fun removeUpdate(e: DocumentEvent?) = updateOptionEnvVariables()
-                override fun changedUpdate(e: DocumentEvent?) = updateOptionEnvVariables()
+                override fun insertUpdate(e: DocumentEvent?) = updateOptionTerminalName()
+                override fun removeUpdate(e: DocumentEvent?) = updateOptionTerminalName()
+                override fun changedUpdate(e: DocumentEvent?) = updateOptionTerminalName()
             })
         }
-        optionEnvFieldPanel.add(optionEnvVariablesField, BorderLayout.CENTER)
-        val optionEnvEditButton = JButton("...").apply {
-            toolTipText = "编辑环境变量"
+        optionTerminalNamePanel.add(defaultTerminalNameField, BorderLayout.CENTER)
+        panel.add(optionTerminalNamePanel)
+
+        // Terminal Mode（仅普通选项显示）— 紧跟终端名称后
+        optionTerminalModePanel = JPanel().apply {
+            layout = BoxLayout(this, BoxLayout.Y_AXIS)
+        }
+        val optionTerminalModeRow = JPanel(BorderLayout())
+        optionTerminalModeCheckbox = JCheckBox("在编辑器中打开").apply {
             addActionListener {
-                val currentProject = project ?: ProjectManager.getInstance().openProjects.firstOrNull()
-                val dialog = EnvVariablesDialog(currentProject, optionEnvVariablesField.text)
-                if (dialog.showAndGet()) {
-                    optionEnvVariablesField.text = dialog.envVariablesText
-                }
+                if (!ignoreUpdate) updateOptionTerminalMode()
             }
         }
-        optionEnvFieldPanel.add(optionEnvEditButton, BorderLayout.EAST)
-        optionEnvVariablesPanel.add(optionEnvFieldPanel, BorderLayout.CENTER)
-        panel.add(optionEnvVariablesPanel)
+        optionTerminalModeRow.add(optionTerminalModeCheckbox, BorderLayout.WEST)
+        optionTerminalModePanel.add(optionTerminalModeRow)
+        val optionTerminalModeHintPanel = JPanel(BorderLayout())
+        val optionCheckboxSpacer = Box.createHorizontalStrut(JCheckBox().preferredSize.width)
+        optionTerminalModeHintPanel.add(optionCheckboxSpacer, BorderLayout.WEST)
+        optionTerminalModeHintPanel.add(JLabel("默认通过终端工具窗口打开").apply {
+            foreground = com.intellij.ui.JBColor.GRAY
+            font = font.deriveFont(font.size2D - 1f)
+        }, BorderLayout.CENTER)
+        optionTerminalModePanel.add(optionTerminalModeHintPanel)
+        panel.add(optionTerminalModePanel)
 
         // Working Directory（仅普通选项显示）
         optionDirPanel = JPanel(BorderLayout())
@@ -971,29 +970,36 @@ class CCBarSettingsPanel(private val project: Project?) {
         optionDirHintPanel.add(optionWorkDirHintLabel, BorderLayout.CENTER)
         panel.add(optionDirHintPanel)
 
-        // Default Terminal Name（仅普通选项显示）
-        optionTerminalNamePanel = JPanel(BorderLayout())
-        optionTerminalNamePanel.add(JLabel("默认终端窗口名称:"), BorderLayout.WEST)
-        defaultTerminalNameField = JBTextField().apply {
+        // Environment Variables（仅普通选项显示）
+        optionEnvVariablesPanel = JPanel(BorderLayout())
+        optionEnvVariablesPanel.add(JLabel("环境变量:"), BorderLayout.WEST)
+        val optionEnvFieldPanel = JPanel(BorderLayout())
+        optionEnvVariablesField = JBTextField().apply {
+            emptyText.text = "KEY1=val1;KEY2=val2"
             document.addDocumentListener(object : DocumentListener {
-                override fun insertUpdate(e: DocumentEvent?) = updateOptionTerminalName()
-                override fun removeUpdate(e: DocumentEvent?) = updateOptionTerminalName()
-                override fun changedUpdate(e: DocumentEvent?) = updateOptionTerminalName()
+                override fun insertUpdate(e: DocumentEvent?) = updateOptionEnvVariables()
+                override fun removeUpdate(e: DocumentEvent?) = updateOptionEnvVariables()
+                override fun changedUpdate(e: DocumentEvent?) = updateOptionEnvVariables()
             })
         }
-        optionTerminalNamePanel.add(defaultTerminalNameField, BorderLayout.CENTER)
-        panel.add(optionTerminalNamePanel)
-
-        // Terminal Mode（仅普通选项显示）
-        optionTerminalModePanel = JPanel(BorderLayout())
-        optionTerminalModePanel.add(JLabel("终端打开模式:"), BorderLayout.WEST)
-        optionTerminalModeCombo = JComboBox(arrayOf("终端工具窗口", "编辑器")).apply {
+        optionEnvFieldPanel.add(optionEnvVariablesField, BorderLayout.CENTER)
+        val optionEnvEditButton = JButton("...").apply {
+            toolTipText = "编辑环境变量"
             addActionListener {
-                if (!ignoreUpdate) updateOptionTerminalMode()
+                val currentProject = project ?: ProjectManager.getInstance().openProjects.firstOrNull()
+                val dialog = EnvVariablesDialog(currentProject, optionEnvVariablesField.text)
+                if (dialog.showAndGet()) {
+                    optionEnvVariablesField.text = dialog.envVariablesText
+                }
             }
         }
-        optionTerminalModePanel.add(optionTerminalModeCombo, BorderLayout.CENTER)
-        panel.add(optionTerminalModePanel)
+        optionEnvFieldPanel.add(optionEnvEditButton, BorderLayout.EAST)
+        optionEnvVariablesPanel.add(optionEnvFieldPanel, BorderLayout.CENTER)
+        panel.add(optionEnvVariablesPanel)
+
+        // SubButton 列表（单行：标签 + 只读摘要 + 编辑按钮）
+        subButtonOuterPanel = createSubButtonPanel()
+        panel.add(subButtonOuterPanel)
 
         outerPanel.add(panel, BorderLayout.NORTH)
         return outerPanel
@@ -1004,32 +1010,20 @@ class CCBarSettingsPanel(private val project: Project?) {
      */
     private fun createSubButtonPanel(): JComponent {
         val panel = JPanel(BorderLayout())
-        panel.border = BorderFactory.createTitledBorder("SubButton 列表")
 
-        subButtonTableModel = object : DefaultTableModel(arrayOf("名称", "参数"), 0) {
-            override fun isCellEditable(row: Int, column: Int): Boolean = true
+        panel.add(JLabel("SubButton 列表:"), BorderLayout.WEST)
+
+        subButtonSummaryField = JBTextField().apply {
+            isEditable = false
         }
-        subButtonTable = JBTable(subButtonTableModel)
+        panel.add(subButtonSummaryField, BorderLayout.CENTER)
 
-        // 监听表格数据变更，实时同步到数据模型
-        subButtonTableModel.addTableModelListener { e ->
-            if (ignoreUpdate) return@addTableModelListener
-            if (e.type == TableModelEvent.UPDATE) {
-                syncSubButtonTableToModel()
-            }
+        val editButton = JButton(AllIcons.Actions.Edit).apply {
+            toolTipText = "编辑 SubButton 列表"
+            addActionListener { openSubButtonEditDialog() }
         }
+        panel.add(editButton, BorderLayout.EAST)
 
-        val decorator = com.intellij.ui.ToolbarDecorator.createDecorator(subButtonTable)
-            .setAddActionName("添加")
-            .setRemoveActionName("删除")
-            .setMoveUpActionName("上移")
-            .setMoveDownActionName("下移")
-            .setAddAction { addSubButton() }
-            .setRemoveAction { removeSubButton() }
-            .setMoveUpAction { moveSubButtonUp() }
-            .setMoveDownAction { moveSubButtonDown() }
-
-        panel.add(decorator.createPanel(), BorderLayout.CENTER)
         return panel
     }
 
@@ -1219,7 +1213,7 @@ class CCBarSettingsPanel(private val project: Project?) {
             buttonEnvVariablesField.text = button.envVariables
             buttonWorkingDirectoryField.text = button.workingDirectory
             buttonTerminalNameField.text = button.defaultTerminalName
-            buttonTerminalModeCombo.selectedIndex = if (button.terminalMode == TerminalMode.EDITOR) 1 else 0
+            buttonTerminalModeCheckbox.isSelected = button.terminalMode == TerminalMode.EDITOR
             simpleModeCheckbox.isSelected = button.simpleMode
             // 更新直接命令模式相关字段的显示状态
             updateDirectCommandModeVisibility()
@@ -1240,7 +1234,7 @@ class CCBarSettingsPanel(private val project: Project?) {
             buttonEnvVariablesField.text = ""
             buttonWorkingDirectoryField.text = ""
             buttonTerminalNameField.text = ""
-            buttonTerminalModeCombo.selectedIndex = 0
+            buttonTerminalModeCheckbox.isSelected = false
             simpleModeCheckbox.isSelected = false
             // 重置提示文字状态
             updateCommandHintVisibility()
@@ -1288,7 +1282,7 @@ class CCBarSettingsPanel(private val project: Project?) {
 
     private fun updateButtonTerminalMode() {
         if (ignoreUpdate) return
-        selectedButton?.terminalMode = if (buttonTerminalModeCombo.selectedIndex == 1) TerminalMode.EDITOR else TerminalMode.TOOL_WINDOW
+        selectedButton?.terminalMode = if (buttonTerminalModeCheckbox.isSelected) TerminalMode.EDITOR else TerminalMode.TOOL_WINDOW
     }
 
     private fun updateSimpleMode() {
@@ -1369,7 +1363,7 @@ class CCBarSettingsPanel(private val project: Project?) {
             } else {
                 selectedOption = null
                 clearOptionDetail()
-                updateSubButtonTable()
+                updateSubButtonSummary()
             }
         }
     }
@@ -1567,7 +1561,7 @@ class CCBarSettingsPanel(private val project: Project?) {
                 optionListModel.remove(index)
                 selectedOption = null
                 clearOptionDetail()
-                updateSubButtonTable()
+                updateSubButtonSummary()
             }
         }
     }
@@ -1628,12 +1622,12 @@ class CCBarSettingsPanel(private val project: Project?) {
             } else {
                 // 普通选项：显示所有字段
                 showOptionDetail()
-                updateSubButtonTable()
+                updateSubButtonSummary()
             }
         } else {
             selectedOption = null
             clearOptionDetail()
-            updateSubButtonTable()
+            updateSubButtonSummary()
             showOptionDetail()
         }
     }
@@ -1722,7 +1716,7 @@ class CCBarSettingsPanel(private val project: Project?) {
             optionEnvVariablesField.text = option.envVariables
             workingDirectoryField.text = option.workingDirectory
             defaultTerminalNameField.text = option.defaultTerminalName
-            optionTerminalModeCombo.selectedIndex = if (option.terminalMode == TerminalMode.EDITOR) 1 else 0
+            optionTerminalModeCheckbox.isSelected = option.terminalMode == TerminalMode.EDITOR
             // 更新提示文字状态
             updateOptionWorkDirHintVisibility()
         } finally {
@@ -1739,7 +1733,7 @@ class CCBarSettingsPanel(private val project: Project?) {
             optionEnvVariablesField.text = ""
             workingDirectoryField.text = ""
             defaultTerminalNameField.text = ""
-            optionTerminalModeCombo.selectedIndex = 0
+            optionTerminalModeCheckbox.isSelected = false
             // 重置提示文字状态
             updateOptionWorkDirHintVisibility()
         } finally {
@@ -1782,83 +1776,28 @@ class CCBarSettingsPanel(private val project: Project?) {
 
     private fun updateOptionTerminalMode() {
         if (ignoreUpdate) return
-        selectedOption?.terminalMode = if (optionTerminalModeCombo.selectedIndex == 1) TerminalMode.EDITOR else TerminalMode.TOOL_WINDOW
+        selectedOption?.terminalMode = if (optionTerminalModeCheckbox.isSelected) TerminalMode.EDITOR else TerminalMode.TOOL_WINDOW
     }
 
-    // ==================== SubButton 表格操作 ====================
+    // ==================== SubButton 操作 ====================
 
-    private fun updateSubButtonTable() {
-        ignoreUpdate = true
-        try {
-            subButtonTableModel.rowCount = 0
-            selectedOption?.subButtons?.forEach { subButton ->
-                subButtonTableModel.addRow(arrayOf(subButton.name, subButton.params))
-            }
-        } finally {
-            ignoreUpdate = false
+    private fun updateSubButtonSummary() {
+        if (::subButtonSummaryField.isInitialized) {
+            val names = selectedOption?.subButtons?.map { it.name } ?: emptyList()
+            subButtonSummaryField.text = if (names.isEmpty()) "" else names.joinToString(" | ")
         }
     }
 
-    /**
-     * 将 SubButton 表格中的数据同步回数据模型
-     */
-    private fun syncSubButtonTableToModel() {
+    private fun openSubButtonEditDialog() {
         val option = selectedOption ?: return
-        for (i in 0 until subButtonTableModel.rowCount) {
-            if (i < option.subButtons.size) {
-                option.subButtons[i].name = subButtonTableModel.getValueAt(i, 0) as? String ?: ""
-                option.subButtons[i].params = subButtonTableModel.getValueAt(i, 1) as? String ?: ""
-            }
-        }
-    }
-
-    private fun addSubButton() {
-        val option = selectedOption ?: return
-        val newSubButton = SubButtonConfig(
-            id = UUID.randomUUID().toString(),
-            name = "New SubButton",
-            params = ""
-        )
-        option.subButtons.add(newSubButton)
-        subButtonTableModel.addRow(arrayOf(newSubButton.name, newSubButton.params))
-    }
-
-    private fun removeSubButton() {
-        val option = selectedOption ?: return
-        val index = subButtonTable.selectedRow
-        if (index >= 0) {
-            option.subButtons.removeAt(index)
-            subButtonTableModel.removeRow(index)
-        }
-    }
-
-    private fun moveSubButtonUp() {
-        val option = selectedOption ?: return
-        val index = subButtonTable.selectedRow
-        if (index > 0) {
-            Collections.swap(option.subButtons, index, index - 1)
-            val name = subButtonTableModel.getValueAt(index, 0)
-            val params = subButtonTableModel.getValueAt(index, 1)
-            subButtonTableModel.setValueAt(subButtonTableModel.getValueAt(index - 1, 0), index, 0)
-            subButtonTableModel.setValueAt(subButtonTableModel.getValueAt(index - 1, 1), index, 1)
-            subButtonTableModel.setValueAt(name, index - 1, 0)
-            subButtonTableModel.setValueAt(params, index - 1, 1)
-            subButtonTable.setRowSelectionInterval(index - 1, index - 1)
-        }
-    }
-
-    private fun moveSubButtonDown() {
-        val option = selectedOption ?: return
-        val index = subButtonTable.selectedRow
-        if (index < subButtonTableModel.rowCount - 1) {
-            Collections.swap(option.subButtons, index, index + 1)
-            val name = subButtonTableModel.getValueAt(index, 0)
-            val params = subButtonTableModel.getValueAt(index, 1)
-            subButtonTableModel.setValueAt(subButtonTableModel.getValueAt(index + 1, 0), index, 0)
-            subButtonTableModel.setValueAt(subButtonTableModel.getValueAt(index + 1, 1), index, 1)
-            subButtonTableModel.setValueAt(name, index + 1, 0)
-            subButtonTableModel.setValueAt(params, index + 1, 1)
-            subButtonTable.setRowSelectionInterval(index + 1, index + 1)
+        val currentProject = project ?: ProjectManager.getInstance().openProjects.firstOrNull()
+        val deepCopy = option.subButtons.map { it.deepCopy() }
+        val dialog = SubButtonEditDialog(currentProject, deepCopy)
+        if (dialog.showAndGet()) {
+            val edited = dialog.getEditedSubButtons()
+            option.subButtons.clear()
+            option.subButtons.addAll(edited)
+            updateSubButtonSummary()
         }
     }
 
@@ -1911,7 +1850,7 @@ class CCBarSettingsPanel(private val project: Project?) {
                         clearButtonDetail()
                         clearOptionDetail()
                         optionListModel.removeAll()
-                        subButtonTableModel.rowCount = 0
+                        updateSubButtonSummary()
 
                         Messages.showInfoMessage("配置导入成功！", "成功")
                     }
@@ -1985,19 +1924,13 @@ class CCBarSettingsPanel(private val project: Project?) {
             clearButtonDetail()
             clearOptionDetail()
             optionListModel.removeAll()
-            subButtonTableModel.rowCount = 0
+            updateSubButtonSummary()
         }
     }
 
     // ==================== Configurable 接口实现 ====================
 
     fun isModified(): Boolean {
-        // 如果表格正在编辑中，不停止编辑，直接返回 true（假设有修改）
-        // 这样可以避免在用户编辑过程中被定期调用的 isModified() 干扰编辑
-        if (::subButtonTable.isInitialized && subButtonTable.isEditing) {
-            return true
-        }
-
         // 检查系统配置是否修改
         val systemSettings = CCBarSettings.getInstance()
         val systemModified = editingSystemState.buttons != systemSettings.state.buttons
@@ -2071,15 +2004,6 @@ class CCBarSettingsPanel(private val project: Project?) {
     }
 
     fun apply() {
-        // 提交正在编辑中的单元格
-        if (::subButtonTable.isInitialized) {
-            subButtonTable.cellEditor?.stopCellEditing()
-        }
-        // 同步 SubButton 表格编辑到数据模型
-        if (::subButtonTableModel.isInitialized) {
-            syncSubButtonTableToModel()
-        }
-
         // 保存系统配置
         val systemSettings = CCBarSettings.getInstance()
         systemSettings.loadState(editingSystemState.deepCopy())
@@ -2120,9 +2044,7 @@ class CCBarSettingsPanel(private val project: Project?) {
         clearButtonDetail()
         clearOptionDetail()
         optionListModel.removeAll()
-        if (::subButtonTableModel.isInitialized) {
-            subButtonTableModel.rowCount = 0
-        }
+        updateSubButtonSummary()
     }
 
     // ==================== 列表渲染器 ====================
