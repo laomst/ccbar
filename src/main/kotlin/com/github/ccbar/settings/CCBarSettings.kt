@@ -193,6 +193,7 @@ data class ButtonConfig(
     var workingDirectory: String = "",  // 工作目录，留空使用项目根目录
     var defaultTerminalName: String = "",  // 直接命令模式的默认终端名称
     var terminalMode: String = "",  // 终端打开模式：""=工具窗口, "editor"=编辑器
+    var simpleMode: Boolean = false,  // 简易模式：仅显示选项名称，隐藏命令预览和子按钮
     var options: MutableList<OptionConfig> = mutableListOf()
 ) {
     /**
@@ -206,6 +207,7 @@ data class ButtonConfig(
         workingDirectory = workingDirectory,
         defaultTerminalName = defaultTerminalName,
         terminalMode = terminalMode,
+        simpleMode = simpleMode,
         options = options.map { it.deepCopy() }.toMutableList()
     )
 

@@ -103,6 +103,10 @@ class CCBarSettingsPanel(private val project: Project?) {
     private lateinit var buttonTerminalModePanel: JComponent
     private lateinit var buttonTerminalModeCombo: JComboBox<String>
 
+    // Button 简易模式复选框（仅选项列表模式时显示）
+    private lateinit var simpleModePanel: JComponent
+    private lateinit var simpleModeCheckbox: JCheckBox
+
     // Options 面板引用（用于控制显示/隐藏）
     private lateinit var optionPanel: JComponent
 
@@ -695,6 +699,16 @@ class CCBarSettingsPanel(private val project: Project?) {
         buttonTerminalModePanel.add(buttonTerminalModeCombo, BorderLayout.CENTER)
         panel.add(buttonTerminalModePanel)
 
+        // 简易模式复选框（仅选项列表模式时显示）
+        simpleModePanel = JPanel(BorderLayout())
+        simpleModeCheckbox = JCheckBox("简易模式（弹出菜单仅显示选项名称）").apply {
+            addActionListener {
+                if (!ignoreUpdate) updateSimpleMode()
+            }
+        }
+        simpleModePanel.add(simpleModeCheckbox, BorderLayout.WEST)
+        panel.add(simpleModePanel)
+
         outerPanel.add(panel, BorderLayout.NORTH)
         return outerPanel
     }
@@ -1054,6 +1068,7 @@ class CCBarSettingsPanel(private val project: Project?) {
             buttonWorkingDirectoryField.text = button.workingDirectory
             buttonTerminalNameField.text = button.defaultTerminalName
             buttonTerminalModeCombo.selectedIndex = if (button.terminalMode == TerminalMode.EDITOR) 1 else 0
+            simpleModeCheckbox.isSelected = button.simpleMode
             // 更新直接命令模式相关字段的显示状态
             updateDirectCommandModeVisibility()
             // 更新提示文字状态
@@ -1073,6 +1088,7 @@ class CCBarSettingsPanel(private val project: Project?) {
             buttonWorkingDirectoryField.text = ""
             buttonTerminalNameField.text = ""
             buttonTerminalModeCombo.selectedIndex = 0
+            simpleModeCheckbox.isSelected = false
             // 重置提示文字状态
             updateCommandHintVisibility()
             updateWorkDirHintVisibility()
@@ -1114,6 +1130,12 @@ class CCBarSettingsPanel(private val project: Project?) {
     private fun updateButtonTerminalMode() {
         if (ignoreUpdate) return
         selectedButton?.terminalMode = if (buttonTerminalModeCombo.selectedIndex == 1) TerminalMode.EDITOR else TerminalMode.TOOL_WINDOW
+    }
+
+    private fun updateSimpleMode() {
+        if (ignoreUpdate) return
+        selectedButton?.simpleMode = simpleModeCheckbox.isSelected
+        updateSimpleModeVisibility()
     }
 
     /**
@@ -1159,7 +1181,19 @@ class CCBarSettingsPanel(private val project: Project?) {
         buttonWorkingDirectoryPanel.isVisible = isDirectMode
         buttonTerminalNamePanel.isVisible = isDirectMode
         buttonTerminalModePanel.isVisible = isDirectMode
+        simpleModePanel.isVisible = !isDirectMode
         optionPanel.isVisible = !isDirectMode
+        if (!isDirectMode) {
+            updateSimpleModeVisibility()
+        }
+    }
+
+    /**
+     * 更新简易模式下子按钮面板的显示状态
+     */
+    private fun updateSimpleModeVisibility() {
+        val isSimple = selectedButton?.simpleMode == true
+        subButtonOuterPanel.isVisible = !isSimple
     }
 
     // ==================== Option 列表操作 ====================
@@ -1479,8 +1513,10 @@ class CCBarSettingsPanel(private val project: Project?) {
         if (!optionTerminalModePanel.isVisible) {
             optionTerminalModePanel.isVisible = true
         }
-        if (!subButtonOuterPanel.isVisible) {
-            subButtonOuterPanel.isVisible = true
+        // 简易模式下隐藏子按钮面板
+        val shouldShowSubButtons = selectedButton?.simpleMode != true
+        if (subButtonOuterPanel.isVisible != shouldShowSubButtons) {
+            subButtonOuterPanel.isVisible = shouldShowSubButtons
         }
         // 更新标题
         optionDetailTitledBorder.title = "Option 详情"

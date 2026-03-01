@@ -35,23 +35,20 @@ class CCBarButtonAction(
             // 选项列表模式：弹出菜单
             val component = e.inputEvent?.component ?: return
             val popup = CCBarPopupBuilder.buildPopup(project, buttonConfig)
-            // 弹框右对齐到按钮右边缘
-            showPopupRightAligned(popup, component)
+            // 弹框左对齐到按钮左边缘（向右展开）
+            showPopupLeftAligned(popup, component)
         }
     }
 
     /**
-     * 显示弹框，右对齐到组件的右边缘
+     * 显示弹框，左对齐到组件的左边缘（向右展开）
      */
-    private fun showPopupRightAligned(popup: JBPopup, component: Component) {
+    private fun showPopupLeftAligned(popup: JBPopup, component: Component) {
         val componentBounds = component.bounds
         val locationOnScreen = component.locationOnScreen
 
-        // 计算弹框尺寸（需要先获取）
-        val popupSize = popup.content?.preferredSize ?: popup.size
-
-        // 计算弹框位置：右对齐到组件右边缘
-        val x = locationOnScreen.x + componentBounds.width - popupSize.width
+        // 计算弹框位置：左对齐到组件左边缘
+        val x = locationOnScreen.x
         val y = locationOnScreen.y + componentBounds.height
 
         popup.showInScreenCoordinates(component, Point(x, y))

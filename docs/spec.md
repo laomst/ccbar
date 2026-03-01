@@ -34,6 +34,7 @@ Button（工具栏按钮）
 - **Button**：工具栏上的入口按钮。支持两种模式：
   - **直接命令模式**：Button 绑定 command 字段，点击后直接执行命令（不弹出菜单）
   - **选项列表模式**：Button 不绑定 command，点击后弹出 Option 列表
+    - **简易模式**（可选）：开启后弹出菜单仅显示选项名称，不展示命令预览和子按钮
 - **Option**：按钮下的选项分组，绑定基础命令（baseCommand）和可选的工作目录。**点击 Option 本身直接执行 baseCommand（不带参数）**。
 - **SubButton**：选项下的子按钮，绑定参数文本（params）。点击后执行 Option.baseCommand + params。params 为纯文本，第一阶段不支持变量替换。
 
@@ -43,6 +44,7 @@ Button（工具栏按钮）
 |------|----------|----------|
 | 直接命令模式 | `Button.command` 不为空 | 直接执行命令 + 命名弹窗 |
 | 选项列表模式 | `Button.command` 为空 | 弹出 Option 列表 |
+| 选项列表模式（简易） | `Button.command` 为空且 `simpleMode = true` | 弹出仅含名称的 Option 列表 |
 
 **按钮启用条件**：`command` 不为空 OR `options` 不为空
 
@@ -383,7 +385,7 @@ Button（工具栏按钮）
 │  │                     │  │ Command:    [                              ]   │ │
 │  │ [+][-][↑][↓]       │  │ Work Dir:   [                              ]   │ │
 │  └─────────────────────┘  │ Term Name:  [                              ]   │ │
-│                           │                                                   │ │
+│                           │ [✓] 简易模式                                    │ │
 │  ┌─────────────────────┐  │ ─────────────────────────────────────────────────  │ │
 │  │ Options             │  │ Options (分组)                                   │ │
 │  │                     │  │                                                   │ │
@@ -392,7 +394,7 @@ Button（工具栏按钮）
 │  │                     │  │ │ Base Command:      [claude              ]   │ │ │
 │  │ [+][-][↑][↓]       │  │ │ Working Directory: [                    ]   │ │ │
 │  └─────────────────────┘  │ │ Default Terminal Name: [Claude - Model  ]   │ │ │
-│                           │ │ Sub Buttons: ...                             │ │ │
+│                           │ │ Sub Buttons: ... (简易模式下隐藏)            │ │ │
 │                           │ └──────────────────────────────────────────────┘ │ │
 │                           └───────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────────────────────────┘
@@ -514,6 +516,7 @@ data class ButtonConfig(
     var workingDirectory: String = "",  // 工作目录，留空使用项目根目录
     var defaultTerminalName: String = "",  // 直接命令模式的默认终端名称
     var terminalMode: String = "",  // 终端打开模式：""=工具窗口, "editor"=编辑器
+    var simpleMode: Boolean = false,  // 简易模式：仅显示选项名称，隐藏命令预览和子按钮
     var options: List<OptionConfig> = emptyList()
 )
 

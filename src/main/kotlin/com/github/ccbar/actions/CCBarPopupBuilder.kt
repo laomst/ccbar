@@ -16,7 +16,9 @@ import java.awt.Color
 import java.awt.Cursor
 import java.awt.Dimension
 import java.awt.FlowLayout
-import java.awt.Font
+import java.awt.Graphics
+import java.awt.Graphics2D
+import java.awt.RenderingHints
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import javax.swing.BorderFactory
@@ -26,11 +28,12 @@ import javax.swing.JLabel
 import javax.swing.JPanel
 import javax.swing.BoxLayout
 import javax.swing.SwingConstants
+import javax.swing.UIManager
 
 /**
  * CCBar 弹出菜单构建器
  * 构建包含 Option 行和内联 SubButton 的弹出面板
- * 两行布局：第一行 名称 | 命令预览，第二行 子按钮列表（小号文字）
+ * 两行布局：第一行 命令预览 | 名称，第二行 子按钮列表（小号文字）
  */
 object CCBarPopupBuilder {
 
@@ -42,6 +45,9 @@ object CCBarPopupBuilder {
 
     // 第二行高度（子按钮行，小号文字）
     private const val SUB_ROW_HEIGHT = 22
+
+    // 悬浮高亮圆角半径
+    private const val HOVER_ARC = 8
 
     // 命令预览文字颜色
     private val PREVIEW_FOREGROUND: Color
@@ -59,6 +65,11 @@ object CCBarPopupBuilder {
     private val LABEL_FOREGROUND: Color
         get() = JBColor(Color(100, 100, 100), Color(160, 160, 160))
 
+    // 悬浮高亮背景色（蓝色系）
+    private val HOVER_BACKGROUND: Color
+        get() = UIManager.getColor("List.selectionBackground")
+            ?: JBColor(Color(47, 101, 202, 40), Color(75, 110, 175, 60))
+
     /**
      * 构建弹出菜单
      */
@@ -66,14 +77,17 @@ object CCBarPopupBuilder {
         val mainPanel = JPanel().apply {
             layout = BoxLayout(this, BoxLayout.Y_AXIS)
             border = JBUI.Borders.empty(12)
-            background = JBColor.PanelBackground
+            // 使用工具栏/头部区域的背景色
+            background = UIManager.getColor("MainToolbar.background") ?: JBColor.PanelBackground
         }
+
+        val simpleMode = buttonConfig.simpleMode
 
         // 计算所有选项标题的最大宽度
         val labelWidth = calculateMaxLabelWidth(buttonConfig)
 
-        // 计算所有选项命令预览的最大宽度
-        val previewWidth = calculateMaxPreviewWidth(buttonConfig)
+        // 计算所有选项命令预览的最大宽度（简易模式下不需要）
+        val previewWidth = if (simpleMode) 0 else calculateMaxPreviewWidth(buttonConfig)
 
         // 先创建 popup，后续在回调中使用
         lateinit var popup: JBPopup
@@ -82,6 +96,9 @@ object CCBarPopupBuilder {
         for (option in buttonConfig.options) {
             if (option.isSeparator()) {
                 mainPanel.add(createSeparatorRow(option))
+            } else if (simpleMode) {
+                val row = createSimpleOptionRow(project, option, labelWidth) { popup.closeOk(null) }
+                mainPanel.add(row)
             } else {
                 val optionBlock = createOptionBlock(project, option, labelWidth, previewWidth) { popup.closeOk(null) }
                 mainPanel.add(optionBlock)
@@ -98,10 +115,54 @@ object CCBarPopupBuilder {
             .setMovable(false)
             .setResizable(false)
             .setShowBorder(true)
-            .setTitle(buttonConfig.name)
             .createPopup()
 
         return popup
+    }
+
+    /**
+     * 创建支持悬浮高亮的圆角面板容器
+     * 鼠标进入时绘制圆角矩形背景，离开时恢复透明
+     */
+    private fun createHoverPanel(onClick: () -> Unit): JPanel {
+        var hovered = false
+
+        val panel = object : JPanel() {
+            override fun paintComponent(g: Graphics) {
+                if (hovered) {
+                    val g2d = g as Graphics2D
+                    g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+                    g2d.color = HOVER_BACKGROUND
+                    g2d.fillRoundRect(0, 0, width, height, HOVER_ARC, HOVER_ARC)
+                }
+                super.paintComponent(g)
+            }
+        }
+
+        panel.apply {
+            layout = BoxLayout(this, BoxLayout.Y_AXIS)
+            isOpaque = false
+            cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+            border = JBUI.Borders.empty(4, 8)
+
+            addMouseListener(object : MouseAdapter() {
+                override fun mouseClicked(e: MouseEvent?) {
+                    onClick()
+                }
+
+                override fun mouseEntered(e: MouseEvent?) {
+                    hovered = true
+                    repaint()
+                }
+
+                override fun mouseExited(e: MouseEvent?) {
+                    hovered = false
+                    repaint()
+                }
+            })
+        }
+
+        return panel
     }
 
     /**
@@ -164,9 +225,9 @@ object CCBarPopupBuilder {
 
         if (option.name.isNotBlank()) {
             val innerPanel = object : JPanel() {
-                override fun paintComponent(g: java.awt.Graphics) {
+                override fun paintComponent(g: Graphics) {
                     super.paintComponent(g)
-                    val g2d = g as java.awt.Graphics2D
+                    val g2d = g as Graphics2D
                     g2d.color = JBColor.GRAY
                     g2d.stroke = java.awt.BasicStroke(1f)
 
@@ -195,9 +256,9 @@ object CCBarPopupBuilder {
             panel.add(innerPanel, BorderLayout.CENTER)
         } else {
             val separatorPanel = object : JPanel() {
-                override fun paintComponent(g: java.awt.Graphics) {
+                override fun paintComponent(g: Graphics) {
                     super.paintComponent(g)
-                    val g2d = g as java.awt.Graphics2D
+                    val g2d = g as Graphics2D
                     g2d.color = JBColor.GRAY
                     g2d.stroke = java.awt.BasicStroke(1f)
                     val centerY = height / 2
@@ -213,33 +274,66 @@ object CCBarPopupBuilder {
     }
 
     /**
-     * 创建 Option 块（两行布局）
-     * 第一行：名称 | 命令预览
+     * 创建简易模式的选项行（仅显示名称，整行悬浮高亮）
+     */
+    private fun createSimpleOptionRow(project: Project, option: OptionConfig, labelWidth: Int, onClose: () -> Unit): JPanel {
+        val hoverPanel = createHoverPanel {
+            onClose()
+            CCBarTerminalService.openTerminal(project, option, null)
+        }
+        hoverPanel.toolTipText = option.baseCommand
+
+        val row = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
+            isOpaque = false
+        }
+
+        val label = JBLabel(option.name).apply {
+            preferredSize = Dimension(labelWidth, ROW_HEIGHT)
+            horizontalAlignment = SwingConstants.LEFT
+            foreground = JBColor.foreground()
+        }
+
+        row.add(label)
+        hoverPanel.add(row)
+        return hoverPanel
+    }
+
+    /**
+     * 创建 Option 块（两行布局，整块悬浮高亮）
+     * 第一行：命令预览 | 名称
      * 第二行：子按钮列表（小号文字）
      */
     private fun createOptionBlock(project: Project, option: OptionConfig, labelWidth: Int, previewWidth: Int, onClose: () -> Unit): JPanel {
-        val blockPanel = JPanel().apply {
-            layout = BoxLayout(this, BoxLayout.Y_AXIS)
-            isOpaque = false
+        val hoverPanel = createHoverPanel {
+            onClose()
+            CCBarTerminalService.openTerminal(project, option, null)
         }
 
         // 命令预览标签（需要被子按钮 hover 更新）
-        val commandPreview = createCommandPreviewLabel(project, option, previewWidth, onClose)
+        val commandPreview = JBLabel(option.baseCommand).apply {
+            preferredSize = Dimension(previewWidth, ROW_HEIGHT)
+            horizontalAlignment = SwingConstants.LEFT
+            foreground = PREVIEW_FOREGROUND
+        }
 
-        // 第一行：名称 | 命令预览
+        // 第一行：命令预览 | 名称
         val firstRow = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
             isOpaque = false
         }
-        val optionLabel = createOptionLabel(project, option, labelWidth, onClose)
+        val optionLabel = JBLabel(option.name).apply {
+            preferredSize = Dimension(labelWidth, ROW_HEIGHT)
+            horizontalAlignment = SwingConstants.LEFT
+            foreground = LABEL_FOREGROUND
+            border = JBUI.Borders.emptyLeft(8)
+        }
         firstRow.add(commandPreview)
         firstRow.add(optionLabel)
-        blockPanel.add(firstRow)
+        hoverPanel.add(firstRow)
 
         // 第二行：子按钮列表（仅在有子按钮时显示）
         if (option.subButtons.isNotEmpty()) {
             val secondRow = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
                 isOpaque = false
-                // 左侧缩进，与命令预览对齐
                 border = JBUI.Borders.emptyLeft(4)
             }
 
@@ -256,71 +350,15 @@ object CCBarPopupBuilder {
                 }
             }
 
-            blockPanel.add(secondRow)
+            hoverPanel.add(secondRow)
         }
 
-        return blockPanel
-    }
-
-    /**
-     * 创建选项名称标签
-     */
-    private fun createOptionLabel(project: Project, option: OptionConfig, labelWidth: Int, onClose: () -> Unit): JBLabel {
-        return JBLabel(option.name).apply {
-            preferredSize = Dimension(labelWidth, ROW_HEIGHT)
-            horizontalAlignment = SwingConstants.LEFT
-            foreground = LABEL_FOREGROUND
-            cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
-            toolTipText = "点击执行: ${option.baseCommand}"
-            border = JBUI.Borders.emptyLeft(8)
-
-            addMouseListener(object : MouseAdapter() {
-                override fun mouseClicked(e: MouseEvent?) {
-                    onClose()
-                    CCBarTerminalService.openTerminal(project, option, null)
-                }
-
-                override fun mouseEntered(e: MouseEvent?) {
-                    foreground = JBColor.BLUE
-                }
-
-                override fun mouseExited(e: MouseEvent?) {
-                    foreground = LABEL_FOREGROUND
-                }
-            })
-        }
-    }
-
-    /**
-     * 创建命令预览标签（纯文本）
-     */
-    private fun createCommandPreviewLabel(project: Project, option: OptionConfig, previewWidth: Int, onClose: () -> Unit): JBLabel {
-        return JBLabel(option.baseCommand).apply {
-            preferredSize = Dimension(previewWidth, ROW_HEIGHT)
-            horizontalAlignment = SwingConstants.LEFT
-            foreground = PREVIEW_FOREGROUND
-            cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
-            toolTipText = "点击执行: ${option.baseCommand}"
-
-            addMouseListener(object : MouseAdapter() {
-                override fun mouseClicked(e: MouseEvent?) {
-                    onClose()
-                    CCBarTerminalService.openTerminal(project, option, null)
-                }
-
-                override fun mouseEntered(e: MouseEvent?) {
-                    foreground = JBColor.BLUE
-                }
-
-                override fun mouseExited(e: MouseEvent?) {
-                    foreground = PREVIEW_FOREGROUND
-                }
-            })
-        }
+        return hoverPanel
     }
 
     /**
      * 创建 SubButton 标签（小号纯文本）
+     * 点击子按钮会消费事件，不触发 hoverPanel 的点击
      */
     private fun createSubButtonLabel(
         project: Project,
@@ -341,6 +379,7 @@ object CCBarPopupBuilder {
 
             addMouseListener(object : MouseAdapter() {
                 override fun mouseClicked(e: MouseEvent?) {
+                    e?.consume()
                     onClose()
                     CCBarTerminalService.openTerminal(project, option, subButton)
                 }
@@ -348,7 +387,6 @@ object CCBarPopupBuilder {
                 override fun mouseEntered(e: MouseEvent?) {
                     foreground = JBColor.BLUE
                     commandPreview.text = fullCommand
-                    commandPreview.foreground = PREVIEW_FOREGROUND
                 }
 
                 override fun mouseExited(e: MouseEvent?) {
