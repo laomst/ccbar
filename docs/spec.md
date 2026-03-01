@@ -56,7 +56,7 @@ CommandBar（工具栏按钮）
 ### 3.1 多个快捷按钮
 - 支持在 ToolBar 中添加多个快捷按钮
 - 每个按钮代表一个命令类别（如 "Claude Code"、"Dev Tools" 等）
-- 每个按钮可自定义图标（支持 IDEA 内置图标和自定义 SVG/PNG 文件）和标签
+- 每个按钮可自定义图标（支持 IDEA 内置图标、自定义 SVG/PNG 文件和 HTTP/HTTPS 网络图片）和标签
 
 ### 3.2 按钮点击行为
 
@@ -577,7 +577,8 @@ data class QuickParamConfig(
 | 图标类型 | 存储格式 | 说明 |
 |---------|---------|------|
 | IDEA 内置图标 | `builtin:AllIcons.Actions.Execute` | 以 `builtin:` 前缀标识 |
-| 自定义图标文件 | `file:/path/to/icon.svg` | 以 `file:` 前缀标识，支持 SVG 和 PNG |
+| 自定义图标文件 | `file:/path/to/icon.svg` | 以 `file:` 前缀标识，支持 SVG、PNG、JPG、GIF、BMP、ICO |
+| 网络图片 | `https://example.com/icon.svg` | 以 `http://` 或 `https://` 开头，异步下载并缓存到磁盘 |
 
 ### 7.4 数据操作逻辑
 
@@ -656,7 +657,7 @@ private val defaultConfig = PluginConfig(
 | 终端始终新建 | P0 | 每次执行都新建终端 Tab |
 | 终端命名弹窗 | P0 | 每次执行前弹出命名对话框，默认名称来自 Command/CommandBar 配置 |
 | 终端打开到工具窗口 | P0 | 在 Terminal 工具窗口中新建终端标签页 |
-| 自定义图标 | P0 | 支持 IDEA 内置图标和自定义 SVG/PNG |
+| 自定义图标 | P0 | 支持 IDEA 内置图标、自定义 SVG/PNG 和 HTTP/HTTPS 网络图片 |
 | Command/CommandBar 工作目录 | P0 | 支持 Command/CommandBar 级自定义工作目录，默认项目根目录 |
 | 导入/导出配置 | P1 | 支持 JSON 格式配置导入导出 |
 | 项目级配置 | P1 | 支持为每个项目设置独立的按钮配置，存储在 .idea/ccbar.xml |

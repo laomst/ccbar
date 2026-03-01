@@ -164,6 +164,9 @@ class CCBarSettingsPanel(private val project: Project?) {
     // 气泡延迟关闭计时器
     private var popupCloseTimer: javax.swing.Timer? = null
 
+    // 网络图标加载完成监听器的取消注册函数
+    private var removeIconLoadedListener: (() -> Unit)? = null
+
     // 添加CommandBar的 UI 组件引用（用于气泡锚定）
     private var addOptionButtonRef: JComponent? = null
 
@@ -221,6 +224,13 @@ class CCBarSettingsPanel(private val project: Project?) {
 
         // 底部操作CommandBar
         mainPanel.add(createActionButtonsPanel(), BorderLayout.SOUTH)
+
+        // 注册网络图标加载完成监听器，刷新列表中的图标显示
+        removeIconLoadedListener?.invoke()
+        removeIconLoadedListener = CCBarIcons.addIconLoadedListener {
+            buttonList.repaint()
+            optionList.repaint()
+        }
 
         return mainPanel
     }

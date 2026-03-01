@@ -1,11 +1,16 @@
 package com.github.ccbar.icons
 
 import com.intellij.icons.AllIcons
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.PathManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.util.IconUtil
 import java.awt.image.BufferedImage
 import java.io.ByteArrayInputStream
 import java.io.File
+import java.net.HttpURLConnection
+import java.net.URI
+import java.security.MessageDigest
 import java.util.concurrent.ConcurrentHashMap
 import javax.imageio.ImageIO
 import javax.swing.Icon
@@ -14,7 +19,7 @@ import com.intellij.openapi.util.IconLoader
 
 /**
  * CCBar 图标管理工具
- * 支持加载 IDEA 内置图标和自定义 SVG/PNG/ICO 文件
+ * 支持加载 IDEA 内置图标、自定义 SVG/PNG/ICO 文件和 HTTP/HTTPS 网络图片
  *
  * 内置图标持久化格式为字段路径：`builtin:AllIcons.Actions.Execute`
  * 加载时通过反射访问 AllIcons 静态字段
@@ -23,9 +28,27 @@ object CCBarIcons {
 
     private val LOG = Logger.getInstance(CCBarIcons::class.java)
     private const val ICON_SIZE = 16
+    private const val URL_CONNECT_TIMEOUT = 10_000
+    private const val URL_READ_TIMEOUT = 10_000
 
     // 线程安全的图标缓存
     private val iconCache = ConcurrentHashMap<String, Icon>()
+
+    // 正在下载中的 URL 集合，避免重复下载
+    private val pendingDownloads = ConcurrentHashMap.newKeySet<String>()
+
+    // 网络图标加载完成的监听器列表
+    private val iconLoadedListeners = ConcurrentHashMap.newKeySet<(String) -> Unit>()
+
+    /**
+     * 注册网络图标加载完成监听器
+     * @param listener 回调参数为加载完成的图标 URL
+     * @return 取消注册的函数
+     */
+    fun addIconLoadedListener(listener: (String) -> Unit): () -> Unit {
+        iconLoadedListeners.add(listener)
+        return { iconLoadedListeners.remove(listener) }
+    }
 
     /**
      * 加载图标
@@ -33,6 +56,7 @@ object CCBarIcons {
      * @param iconPath 图标路径
      *   - 内置图标：`builtin:AllIcons.Actions.Execute`
      *   - 自定义文件：`file:/path/to/icon.svg` 或直接文件路径
+     *   - 网络图片：`http://...` 或 `https://...`
      * @return 加载的图标，失败时返回默认图标
      */
     fun loadIcon(iconPath: String?, @Suppress("UNUSED_PARAMETER") project: com.intellij.openapi.project.Project? = null): Icon {
@@ -40,9 +64,18 @@ object CCBarIcons {
             return getDefaultIcon()
         }
 
+        // 网络图标：先检查内存缓存，未命中时尝试磁盘缓存或异步下载
+        if (isUrlIcon(iconPath)) {
+            return iconCache[iconPath] ?: loadUrlIcon(iconPath)
+        }
+
         return iconCache.getOrPut(iconPath) {
             loadIconInternal(iconPath)
         }
+    }
+
+    private fun isUrlIcon(iconPath: String): Boolean {
+        return iconPath.startsWith("http://") || iconPath.startsWith("https://")
     }
 
     private fun loadIconInternal(iconPath: String): Icon {
@@ -58,6 +91,141 @@ object CCBarIcons {
             else -> {
                 loadFileIcon(iconPath)
             }
+        }
+    }
+
+    // ==================== 网络图标加载 ====================
+
+    /**
+     * 获取网络图标磁盘缓存目录
+     */
+    private fun getIconCacheDir(): File {
+        val cacheDir = File(PathManager.getSystemPath(), "ccbar/icon-cache")
+        if (!cacheDir.exists()) {
+            cacheDir.mkdirs()
+        }
+        return cacheDir
+    }
+
+    /**
+     * 将 URL 转为磁盘缓存文件名（MD5 哈希 + 扩展名）
+     */
+    private fun urlToCacheFile(url: String): File {
+        val md5 = MessageDigest.getInstance("MD5")
+            .digest(url.toByteArray())
+            .joinToString("") { "%02x".format(it) }
+        val ext = url.substringAfterLast('.', "png")
+            .substringBefore('?')
+            .substringBefore('#')
+            .lowercase()
+            .let { if (it.length > 5) "png" else it }
+        return File(getIconCacheDir(), "$md5.$ext")
+    }
+
+    /**
+     * 加载网络图标
+     *
+     * 加载策略：
+     * 1. 检查磁盘缓存，命中则同步加载到内存缓存并返回
+     * 2. 磁盘缓存未命中，返回默认图标并启动后台下载
+     * 3. 下载完成后更新内存缓存并刷新工具栏
+     */
+    private fun loadUrlIcon(url: String): Icon {
+        // 1. 尝试从磁盘缓存加载
+        val cacheFile = urlToCacheFile(url)
+        if (cacheFile.exists() && cacheFile.length() > 0) {
+            try {
+                val icon = loadFileIcon(cacheFile.absolutePath)
+                if (icon != getDefaultIcon()) {
+                    iconCache[url] = icon
+                    return icon
+                }
+            } catch (e: Exception) {
+                LOG.info("CCBar: 磁盘缓存图标加载失败: $url - ${e.message}")
+            }
+        }
+
+        // 2. 启动后台下载（避免重复下载）
+        if (pendingDownloads.add(url)) {
+            ApplicationManager.getApplication().executeOnPooledThread {
+                try {
+                    downloadAndCacheIcon(url, cacheFile)
+                } finally {
+                    pendingDownloads.remove(url)
+                }
+            }
+        }
+
+        // 3. 返回默认图标作为占位
+        return getDefaultIcon()
+    }
+
+    /**
+     * 后台下载网络图标并缓存
+     */
+    private fun downloadAndCacheIcon(url: String, cacheFile: File) {
+        try {
+            val connection = URI(url).toURL().openConnection() as HttpURLConnection
+            connection.connectTimeout = URL_CONNECT_TIMEOUT
+            connection.readTimeout = URL_READ_TIMEOUT
+            connection.instanceFollowRedirects = true
+            connection.setRequestProperty("User-Agent", "CCBar-IDEA-Plugin")
+
+            try {
+                val responseCode = connection.responseCode
+                if (responseCode != HttpURLConnection.HTTP_OK) {
+                    LOG.warn("CCBar: 网络图标下载失败: $url, HTTP $responseCode")
+                    return
+                }
+
+                val data = connection.inputStream.use { it.readBytes() }
+                if (data.isEmpty()) {
+                    LOG.warn("CCBar: 网络图标下载为空: $url")
+                    return
+                }
+
+                // 保存到磁盘缓存
+                cacheFile.writeBytes(data)
+
+                // 从缓存文件加载图标
+                val icon = loadFileIcon(cacheFile.absolutePath)
+                if (icon != getDefaultIcon()) {
+                    iconCache[url] = icon
+                    // 在 EDT 上刷新工具栏和通知监听器
+                    ApplicationManager.getApplication().invokeLater {
+                        refreshToolbars()
+                        iconLoadedListeners.forEach { listener ->
+                            try {
+                                listener(url)
+                            } catch (e: Exception) {
+                                LOG.info("CCBar: 图标加载监听器回调异常: ${e.message}")
+                            }
+                        }
+                    }
+                } else {
+                    // 加载失败，删除无效缓存
+                    cacheFile.delete()
+                    LOG.warn("CCBar: 网络图标格式无法解析: $url")
+                }
+            } finally {
+                connection.disconnect()
+            }
+        } catch (e: Exception) {
+            LOG.warn("CCBar: 网络图标下载异常: $url - ${e.message}")
+        }
+    }
+
+    /**
+     * 刷新所有工具栏，使新加载的图标生效
+     * 注意：此方法应在 EDT 上调用
+     */
+    private fun refreshToolbars() {
+        try {
+            val clazz = Class.forName("com.intellij.openapi.actionSystem.impl.ActionToolbarImpl")
+            val method = clazz.getMethod("updateAllToolbarsImmediately")
+            method.invoke(null)
+        } catch (e: Exception) {
+            LOG.info("CCBar: 工具栏刷新失败（可能不影响功能）: ${e.message}")
         }
     }
 
@@ -362,6 +530,16 @@ object CCBarIcons {
 
     fun clearCache() {
         iconCache.clear()
+    }
+
+    /**
+     * 清除网络图标的磁盘缓存
+     */
+    fun clearDiskCache() {
+        val cacheDir = File(PathManager.getSystemPath(), "ccbar/icon-cache")
+        if (cacheDir.exists()) {
+            cacheDir.listFiles()?.forEach { it.delete() }
+        }
     }
 
     fun getCommonBuiltinIcons(): List<Pair<String, String>> = listOf(
