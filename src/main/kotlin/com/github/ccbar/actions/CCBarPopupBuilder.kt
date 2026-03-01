@@ -316,7 +316,7 @@ object CCBarPopupBuilder {
 
         // 命令预览标签（需要被子按钮 hover 更新）
         val commandPreview = JBLabel(option.baseCommand).apply {
-            icon = com.github.ccbar.icons.CCBarIcons.loadIcon("builtin:AllIcons.Debugger.ExecuteCurrentStatement")
+            icon = com.github.ccbar.icons.CCBarIcons.loadIcon("builtin:/debugger/executeCurrentStatement.svg")
             preferredSize = Dimension(previewWidth, ROW_HEIGHT)
             horizontalAlignment = SwingConstants.LEFT
             foreground = PREVIEW_FOREGROUND

@@ -503,6 +503,7 @@ class CCBarSettingsPanel(private val project: Project?) {
         }
 
         val panel = BorderLayoutPanel().withBorder(JBUI.Borders.empty(8))
+        @Suppress("DEPRECATION")
         val decorator = com.intellij.ui.ToolbarDecorator.createDecorator(buttonList)
             .setAddActionName("添加")
             .setRemoveActionName("删除")
@@ -570,7 +571,7 @@ class CCBarSettingsPanel(private val project: Project?) {
 
         // 创建带文件浏览的输入框
         buttonIconField = TextFieldWithBrowseButton().apply {
-            (textField as? JBTextField)?.emptyText?.text = "builtin:AllIcons.Actions.Execute"
+            (textField as? JBTextField)?.emptyText?.text = "builtin:/actions/execute.svg"
             textField.document.addDocumentListener(object : DocumentListener {
                 override fun insertUpdate(e: DocumentEvent?) = updateButtonIcon()
                 override fun removeUpdate(e: DocumentEvent?) = updateButtonIcon()
@@ -579,9 +580,12 @@ class CCBarSettingsPanel(private val project: Project?) {
             // 文件浏览功能
             addBrowseFolderListener(
                 "选择图标文件",
-                "选择 SVG、PNG 或 ICO 图标文件",
+                "选择 SVG、PNG、ICO、JPG、GIF、BMP 图标文件",
                 null,
-                FileChooserDescriptorFactory.createSingleFileDescriptor()
+                FileChooserDescriptorFactory.createSingleFileDescriptor().withFileFilter { file ->
+                    val ext = file.extension?.lowercase()
+                    ext in listOf("svg", "png", "ico", "jpg", "jpeg", "gif", "bmp")
+                }
             )
         }
 
@@ -741,6 +745,7 @@ class CCBarSettingsPanel(private val project: Project?) {
         }
 
         val listPanel = BorderLayoutPanel()
+        @Suppress("DEPRECATION")
         val decorator = ToolbarDecorator.createDecorator(optionList)
             .setAddActionName("添加")
             .setRemoveActionName("删除")
@@ -748,7 +753,7 @@ class CCBarSettingsPanel(private val project: Project?) {
             .setMoveDownActionName("下移")
             .setAddAction { anActionButton ->
                 // 点击时也显示气泡（兼容键盘操作），使用 AnActionButton 官方 API 获取按钮位置
-                anActionButton.preferredPopupPoint?.let { showAddOptionBalloon(it) }
+                anActionButton.preferredPopupPoint.let { showAddOptionBalloon(it) }
             }
             .setRemoveAction { removeOption() }
             .setMoveUpAction { moveOptionUp() }
@@ -812,7 +817,7 @@ class CCBarSettingsPanel(private val project: Project?) {
         optionIconPanel = JPanel(BorderLayout())
         optionIconPanel.add(JLabel("图标:"), BorderLayout.WEST)
         optionIconField = TextFieldWithBrowseButton().apply {
-            (textField as? JBTextField)?.emptyText?.text = "builtin:AllIcons.Actions.Execute"
+            (textField as? JBTextField)?.emptyText?.text = "builtin:/actions/execute.svg"
             textField.document.addDocumentListener(object : DocumentListener {
                 override fun insertUpdate(e: DocumentEvent?) = updateOptionIcon()
                 override fun removeUpdate(e: DocumentEvent?) = updateOptionIcon()
@@ -820,9 +825,12 @@ class CCBarSettingsPanel(private val project: Project?) {
             })
             addBrowseFolderListener(
                 "选择图标文件",
-                "选择 SVG、PNG 或 ICO 图标文件",
+                "选择 SVG、PNG、ICO、JPG、GIF、BMP 图标文件",
                 null,
-                FileChooserDescriptorFactory.createSingleFileDescriptor()
+                FileChooserDescriptorFactory.createSingleFileDescriptor().withFileFilter { file ->
+                    val ext = file.extension?.lowercase()
+                    ext in listOf("svg", "png", "ico", "jpg", "jpeg", "gif", "bmp")
+                }
             )
         }
         val optionBuiltinIconBtn = JButton(AllIcons.General.ArrowDown).apply {
@@ -1052,7 +1060,7 @@ class CCBarSettingsPanel(private val project: Project?) {
         val newButton = ButtonConfig(
             id = UUID.randomUUID().toString(),
             name = "New Button",
-            icon = "builtin:AllIcons.Actions.Execute"
+            icon = "builtin:/actions/execute.svg"
         )
         buttonListModel.add(newButton)
         editingState.buttons.add(newButton)
@@ -1188,7 +1196,7 @@ class CCBarSettingsPanel(private val project: Project?) {
     private fun updateButtonIcon() {
         if (ignoreUpdate) return
         val text = buttonIconField.text
-        selectedButton?.icon = if (text.isBlank()) "builtin:AllIcons.Actions.Execute" else text
+        selectedButton?.icon = if (text.isBlank()) "builtin:/actions/execute.svg" else text
         // 同步更新列表中的图标显示
         buttonList.repaint()
     }
@@ -1671,7 +1679,7 @@ class CCBarSettingsPanel(private val project: Project?) {
     private fun updateOptionIcon() {
         if (ignoreUpdate) return
         val text = optionIconField.text
-        selectedOption?.icon = if (text.isBlank()) "builtin:AllIcons.Actions.Execute" else text
+        selectedOption?.icon = if (text.isBlank()) "builtin:/actions/execute.svg" else text
         optionList.repaint()
     }
 
@@ -1776,7 +1784,7 @@ class CCBarSettingsPanel(private val project: Project?) {
 
     private fun importConfig() {
         val fileChooser = FileChooserDescriptorFactory
-            .createSingleFileDescriptor()
+            .createSingleFileDescriptor("json")
             .withTitle("导入配置")
             .withDescription("选择要导入的 JSON 配置文件")
         // 强制使用 IntelliJ 内置文件选择器，避免 macOS 原生对话框在模态窗口中的焦点问题

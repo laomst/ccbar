@@ -55,7 +55,7 @@ class CCBarSettings : PersistentStateComponent<CCBarSettings.State> {
             ButtonConfig(
                 id = "claude-code-default",
                 name = "Claude Code",
-                icon = "builtin:AllIcons.Actions.Execute",
+                icon = "builtin:/actions/execute.svg",
                 options = mutableListOf(
                     OptionConfig(
                         id = "model",
@@ -146,7 +146,7 @@ object OptionType {
 data class OptionConfig(
     var id: String = "",
     var name: String = "",
-    var icon: String = "builtin:AllIcons.Actions.Execute",
+    var icon: String = "builtin:/actions/execute.svg",
     var baseCommand: String = "",
     var workingDirectory: String = "",
     var defaultTerminalName: String = "",

@@ -1,5 +1,6 @@
 package com.github.ccbar.settings.ui
 
+import com.github.ccbar.icons.CCBarIcons
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.ui.popup.JBPopup
@@ -59,7 +60,8 @@ object BuiltinIconSelector {
                         try {
                             field.isAccessible = true
                             val icon = field.get(null) as? Icon ?: continue
-                            val path = "builtin:$prefix${field.name}"
+                            val resourcePath = CCBarIcons.fieldPathToResourcePath("$prefix${field.name}")
+                            val path = "builtin:$resourcePath"
                             icons.add(Triple(field.name, path, icon))
                         } catch (e: Exception) {
                             // 忽略无法访问的字段
@@ -118,12 +120,8 @@ object BuiltinIconSelector {
         // 存储所有图标标签及其路径，用于动态更新选中状态
         val iconLabels = mutableListOf<Pair<String, JLabel>>()
 
-        // 当前选中路径（可变）
-        var selectedPath = currentIconPath
-
         // 更新所有标签的选中状态
         fun updateSelectionState(newSelectedPath: String) {
-            selectedPath = newSelectedPath
             for ((path, label) in iconLabels) {
                 val isSelected = path == newSelectedPath
                 label.border = if (isSelected) {
@@ -139,9 +137,9 @@ object BuiltinIconSelector {
         }
 
         for ((name, path, icon) in icons) {
-            val iconLabel = createIconLabel(name, path, icon, currentIconPath) { selectedPath ->
-                onIconSelected(selectedPath)
-                updateSelectionState(selectedPath)  // 动态更新选中状态
+            val iconLabel = createIconLabel(name, path, icon, currentIconPath) { selected ->
+                onIconSelected(selected)
+                updateSelectionState(selected)  // 动态更新选中状态
             }
             iconLabels.add(path to iconLabel)
             gridPanel.add(iconLabel)
@@ -154,6 +152,7 @@ object BuiltinIconSelector {
             preferredSize = Dimension(520, 400)
             border = null
             background = JBColor.PanelBackground
+            verticalScrollBar.unitIncrement = 32
         }
 
         return JBPopupFactory.getInstance()
