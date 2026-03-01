@@ -642,5 +642,6 @@ private val defaultConfig = PluginConfig(
 - 跨 Option 参数组合（同时选 Model + Workspace 生成组合命令）
 - 环境变量配置
 - 终端复用策略（同名终端检测与复用）
+- ~~自定义 Shell 路径~~（**已搁置** — Story-08，技术调研已完成，详见 `docs/specs/story-08/`）
 
 ---
