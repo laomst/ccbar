@@ -123,6 +123,14 @@ data class SubButtonConfig(
 }
 
 /**
+ * 终端打开模式常量
+ */
+object TerminalMode {
+    const val TOOL_WINDOW = ""        // 在终端工具窗口中打开（默认）
+    const val EDITOR = "editor"       // 在编辑器区域中打开
+}
+
+/**
  * 选项类型常量
  */
 object OptionType {
@@ -142,7 +150,8 @@ data class OptionConfig(
     var workingDirectory: String = "",
     var defaultTerminalName: String = "",
     var subButtons: MutableList<SubButtonConfig> = mutableListOf(),
-    var type: String = ""  // 空值或"option"=普通选项, "separator"=分割线
+    var type: String = "",  // 空值或"option"=普通选项, "separator"=分割线
+    var terminalMode: String = ""  // 终端打开模式：""=工具窗口, "editor"=编辑器
 ) {
     /**
      * 深拷贝
@@ -154,7 +163,8 @@ data class OptionConfig(
         workingDirectory = workingDirectory,
         defaultTerminalName = defaultTerminalName,
         subButtons = subButtons.map { it.deepCopy() }.toMutableList(),
-        type = type
+        type = type,
+        terminalMode = terminalMode
     )
 
     /**
@@ -182,6 +192,7 @@ data class ButtonConfig(
     var command: String = "",  // 直接命令，为空则使用选项列表模式
     var workingDirectory: String = "",  // 工作目录，留空使用项目根目录
     var defaultTerminalName: String = "",  // 直接命令模式的默认终端名称
+    var terminalMode: String = "",  // 终端打开模式：""=工具窗口, "editor"=编辑器
     var options: MutableList<OptionConfig> = mutableListOf()
 ) {
     /**
@@ -194,6 +205,7 @@ data class ButtonConfig(
         command = command,
         workingDirectory = workingDirectory,
         defaultTerminalName = defaultTerminalName,
+        terminalMode = terminalMode,
         options = options.map { it.deepCopy() }.toMutableList()
     )
 

@@ -3,6 +3,8 @@ package com.github.ccbar.terminal
 import com.github.ccbar.settings.ButtonConfig
 import com.github.ccbar.settings.OptionConfig
 import com.github.ccbar.settings.SubButtonConfig
+import com.github.ccbar.settings.TerminalMode
+import com.github.ccbar.terminal.editor.TerminalEditorService
 import com.intellij.notification.Notification
 import com.intellij.notification.NotificationType
 import com.intellij.notification.Notifications
@@ -25,14 +27,16 @@ object CCBarTerminalService {
      */
     fun openTerminal(project: Project, option: OptionConfig, subButton: SubButtonConfig?) {
         val baseCommand = buildCommand(option, subButton)
-        val dialog = CommandPreviewDialog(project, baseCommand, option.defaultTerminalName)
+        val defaultOpenInEditor = option.terminalMode == TerminalMode.EDITOR
+        val dialog = CommandPreviewDialog(project, baseCommand, option.defaultTerminalName, defaultOpenInEditor)
         if (!dialog.showAndGet()) {
             return
         }
         val terminalName = dialog.terminalName
         val command = dialog.fullCommand
         val workingDir = resolveWorkingDirectory(project, option)
-        createTerminalAndExecute(project, command, terminalName, workingDir)
+        val openInEditor = dialog.openInEditor
+        createTerminalAndExecute(project, command, terminalName, workingDir, openInEditor)
     }
 
     /**
@@ -40,14 +44,16 @@ object CCBarTerminalService {
      */
     fun openTerminalForButton(project: Project, button: ButtonConfig) {
         val defaultName = button.defaultTerminalName.ifBlank { button.name }
-        val dialog = CommandPreviewDialog(project, button.command, defaultName)
+        val defaultOpenInEditor = button.terminalMode == TerminalMode.EDITOR
+        val dialog = CommandPreviewDialog(project, button.command, defaultName, defaultOpenInEditor)
         if (!dialog.showAndGet()) {
             return
         }
         val terminalName = dialog.terminalName
         val command = dialog.fullCommand
         val workingDir = resolveWorkingDirectoryForButton(project, button)
-        createTerminalAndExecute(project, command, terminalName, workingDir)
+        val openInEditor = dialog.openInEditor
+        createTerminalAndExecute(project, command, terminalName, workingDir, openInEditor)
     }
 
     private fun buildCommand(option: OptionConfig, subButton: SubButtonConfig?): String {
@@ -100,8 +106,18 @@ object CCBarTerminalService {
         project: Project,
         command: String,
         tabName: String,
-        workingDir: String
+        workingDir: String,
+        openInEditor: Boolean = false
     ) {
+        if (openInEditor) {
+            try {
+                TerminalEditorService.openInEditor(project, command, tabName, workingDir)
+                return
+            } catch (e: Exception) {
+                LOG.warn("CCBar: 编辑器终端打开失败，回退到工具窗口", e)
+            }
+        }
+
         ApplicationManager.getApplication().invokeLater {
             try {
                 val widget = createTerminalWidget(project, tabName, workingDir)

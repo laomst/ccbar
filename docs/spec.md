@@ -110,12 +110,36 @@ Button（工具栏按钮）
 - 终端工作目录默认为当前项目根目录，如果 Option 配置了自定义工作目录则使用自定义值
 
 ### 3.6 终端窗口管理
-- 在 Terminal 工具窗口中新建终端标签页
+- 支持两种终端打开模式：
+  - **工具窗口模式**（默认）：在 Terminal 工具窗口中新建终端标签页
+  - **编辑器模式**：在编辑器区域以编辑器 Tab 形式打开终端，适合长时间运行的 AI 编程助手场景
+- 终端打开模式可在 Button（直接命令模式）和 Option 上分别配置
+- 用户可在 CommandPreviewDialog 中临时切换终端打开模式
+
+#### 两种模式的能力对比
+
+两种模式底层均通过 `LocalTerminalDirectRunner` 创建终端会话，终端本身的能力完全一致：
+
+| 能力 | 工具窗口模式 | 编辑器模式 |
+|------|:----------:|:---------:|
+| 终端基本功能（输入/输出/颜色） | ✅ | ✅ |
+| Shell Integration（提示符检测、命令完成状态） | ✅ | ✅ |
+| IDE 终端字体/配色设置 | ✅ | ✅ |
+| 复制/粘贴/Find | ✅ | ✅ |
+| LocalTerminalCustomizer 扩展点 | ✅ | ✅ |
+| 与代码 Tab 混排/分屏/拖拽 | ❌ | ✅ |
+| Terminal 工具窗口 Tab 管理 | ✅ | ❌ |
+| 会话恢复（IDE 重启后恢复） | ✅ | ❌ |
+
+**差异说明**：
+- 两种模式的终端能力完全一致，差异仅在于 Tab 所在的容器
+- 编辑器模式适合需要长时间运行、与代码频繁切换的场景（如 AI 编程助手）
+- 工具窗口模式适合传统的终端使用场景，可享受 Terminal 工具窗口的完整管理能力
 
 ### 3.7 终端命名与参数配置弹窗
 - 点击 Option 或子按钮后，**每次都弹出**命令预览与参数配置对话框
 - 弹框采用简洁的两行布局：
-  - **第一行**：终端标签名称输入框（默认名称来自 Option 配置的 `defaultTerminalName` 字段）
+  - **第一行**：终端标签名称输入框（默认名称来自 Option 配置的 `defaultTerminalName` 字段）+ "在编辑器中打开"复选框（默认值取决于对应配置的 terminalMode）
   - **第二行**：基础命令文本（只读）+ 追加参数输入框（可编辑）
 - 最终执行命令 = 基础命令 + 空格 + 追加参数（如果追加参数非空）
 - 点击"执行"创建终端并执行完整命令
@@ -489,6 +513,7 @@ data class ButtonConfig(
     var command: String = "",  // 直接命令，为空则使用选项列表模式
     var workingDirectory: String = "",  // 工作目录，留空使用项目根目录
     var defaultTerminalName: String = "",  // 直接命令模式的默认终端名称
+    var terminalMode: String = "",  // 终端打开模式：""=工具窗口, "editor"=编辑器
     var options: List<OptionConfig> = emptyList()
 )
 
@@ -499,7 +524,8 @@ data class OptionConfig(
     var workingDirectory: String = "",  // 可选，留空则使用当前项目根目录
     var defaultTerminalName: String = "",  // 命名弹窗中的默认终端名称
     var subButtons: List<SubButtonConfig> = emptyList(),
-    var type: String = ""  // 可选，空值或"option"=普通选项, "separator"=分割线
+    var type: String = "",  // 可选，空值或"option"=普通选项, "separator"=分割线
+    var terminalMode: String = ""  // 终端打开模式：""=工具窗口, "editor"=编辑器
 )
 
 data class SubButtonConfig(

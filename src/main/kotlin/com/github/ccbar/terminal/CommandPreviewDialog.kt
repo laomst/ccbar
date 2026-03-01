@@ -11,6 +11,7 @@ import java.awt.FlowLayout
 import java.awt.GridBagConstraints
 import java.awt.GridBagLayout
 import java.awt.Insets
+import javax.swing.JCheckBox
 import javax.swing.JComponent
 import javax.swing.JLabel
 import javax.swing.JPanel
@@ -25,12 +26,18 @@ import javax.swing.JTextField
 class CommandPreviewDialog(
     project: Project?,
     private val baseCommand: String,
-    private val defaultTerminalName: String
+    private val defaultTerminalName: String,
+    private val defaultOpenInEditor: Boolean = false
 ) : DialogWrapper(project) {
 
     // 终端名称输入框
     private val terminalNameField = JBTextField(defaultTerminalName).apply {
         preferredSize = Dimension(350, preferredSize.height)
+    }
+
+    // 在编辑器中打开复选框
+    private val editorModeCheckBox = JCheckBox("在编辑器中打开").apply {
+        isSelected = defaultOpenInEditor
     }
 
     // 追加参数输入框
@@ -58,6 +65,12 @@ class CommandPreviewDialog(
     val terminalName: String
         get() = terminalNameField.text.trim()
 
+    /**
+     * 获取是否在编辑器中打开
+     */
+    val openInEditor: Boolean
+        get() = editorModeCheckBox.isSelected
+
     init {
         title = "命令预览与参数配置"
         setOKButtonText("执行")
@@ -75,7 +88,7 @@ class CommandPreviewDialog(
             insets = Insets(4, 4, 4, 4)
         }
 
-        // 第一行：终端标签名称
+        // 第一行：终端标签名称 + 在编辑器中打开复选框
         gbc.gridx = 0
         gbc.gridy = 0
         gbc.weightx = 0.0
@@ -84,8 +97,14 @@ class CommandPreviewDialog(
         gbc.gridx = 1
         gbc.gridy = 0
         gbc.weightx = 1.0
-        gbc.gridwidth = 2
+        gbc.gridwidth = 1
         panel.add(terminalNameField, gbc)
+
+        gbc.gridx = 2
+        gbc.gridy = 0
+        gbc.weightx = 0.0
+        gbc.gridwidth = 1
+        panel.add(editorModeCheckBox, gbc)
 
         // 第二行：基础命令 + 追加参数输入框
         gbc.gridx = 0

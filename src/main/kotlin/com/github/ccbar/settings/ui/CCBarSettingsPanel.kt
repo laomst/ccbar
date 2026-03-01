@@ -99,6 +99,10 @@ class CCBarSettingsPanel(private val project: Project?) {
     // Button 终端名称面板（用于控制显示/隐藏）
     private lateinit var buttonTerminalNamePanel: JComponent
 
+    // Button 终端模式面板和下拉框（仅直接命令模式时显示）
+    private lateinit var buttonTerminalModePanel: JComponent
+    private lateinit var buttonTerminalModeCombo: JComboBox<String>
+
     // Options 面板引用（用于控制显示/隐藏）
     private lateinit var optionPanel: JComponent
 
@@ -123,6 +127,10 @@ class CCBarSettingsPanel(private val project: Project?) {
     private lateinit var optionDirPanel: JPanel
     private lateinit var optionDirHintPanel: JPanel
     private lateinit var optionTerminalNamePanel: JPanel
+
+    // Option 终端模式面板和下拉框
+    private lateinit var optionTerminalModePanel: JPanel
+    private lateinit var optionTerminalModeCombo: JComboBox<String>
 
     // Option 详情面板的边框（用于动态更新标题）
     private lateinit var optionDetailTitledBorder: javax.swing.border.TitledBorder
@@ -676,6 +684,17 @@ class CCBarSettingsPanel(private val project: Project?) {
         buttonTerminalNamePanel.add(buttonTerminalNameField, BorderLayout.CENTER)
         panel.add(buttonTerminalNamePanel)
 
+        // Terminal Mode 字段（仅直接命令模式时显示）
+        buttonTerminalModePanel = JPanel(BorderLayout())
+        buttonTerminalModePanel.add(JLabel("终端打开模式:"), BorderLayout.WEST)
+        buttonTerminalModeCombo = JComboBox(arrayOf("终端工具窗口", "编辑器")).apply {
+            addActionListener {
+                if (!ignoreUpdate) updateButtonTerminalMode()
+            }
+        }
+        buttonTerminalModePanel.add(buttonTerminalModeCombo, BorderLayout.CENTER)
+        panel.add(buttonTerminalModePanel)
+
         outerPanel.add(panel, BorderLayout.NORTH)
         return outerPanel
     }
@@ -818,6 +837,17 @@ class CCBarSettingsPanel(private val project: Project?) {
         }
         optionTerminalNamePanel.add(defaultTerminalNameField, BorderLayout.CENTER)
         panel.add(optionTerminalNamePanel)
+
+        // Terminal Mode（仅普通选项显示）
+        optionTerminalModePanel = JPanel(BorderLayout())
+        optionTerminalModePanel.add(JLabel("终端打开模式:"), BorderLayout.WEST)
+        optionTerminalModeCombo = JComboBox(arrayOf("终端工具窗口", "编辑器")).apply {
+            addActionListener {
+                if (!ignoreUpdate) updateOptionTerminalMode()
+            }
+        }
+        optionTerminalModePanel.add(optionTerminalModeCombo, BorderLayout.CENTER)
+        panel.add(optionTerminalModePanel)
 
         outerPanel.add(panel, BorderLayout.NORTH)
         return outerPanel
@@ -1023,6 +1053,7 @@ class CCBarSettingsPanel(private val project: Project?) {
             buttonCommandField.text = button.command
             buttonWorkingDirectoryField.text = button.workingDirectory
             buttonTerminalNameField.text = button.defaultTerminalName
+            buttonTerminalModeCombo.selectedIndex = if (button.terminalMode == TerminalMode.EDITOR) 1 else 0
             // 更新直接命令模式相关字段的显示状态
             updateDirectCommandModeVisibility()
             // 更新提示文字状态
@@ -1041,6 +1072,7 @@ class CCBarSettingsPanel(private val project: Project?) {
             buttonCommandField.text = ""
             buttonWorkingDirectoryField.text = ""
             buttonTerminalNameField.text = ""
+            buttonTerminalModeCombo.selectedIndex = 0
             // 重置提示文字状态
             updateCommandHintVisibility()
             updateWorkDirHintVisibility()
@@ -1077,6 +1109,11 @@ class CCBarSettingsPanel(private val project: Project?) {
     private fun updateButtonTerminalName() {
         if (ignoreUpdate) return
         selectedButton?.defaultTerminalName = buttonTerminalNameField.text
+    }
+
+    private fun updateButtonTerminalMode() {
+        if (ignoreUpdate) return
+        selectedButton?.terminalMode = if (buttonTerminalModeCombo.selectedIndex == 1) TerminalMode.EDITOR else TerminalMode.TOOL_WINDOW
     }
 
     /**
@@ -1121,6 +1158,7 @@ class CCBarSettingsPanel(private val project: Project?) {
         val isDirectMode = selectedButton?.isDirectCommandMode() == true
         buttonWorkingDirectoryPanel.isVisible = isDirectMode
         buttonTerminalNamePanel.isVisible = isDirectMode
+        buttonTerminalModePanel.isVisible = isDirectMode
         optionPanel.isVisible = !isDirectMode
     }
 
@@ -1408,6 +1446,9 @@ class CCBarSettingsPanel(private val project: Project?) {
         if (optionTerminalNamePanel.isVisible) {
             optionTerminalNamePanel.isVisible = false
         }
+        if (optionTerminalModePanel.isVisible) {
+            optionTerminalModePanel.isVisible = false
+        }
         if (subButtonOuterPanel.isVisible) {
             subButtonOuterPanel.isVisible = false
         }
@@ -1435,6 +1476,9 @@ class CCBarSettingsPanel(private val project: Project?) {
         if (!optionTerminalNamePanel.isVisible) {
             optionTerminalNamePanel.isVisible = true
         }
+        if (!optionTerminalModePanel.isVisible) {
+            optionTerminalModePanel.isVisible = true
+        }
         if (!subButtonOuterPanel.isVisible) {
             subButtonOuterPanel.isVisible = true
         }
@@ -1450,6 +1494,7 @@ class CCBarSettingsPanel(private val project: Project?) {
             baseCommandField.text = option.baseCommand
             workingDirectoryField.text = option.workingDirectory
             defaultTerminalNameField.text = option.defaultTerminalName
+            optionTerminalModeCombo.selectedIndex = if (option.terminalMode == TerminalMode.EDITOR) 1 else 0
             // 更新提示文字状态
             updateOptionWorkDirHintVisibility()
         } finally {
@@ -1464,6 +1509,7 @@ class CCBarSettingsPanel(private val project: Project?) {
             baseCommandField.text = ""
             workingDirectoryField.text = ""
             defaultTerminalNameField.text = ""
+            optionTerminalModeCombo.selectedIndex = 0
             // 重置提示文字状态
             updateOptionWorkDirHintVisibility()
         } finally {
@@ -1490,6 +1536,11 @@ class CCBarSettingsPanel(private val project: Project?) {
     private fun updateOptionTerminalName() {
         if (ignoreUpdate) return
         selectedOption?.defaultTerminalName = defaultTerminalNameField.text
+    }
+
+    private fun updateOptionTerminalMode() {
+        if (ignoreUpdate) return
+        selectedOption?.terminalMode = if (optionTerminalModeCombo.selectedIndex == 1) TerminalMode.EDITOR else TerminalMode.TOOL_WINDOW
     }
 
     // ==================== SubButton 表格操作 ====================

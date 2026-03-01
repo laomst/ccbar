@@ -23,6 +23,10 @@
 
         <!-- 通知组 -->
         <notificationGroup id="CCBar" displayType="BALLOON"/>
+
+        <!-- 终端编辑器提供者 -->
+        <fileEditorProvider
+            implementation="com.github.ccbar.terminal.editor.TerminalEditorProvider"/>
     </extensions>
 
     <actions>
