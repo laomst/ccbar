@@ -96,18 +96,18 @@ object CCBarPopupBuilder {
         // 先创建 popup，后续在回调中使用
         lateinit var popup: JBPopup
 
-        // 为每个 Option 创建一行
-        for (option in commandBarConfig.commands) {
-            if (option.isSeparator()) {
-                mainPanel.add(createSeparatorRow(option))
-            } else if (!option.enabled) {
+        // 为每个 Command 创建一行
+        for (command in commandBarConfig.commands) {
+            if (command.isSeparator()) {
+                mainPanel.add(createSeparatorRow(command))
+            } else if (!command.enabled) {
                 continue
             } else if (simpleMode) {
-                val row = createSimpleCommandRow(project, option, labelWidth) { popup.closeOk(null) }
+                val row = createSimpleCommandRow(project, command, labelWidth) { popup.closeOk(null) }
                 mainPanel.add(row)
             } else {
-                val optionBlock = createCommandBlock(project, option, labelWidth, previewWidth) { popup.closeOk(null) }
-                mainPanel.add(optionBlock)
+                val commandBlock = createCommandBlock(project, command, labelWidth, previewWidth) { popup.closeOk(null) }
+                mainPanel.add(commandBlock)
             }
             // 添加行间距
             mainPanel.add(Box.createVerticalStrut(6))
@@ -178,10 +178,10 @@ object CCBarPopupBuilder {
         val fontMetrics = JBLabel().getFontMetrics(JBLabel().font)
         var maxWidth = MIN_LABEL_WIDTH // 最小宽度
 
-        for (option in commandBarConfig.commands) {
-            if (!option.isSeparator() && option.enabled) {
-                val textWidth = fontMetrics.stringWidth(option.name)
-                val iconWidth = if (option.icon.isNotBlank()) 16 + 4 else 0  // 图标宽度 + 间距
+        for (command in commandBarConfig.commands) {
+            if (!command.isSeparator() && command.enabled) {
+                val textWidth = fontMetrics.stringWidth(command.name)
+                val iconWidth = if (command.icon.isNotBlank()) 16 + 4 else 0  // 图标宽度 + 间距
                 val totalWidth = textWidth + iconWidth + 16
                 if (totalWidth > maxWidth) {
                     maxWidth = totalWidth
@@ -199,13 +199,13 @@ object CCBarPopupBuilder {
         val fontMetrics = JBLabel().getFontMetrics(JBLabel().font)
         var maxWidth = 0
 
-        for (option in commandBarConfig.commands) {
-            if (!option.isSeparator() && option.enabled) {
+        for (command in commandBarConfig.commands) {
+            if (!command.isSeparator() && command.enabled) {
                 // 计算基础命令宽度
-                var textWidth = fontMetrics.stringWidth(option.baseCommand)
+                var textWidth = fontMetrics.stringWidth(command.baseCommand)
                 // 同时考虑带参数的完整命令宽度
-                for (quickParam in option.quickParams.filter { it.enabled }) {
-                    val fullCommand = buildFullCommand(option.baseCommand, quickParam.params)
+                for (quickParam in command.quickParams.filter { it.enabled }) {
+                    val fullCommand = buildFullCommand(command.baseCommand, quickParam.params)
                     val fullWidth = fontMetrics.stringWidth(fullCommand)
                     if (fullWidth > textWidth) {
                         textWidth = fullWidth
@@ -224,13 +224,13 @@ object CCBarPopupBuilder {
     /**
      * 创建分割线行
      */
-    private fun createSeparatorRow(option: CommandConfig): JComponent {
+    private fun createSeparatorRow(command: CommandConfig): JComponent {
         val panel = JPanel(BorderLayout()).apply {
             isOpaque = false
             border = BorderFactory.createEmptyBorder(4, 0, 4, 0)
         }
 
-        if (option.name.isNotBlank()) {
+        if (command.name.isNotBlank()) {
             val innerPanel = object : JPanel() {
                 override fun paintComponent(g: Graphics) {
                     super.paintComponent(g)
@@ -238,7 +238,7 @@ object CCBarPopupBuilder {
                     g2d.color = JBColor.GRAY
                     g2d.stroke = java.awt.BasicStroke(1f)
 
-                    val labelWidth = graphics.getFontMetrics(font).stringWidth(option.name) + 16
+                    val labelWidth = graphics.getFontMetrics(font).stringWidth(command.name) + 16
                     val centerY = height / 2
                     val leftEnd = (width - labelWidth) / 2
                     val rightStart = leftEnd + labelWidth
@@ -254,7 +254,7 @@ object CCBarPopupBuilder {
             innerPanel.layout = BorderLayout()
             innerPanel.isOpaque = false
 
-            val label = JLabel(option.name).apply {
+            val label = JLabel(command.name).apply {
                 foreground = JBColor.GRAY
                 horizontalAlignment = SwingConstants.CENTER
             }
@@ -283,23 +283,23 @@ object CCBarPopupBuilder {
     /**
      * 创建简易模式的Command行（仅显示名称，整行悬浮高亮）
      */
-    private fun createSimpleCommandRow(project: Project, option: CommandConfig, labelWidth: Int, onClose: () -> Unit): JPanel {
+    private fun createSimpleCommandRow(project: Project, command: CommandConfig, labelWidth: Int, onClose: () -> Unit): JPanel {
         val hoverPanel = createHoverPanel {
             onClose()
-            CCBarTerminalService.openTerminal(project, option, null)
+            CCBarTerminalService.openTerminal(project, command, null)
         }
-        hoverPanel.toolTipText = option.baseCommand
+        hoverPanel.toolTipText = command.baseCommand
 
         val row = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
             isOpaque = false
         }
 
-        val label = JBLabel(option.name).apply {
+        val label = JBLabel(command.name).apply {
             preferredSize = Dimension(labelWidth, ROW_HEIGHT)
             horizontalAlignment = SwingConstants.LEFT
             foreground = JBColor.foreground()
-            if (option.icon.isNotBlank()) {
-                icon = com.github.ccbar.icons.CCBarIcons.loadIcon(option.icon)
+            if (command.icon.isNotBlank()) {
+                icon = com.github.ccbar.icons.CCBarIcons.loadIcon(command.icon)
             }
         }
 
@@ -313,14 +313,14 @@ object CCBarPopupBuilder {
      * 第一行：命令预览 | 名称
      * 第二行：快捷参数列表（小号文字）
      */
-    private fun createCommandBlock(project: Project, option: CommandConfig, labelWidth: Int, previewWidth: Int, onClose: () -> Unit): JPanel {
+    private fun createCommandBlock(project: Project, command: CommandConfig, labelWidth: Int, previewWidth: Int, onClose: () -> Unit): JPanel {
         val hoverPanel = createHoverPanel {
             onClose()
-            CCBarTerminalService.openTerminal(project, option, null)
+            CCBarTerminalService.openTerminal(project, command, null)
         }
 
         // 命令预览标签（需要被快捷参数 hover 更新）
-        val commandPreview = JBLabel(option.baseCommand).apply {
+        val commandPreview = JBLabel(command.baseCommand).apply {
             icon = com.github.ccbar.icons.CCBarIcons.loadIcon("builtin:AllIcons.Debugger.ExecuteCurrentStatement")
             preferredSize = Dimension(previewWidth, ROW_HEIGHT)
             horizontalAlignment = SwingConstants.LEFT
@@ -331,21 +331,21 @@ object CCBarPopupBuilder {
         val firstRow = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
             isOpaque = false
         }
-        val optionLabel = JBLabel(option.name).apply {
+        val commandLabel = JBLabel(command.name).apply {
             preferredSize = Dimension(labelWidth, ROW_HEIGHT)
             horizontalAlignment = SwingConstants.LEFT
             foreground = LABEL_FOREGROUND
             border = JBUI.Borders.emptyLeft(8)
-            if (option.icon.isNotBlank()) {
-                icon = com.github.ccbar.icons.CCBarIcons.loadIcon(option.icon)
+            if (command.icon.isNotBlank()) {
+                icon = com.github.ccbar.icons.CCBarIcons.loadIcon(command.icon)
             }
         }
         firstRow.add(commandPreview)
-        firstRow.add(optionLabel)
+        firstRow.add(commandLabel)
         hoverPanel.add(firstRow)
 
         // 第二行：快捷参数列表（仅在有启用的快捷参数时显示）
-        val enabledQuickParams = option.quickParams.filter { it.enabled }
+        val enabledQuickParams = command.quickParams.filter { it.enabled }
         if (enabledQuickParams.isNotEmpty()) {
             val secondRow = JPanel(FlowLayout(FlowLayout.RIGHT, 0, 0)).apply {
                 isOpaque = false
@@ -353,7 +353,7 @@ object CCBarPopupBuilder {
             }
 
             for ((index, quickParam) in enabledQuickParams.withIndex()) {
-                val btn = createQuickParamLabel(project, option, quickParam, commandPreview, onClose)
+                val btn = createQuickParamLabel(project, command, quickParam, commandPreview, onClose)
                 secondRow.add(btn)
                 if (index < enabledQuickParams.size - 1) {
                     val separator = JBLabel("|").apply {
@@ -377,12 +377,12 @@ object CCBarPopupBuilder {
      */
     private fun createQuickParamLabel(
         project: Project,
-        option: CommandConfig,
+        command: CommandConfig,
         quickParam: QuickParamConfig,
         commandPreview: JBLabel,
         onClose: () -> Unit
     ): JBLabel {
-        val fullCommand = buildFullCommand(option.baseCommand, quickParam.params)
+        val fullCommand = buildFullCommand(command.baseCommand, quickParam.params)
 
         return JBLabel(quickParam.name).apply {
             font = font.deriveFont(font.size2D - 1f)
@@ -396,7 +396,7 @@ object CCBarPopupBuilder {
                 override fun mouseClicked(e: MouseEvent?) {
                     e?.consume()
                     onClose()
-                    CCBarTerminalService.openTerminal(project, option, quickParam)
+                    CCBarTerminalService.openTerminal(project, command, quickParam)
                 }
 
                 override fun mouseEntered(e: MouseEvent?) {
@@ -406,7 +406,7 @@ object CCBarPopupBuilder {
 
                 override fun mouseExited(e: MouseEvent?) {
                     foreground = QUICK_PARAM_FOREGROUND
-                    commandPreview.text = option.baseCommand
+                    commandPreview.text = command.baseCommand
                 }
             })
         }

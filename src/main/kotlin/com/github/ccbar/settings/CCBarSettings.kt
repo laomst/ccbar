@@ -136,14 +136,14 @@ object TerminalMode {
  * Command 类型常量
  */
 object CommandType {
-    const val COMMAND = "option"
+    const val COMMAND = "command"
     const val SEPARATOR = "separator"
 }
 
 /**
  * Command 配置
  * 绑定基础命令（baseCommand）和可选的工作目录
- * 支持两种类型：普通 Command（type 为空或 "option"）和分割线（type = "separator"）
+ * 支持两种类型：普通 Command（type 为空或 "command"）和分割线（type = "separator"）
  */
 data class CommandConfig(
     var id: String = "",
@@ -154,7 +154,7 @@ data class CommandConfig(
     var workingDirectory: String = "",
     var defaultTerminalName: String = "",
     var quickParams: MutableList<QuickParamConfig> = mutableListOf(),
-    var type: String = "",  // 空值或"option"=普通 Command, "separator"=分割线
+    var type: String = "",  // 空值或"command"=普通 Command, "separator"=分割线
     var terminalMode: String = "",  // 终端打开模式：""=工具窗口, "editor"=编辑器
     var enabled: Boolean = true
 ) {

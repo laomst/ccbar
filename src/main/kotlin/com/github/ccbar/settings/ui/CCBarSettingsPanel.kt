@@ -73,83 +73,83 @@ class CCBarSettingsPanel(private val project: Project?) {
     private var isProjectConfigEnabled: Boolean = false
 
     // UI 组件
-    private lateinit var buttonListModel: CollectionListModel<CommandBarConfig>
-    private lateinit var buttonList: JBList<CommandBarConfig>
-    private lateinit var optionListModel: CollectionListModel<CommandConfig>
-    private lateinit var optionList: JBList<CommandConfig>
+    private lateinit var commandBarListModel: CollectionListModel<CommandBarConfig>
+    private lateinit var commandBarList: JBList<CommandBarConfig>
+    private lateinit var commandListModel: CollectionListModel<CommandConfig>
+    private lateinit var commandList: JBList<CommandConfig>
     private lateinit var quickParamSummaryField: JBTextField
 
-    // Button 详情字段
-    private lateinit var buttonNameField: JBTextField
-    private lateinit var buttonIconField: TextFieldWithBrowseButton
-    private lateinit var buttonCommandField: JBTextField
-    private lateinit var buttonWorkingDirectoryField: TextFieldWithBrowseButton
-    private lateinit var buttonTerminalNameField: JBTextField
+    // CommandBar 详情字段
+    private lateinit var commandBarNameField: JBTextField
+    private lateinit var commandBarIconField: TextFieldWithBrowseButton
+    private lateinit var commandBarCommandField: JBTextField
+    private lateinit var commandBarWorkingDirField: TextFieldWithBrowseButton
+    private lateinit var commandBarTerminalNameField: JBTextField
 
-    // Button 提示标签（用于动态更新文字）
-    private lateinit var buttonCommandHintLabel: JLabel
-    private lateinit var buttonWorkDirHintLabel: JLabel
+    // CommandBar 提示标签（用于动态更新文字）
+    private lateinit var commandBarCommandHintLabel: JLabel
+    private lateinit var commandBarWorkDirHintLabel: JLabel
 
-    // Button 工作目录面板（用于控制显示/隐藏）
-    private lateinit var buttonWorkingDirectoryPanel: JComponent
+    // CommandBar 工作目录面板（用于控制显示/隐藏）
+    private lateinit var commandBarWorkingDirPanel: JComponent
 
-    // Button 环境变量面板和字段（仅直接命令模式时显示）
-    private lateinit var buttonEnvVariablesPanel: JComponent
-    private lateinit var buttonEnvVariablesField: JBTextField
+    // CommandBar 环境变量面板和字段（仅直接命令模式时显示）
+    private lateinit var commandBarEnvVariablesPanel: JComponent
+    private lateinit var commandBarEnvVariablesField: JBTextField
 
-    // Button 终端名称面板（用于控制显示/隐藏）
-    private lateinit var buttonTerminalNamePanel: JComponent
+    // CommandBar 终端名称面板（用于控制显示/隐藏）
+    private lateinit var commandBarTerminalNamePanel: JComponent
 
-    // Button 终端模式面板和下拉框（仅直接命令模式时显示）
-    private lateinit var buttonTerminalModePanel: JComponent
-    private lateinit var buttonTerminalModeCheckbox: JCheckBox
+    // CommandBar 终端模式面板和下拉框（仅直接命令模式时显示）
+    private lateinit var commandBarTerminalModePanel: JComponent
+    private lateinit var commandBarTerminalModeCheckbox: JCheckBox
 
-    // Button 简易模式复选框（仅Command 列表模式时显示）
+    // CommandBar 简易模式复选框（仅Command 列表模式时显示）
     private lateinit var simpleModePanel: JComponent
     private lateinit var simpleModeCheckbox: JCheckBox
 
-    // Button 启用复选框
-    private lateinit var buttonEnabledCheckbox: JCheckBox
+    // CommandBar 启用复选框
+    private lateinit var commandBarEnabledCheckbox: JCheckBox
 
     // Command 启用复选框
-    private lateinit var optionEnabledCheckbox: JCheckBox
-    private lateinit var optionEnabledPanel: JComponent
+    private lateinit var commandEnabledCheckbox: JCheckBox
+    private lateinit var commandEnabledPanel: JComponent
 
-    // Options 面板引用（用于控制显示/隐藏）
-    private lateinit var optionPanel: JComponent
+    // Command 面板引用（用于控制显示/隐藏）
+    private lateinit var commandPanel: JComponent
 
     // 右侧详情容器（用于切换空状态和详情面板）
     private lateinit var rightContainer: JPanel
 
-    // Option 详情字段
-    private lateinit var optionNameField: JBTextField
-    private lateinit var optionIconField: TextFieldWithBrowseButton
-    private lateinit var optionIconPanel: JPanel
+    // Command 详情字段
+    private lateinit var commandNameField: JBTextField
+    private lateinit var commandIconField: TextFieldWithBrowseButton
+    private lateinit var commandIconPanel: JPanel
     private lateinit var baseCommandField: JBTextField
-    private lateinit var optionEnvVariablesField: JBTextField
-    private lateinit var optionEnvVariablesPanel: JPanel
+    private lateinit var commandEnvVariablesField: JBTextField
+    private lateinit var commandEnvVariablesPanel: JPanel
     private lateinit var workingDirectoryField: TextFieldWithBrowseButton
     private lateinit var defaultTerminalNameField: JBTextField
 
-    // Option 提示标签（用于动态更新文字）
-    private lateinit var optionWorkDirHintLabel: JLabel
+    // Command 提示标签（用于动态更新文字）
+    private lateinit var commandWorkDirHintLabel: JLabel
 
-    // Option 详情面板和 快捷参数面板（用于控制显示/隐藏）
-    private lateinit var optionDetailOuterPanel: JComponent
+    // Command 详情面板和 快捷参数面板（用于控制显示/隐藏）
+    private lateinit var commandDetailOuterPanel: JComponent
     private lateinit var quickParamOuterPanel: JComponent
 
-    // Option 详情面板中各个字段的容器（用于控制分割线时只显示名称）
-    private lateinit var optionCommandPanel: JPanel
-    private lateinit var optionDirPanel: JPanel
-    private lateinit var optionDirHintPanel: JPanel
-    private lateinit var optionTerminalNamePanel: JPanel
+    // Command 详情面板中各个字段的容器（用于控制分割线时只显示名称）
+    private lateinit var commandBaseCommandPanel: JPanel
+    private lateinit var commandDirPanel: JPanel
+    private lateinit var commandDirHintPanel: JPanel
+    private lateinit var commandTerminalNamePanel: JPanel
 
-    // Option 终端模式面板和下拉框
-    private lateinit var optionTerminalModePanel: JPanel
-    private lateinit var optionTerminalModeCheckbox: JCheckBox
+    // Command 终端模式面板和下拉框
+    private lateinit var commandTerminalModePanel: JPanel
+    private lateinit var commandTerminalModeCheckbox: JCheckBox
 
-    // Option 详情面板的边框（用于动态更新标题）
-    private lateinit var optionDetailTitledBorder: javax.swing.border.TitledBorder
+    // Command 详情面板的边框（用于动态更新标题）
+    private lateinit var commandDetailTitledBorder: javax.swing.border.TitledBorder
 
     // 当前选中的 Button 和 Option
     private var selectedCommandBar: CommandBarConfig? = null
@@ -158,8 +158,8 @@ class CCBarSettingsPanel(private val project: Project?) {
     // 忽略更新标志（用于批量更新时避免循环）
     private var ignoreUpdate = false
 
-    // 添加 Command气泡弹窗
-    private var addOptionPopup: JBPopup? = null
+    // 添加 Command 气泡弹窗
+    private var addCommandPopup: JBPopup? = null
 
     // 气泡延迟关闭计时器
     private var popupCloseTimer: javax.swing.Timer? = null
@@ -167,8 +167,8 @@ class CCBarSettingsPanel(private val project: Project?) {
     // 网络图标加载完成监听器的取消注册函数
     private var removeIconLoadedListener: (() -> Unit)? = null
 
-    // 添加CommandBar的 UI 组件引用（用于气泡锚定）
-    private var addOptionButtonRef: JComponent? = null
+    // 添加 Command 的 UI 组件引用（用于气泡锚定）
+    private var addCommandButtonRef: JComponent? = null
 
     // 卡片布局常量
     private companion object {
@@ -228,8 +228,8 @@ class CCBarSettingsPanel(private val project: Project?) {
         // 注册网络图标加载完成监听器，刷新列表中的图标显示
         removeIconLoadedListener?.invoke()
         removeIconLoadedListener = CCBarIcons.addIconLoadedListener {
-            buttonList.repaint()
-            optionList.repaint()
+            commandBarList.repaint()
+            commandList.repaint()
         }
 
         return mainPanel
@@ -362,7 +362,7 @@ class CCBarSettingsPanel(private val project: Project?) {
     private fun createConfigContentPanel(): JComponent {
         // 创建左右分割面板
         val splitter = OnePixelSplitter(false, 0.2f).apply {
-            firstComponent = createButtonListPanel()
+            firstComponent = createCommandBarListPanel()
             // 右侧：使用卡片布局切换空状态和详情面板
             rightContainer = JPanel(CardLayout())
             rightContainer.add(createEmptyPanel(), CARD_EMPTY)
@@ -378,7 +378,7 @@ class CCBarSettingsPanel(private val project: Project?) {
 
     /**
      * 保存当前编辑状态
-     * 注意：由于 buttonListModel 中的元素和 editingState.commandBars 中的元素是同一个对象引用，
+     * 注意：由于 commandBarListModel 中的元素和 editingState.commandBars 中的元素是同一个对象引用，
      * 用户的修改会直接反映到 editingProjectState 或 editingSystemState 中，
      * 所以不需要额外的深拷贝操作。
      */
@@ -392,17 +392,17 @@ class CCBarSettingsPanel(private val project: Project?) {
      */
     private fun refreshConfigPanel() {
         // 重新加载CommandBar列表
-        buttonListModel.removeAll()
+        commandBarListModel.removeAll()
         for (btn in editingState.commandBars) {
-            buttonListModel.add(btn)
+            commandBarListModel.add(btn)
         }
 
         // 清空选中状态
         selectedCommandBar = null
         selectedCommand = null
-        clearButtonDetail()
-        clearOptionDetail()
-        optionListModel.removeAll()
+        clearCommandBarDetail()
+        clearCommandDetail()
+        commandListModel.removeAll()
         updateQuickParamSummary()
 
         showEmptyPanel()
@@ -504,30 +504,30 @@ class CCBarSettingsPanel(private val project: Project?) {
     }
 
     /**
-     * 创建 Button 列表面板
+     * 创建 CommandBar 列表面板
      */
-    private fun createButtonListPanel(): JComponent {
-        buttonListModel = CollectionListModel(editingState.commandBars)
-        buttonList = JBList(buttonListModel).apply {
-            cellRenderer = ButtonListCellRenderer()
+    private fun createCommandBarListPanel(): JComponent {
+        commandBarListModel = CollectionListModel(editingState.commandBars)
+        commandBarList = JBList(commandBarListModel).apply {
+            cellRenderer = CommandBarListCellRenderer()
             selectionMode = ListSelectionModel.SINGLE_SELECTION
-            addListSelectionListener { onButtonSelected() }
+            addListSelectionListener { onCommandBarSelected() }
         }
 
         val panel = BorderLayoutPanel().withBorder(JBUI.Borders.empty(8))
         @Suppress("DEPRECATION")
-        val decorator = com.intellij.ui.ToolbarDecorator.createDecorator(buttonList)
+        val decorator = com.intellij.ui.ToolbarDecorator.createDecorator(commandBarList)
             .setAddActionName("添加")
             .setRemoveActionName("删除")
             .setMoveUpActionName("上移")
             .setMoveDownActionName("下移")
-            .setAddAction { addButton() }
-            .setRemoveAction { removeButton() }
-            .setMoveUpAction { moveButtonUp() }
-            .setMoveDownAction { moveButtonDown() }
+            .setAddAction { addCommandBar() }
+            .setRemoveAction { removeCommandBar() }
+            .setMoveUpAction { moveCommandBarUp() }
+            .setMoveDownAction { moveCommandBarDown() }
             .addExtraAction(object : com.intellij.ui.AnActionButton("复制", AllIcons.Actions.Copy) {
-                override fun actionPerformed(e: AnActionEvent) = copyButton()
-                override fun isEnabled(): Boolean = buttonList.selectedIndex >= 0
+                override fun actionPerformed(e: AnActionEvent) = copyCommandBar()
+                override fun isEnabled(): Boolean = commandBarList.selectedIndex >= 0
             })
 
         panel.addToCenter(decorator.createPanel())
@@ -542,22 +542,22 @@ class CCBarSettingsPanel(private val project: Project?) {
         panel.border = JBUI.Borders.empty(8)
 
         // Button 详情
-        val buttonDetailPanel = createButtonDetailPanel()
+        val commandBarDetailPanel = createCommandBarDetailPanel()
 
-        // Option 列表和详情
-        optionPanel = createOptionPanel()
+        // Command 列表和详情
+        commandPanel = createCommandPanel()
 
-        // 使用 BorderLayout 替代 JSplitPane，便于控制 optionPanel 的显示/隐藏
-        panel.add(buttonDetailPanel, BorderLayout.NORTH)
-        panel.add(optionPanel, BorderLayout.CENTER)
+        // 使用 BorderLayout 替代 JSplitPane，便于控制 commandPanel 的显示/隐藏
+        panel.add(commandBarDetailPanel, BorderLayout.NORTH)
+        panel.add(commandPanel, BorderLayout.CENTER)
 
         return panel
     }
 
     /**
-     * 创建 Button 详情面板
+     * 创建 CommandBar 详情面板
      */
-    private fun createButtonDetailPanel(): JComponent {
+    private fun createCommandBarDetailPanel(): JComponent {
         val outerPanel = JPanel(BorderLayout())
         val panel = JPanel().apply {
             layout = BoxLayout(this, BoxLayout.Y_AXIS)
@@ -565,11 +565,11 @@ class CCBarSettingsPanel(private val project: Project?) {
         }
 
         // 启用复选框
-        buttonEnabledCheckbox = JCheckBox("启用").apply {
+        commandBarEnabledCheckbox = JCheckBox("启用").apply {
             addActionListener {
                 if (!ignoreUpdate) {
                     selectedCommandBar?.enabled = isSelected
-                    buttonList.repaint()
+                    commandBarList.repaint()
                 }
             }
         }
@@ -577,15 +577,15 @@ class CCBarSettingsPanel(private val project: Project?) {
         // Name 字段 + 启用复选框（同一行）
         val namePanel = JPanel(BorderLayout())
         namePanel.add(JLabel("名称:"), BorderLayout.WEST)
-        buttonNameField = JBTextField().apply {
+        commandBarNameField = JBTextField().apply {
             document.addDocumentListener(object : DocumentListener {
-                override fun insertUpdate(e: DocumentEvent?) = updateButtonName()
-                override fun removeUpdate(e: DocumentEvent?) = updateButtonName()
-                override fun changedUpdate(e: DocumentEvent?) = updateButtonName()
+                override fun insertUpdate(e: DocumentEvent?) = updateCommandBarName()
+                override fun removeUpdate(e: DocumentEvent?) = updateCommandBarName()
+                override fun changedUpdate(e: DocumentEvent?) = updateCommandBarName()
             })
         }
-        namePanel.add(buttonNameField, BorderLayout.CENTER)
-        namePanel.add(buttonEnabledCheckbox, BorderLayout.EAST)
+        namePanel.add(commandBarNameField, BorderLayout.CENTER)
+        namePanel.add(commandBarEnabledCheckbox, BorderLayout.EAST)
         panel.add(namePanel)
 
         // Icon 字段（包含输入框 + 内置图标下拉CommandBar + 文件浏览CommandBar）
@@ -593,12 +593,12 @@ class CCBarSettingsPanel(private val project: Project?) {
         iconPanel.add(JLabel("图标:"), BorderLayout.WEST)
 
         // 创建带文件浏览的输入框
-        buttonIconField = TextFieldWithBrowseButton().apply {
+        commandBarIconField = TextFieldWithBrowseButton().apply {
             (textField as? JBTextField)?.emptyText?.text = "builtin:AllIcons.Actions.Execute"
             textField.document.addDocumentListener(object : DocumentListener {
-                override fun insertUpdate(e: DocumentEvent?) = updateButtonIcon()
-                override fun removeUpdate(e: DocumentEvent?) = updateButtonIcon()
-                override fun changedUpdate(e: DocumentEvent?) = updateButtonIcon()
+                override fun insertUpdate(e: DocumentEvent?) = updateCommandBarIcon()
+                override fun removeUpdate(e: DocumentEvent?) = updateCommandBarIcon()
+                override fun changedUpdate(e: DocumentEvent?) = updateCommandBarIcon()
             })
             // 文件浏览功能
             addBrowseFolderListener(
@@ -625,9 +625,9 @@ class CCBarSettingsPanel(private val project: Project?) {
             addActionListener {
                 val popup = BuiltinIconSelector.createPopup(
                     onIconSelected = { iconPath ->
-                        buttonIconField.text = iconPath
+                        commandBarIconField.text = iconPath
                     },
-                    currentIconPath = buttonIconField.text
+                    currentIconPath = commandBarIconField.text
                 )
                 popup.showUnderneathOf(this)
             }
@@ -635,7 +635,7 @@ class CCBarSettingsPanel(private val project: Project?) {
 
         // 创建组合面板（输入框 + 下拉CommandBar）
         val iconFieldPanel = JPanel(BorderLayout()).apply {
-            add(buttonIconField, BorderLayout.CENTER)
+            add(commandBarIconField, BorderLayout.CENTER)
             add(builtinIconBtn, BorderLayout.EAST)
         }
 
@@ -643,81 +643,81 @@ class CCBarSettingsPanel(private val project: Project?) {
         panel.add(iconPanel)
 
         // Command 字段
-        val commandPanel = JPanel(BorderLayout())
-        commandPanel.add(JLabel("直接命令:"), BorderLayout.WEST)
-        buttonCommandHintLabel = JLabel("输入直接命令后将不支持绑定Command 列表").apply {
+        val directCommandPanel = JPanel(BorderLayout())
+        directCommandPanel.add(JLabel("直接命令:"), BorderLayout.WEST)
+        commandBarCommandHintLabel = JLabel("输入直接命令后将不支持绑定Command 列表").apply {
             foreground = com.intellij.ui.JBColor.GRAY
         }
-        buttonCommandField = JBTextField().apply {
+        commandBarCommandField = JBTextField().apply {
             document.addDocumentListener(object : DocumentListener {
                 override fun insertUpdate(e: DocumentEvent?) {
-                    updateButtonCommand()
+                    updateCommandBarCommand()
                     updateCommandHintVisibility()
                 }
                 override fun removeUpdate(e: DocumentEvent?) {
-                    updateButtonCommand()
+                    updateCommandBarCommand()
                     updateCommandHintVisibility()
                 }
                 override fun changedUpdate(e: DocumentEvent?) {
-                    updateButtonCommand()
+                    updateCommandBarCommand()
                     updateCommandHintVisibility()
                 }
             })
         }
-        commandPanel.add(buttonCommandField, BorderLayout.CENTER)
-        panel.add(commandPanel)
+        directCommandPanel.add(commandBarCommandField, BorderLayout.CENTER)
+        panel.add(directCommandPanel)
         // 添加提示标签（单独一行，与输入框左对齐）
         val commandHintPanel = JPanel(BorderLayout())
         commandHintPanel.add(Box.createHorizontalStrut(JLabel("直接命令:").preferredSize.width), BorderLayout.WEST)
-        commandHintPanel.add(buttonCommandHintLabel, BorderLayout.CENTER)
+        commandHintPanel.add(commandBarCommandHintLabel, BorderLayout.CENTER)
         panel.add(commandHintPanel)
 
         // Terminal Name 字段（仅直接命令模式时显示）— 紧跟图标后
-        buttonTerminalNamePanel = JPanel(BorderLayout())
-        buttonTerminalNamePanel.add(JLabel("默认终端窗口名称:"), BorderLayout.WEST)
-        buttonTerminalNameField = JBTextField().apply {
+        commandBarTerminalNamePanel = JPanel(BorderLayout())
+        commandBarTerminalNamePanel.add(JLabel("默认终端窗口名称:"), BorderLayout.WEST)
+        commandBarTerminalNameField = JBTextField().apply {
             document.addDocumentListener(object : DocumentListener {
-                override fun insertUpdate(e: DocumentEvent?) = updateButtonTerminalName()
-                override fun removeUpdate(e: DocumentEvent?) = updateButtonTerminalName()
-                override fun changedUpdate(e: DocumentEvent?) = updateButtonTerminalName()
+                override fun insertUpdate(e: DocumentEvent?) = updateCommandBarTerminalName()
+                override fun removeUpdate(e: DocumentEvent?) = updateCommandBarTerminalName()
+                override fun changedUpdate(e: DocumentEvent?) = updateCommandBarTerminalName()
             })
         }
-        buttonTerminalNamePanel.add(buttonTerminalNameField, BorderLayout.CENTER)
-        panel.add(buttonTerminalNamePanel)
+        commandBarTerminalNamePanel.add(commandBarTerminalNameField, BorderLayout.CENTER)
+        panel.add(commandBarTerminalNamePanel)
 
         // Terminal Mode 字段（仅直接命令模式时显示）— 紧跟终端名称后
-        buttonTerminalModePanel = JPanel().apply {
+        commandBarTerminalModePanel = JPanel().apply {
             layout = BoxLayout(this, BoxLayout.Y_AXIS)
         }
-        val buttonTerminalModeRow = JPanel(BorderLayout())
-        buttonTerminalModeCheckbox = JCheckBox("在编辑器中打开").apply {
+        val commandBarTerminalModeRow = JPanel(BorderLayout())
+        commandBarTerminalModeCheckbox = JCheckBox("在编辑器中打开").apply {
             addActionListener {
-                if (!ignoreUpdate) updateButtonTerminalMode()
+                if (!ignoreUpdate) updateCommandBarTerminalMode()
             }
         }
-        buttonTerminalModeRow.add(buttonTerminalModeCheckbox, BorderLayout.WEST)
-        buttonTerminalModePanel.add(buttonTerminalModeRow)
-        val buttonTerminalModeHintPanel = JPanel(BorderLayout())
-        val buttonCheckboxSpacer = Box.createHorizontalStrut(JCheckBox().preferredSize.width)
-        buttonTerminalModeHintPanel.add(buttonCheckboxSpacer, BorderLayout.WEST)
-        buttonTerminalModeHintPanel.add(JLabel("默认通过终端工具窗口打开").apply {
+        commandBarTerminalModeRow.add(commandBarTerminalModeCheckbox, BorderLayout.WEST)
+        commandBarTerminalModePanel.add(commandBarTerminalModeRow)
+        val commandBarTerminalModeHintPanel = JPanel(BorderLayout())
+        val commandBarCheckboxSpacer = Box.createHorizontalStrut(JCheckBox().preferredSize.width)
+        commandBarTerminalModeHintPanel.add(commandBarCheckboxSpacer, BorderLayout.WEST)
+        commandBarTerminalModeHintPanel.add(JLabel("默认通过终端工具窗口打开").apply {
             foreground = com.intellij.ui.JBColor.GRAY
             font = font.deriveFont(font.size2D - 1f)
         }, BorderLayout.CENTER)
-        buttonTerminalModePanel.add(buttonTerminalModeHintPanel)
-        panel.add(buttonTerminalModePanel)
+        commandBarTerminalModePanel.add(commandBarTerminalModeHintPanel)
+        panel.add(commandBarTerminalModePanel)
 
         // Working Directory 字段（仅直接命令模式时显示）
-        buttonWorkingDirectoryPanel = JPanel().apply {
+        commandBarWorkingDirPanel = JPanel().apply {
             layout = BoxLayout(this, BoxLayout.Y_AXIS)
         }
         val workDirPanel = JPanel(BorderLayout())
         workDirPanel.add(JLabel("工作目录:"), BorderLayout.WEST)
         val projectPath = getCurrentProjectPath()
-        buttonWorkDirHintLabel = JLabel("留空时使用项目根路径").apply {
+        commandBarWorkDirHintLabel = JLabel("留空时使用项目根路径").apply {
             foreground = com.intellij.ui.JBColor.GRAY
         }
-        buttonWorkingDirectoryField = TextFieldWithBrowseButton().apply {
+        commandBarWorkingDirField = TextFieldWithBrowseButton().apply {
             addBrowseFolderListener(
                 "选择工作目录",
                 "选择终端的工作目录",
@@ -728,54 +728,54 @@ class CCBarSettingsPanel(private val project: Project?) {
             (textField as? JBTextField)?.emptyText?.text = projectPath ?: ""
             textField.document.addDocumentListener(object : DocumentListener {
                 override fun insertUpdate(e: DocumentEvent?) {
-                    updateButtonWorkingDirectory()
+                    updateCommandBarWorkingDir()
                     updateWorkDirHintVisibility()
                 }
                 override fun removeUpdate(e: DocumentEvent?) {
-                    updateButtonWorkingDirectory()
+                    updateCommandBarWorkingDir()
                     updateWorkDirHintVisibility()
                 }
                 override fun changedUpdate(e: DocumentEvent?) {
-                    updateButtonWorkingDirectory()
+                    updateCommandBarWorkingDir()
                     updateWorkDirHintVisibility()
                 }
             })
         }
-        workDirPanel.add(buttonWorkingDirectoryField, BorderLayout.CENTER)
-        buttonWorkingDirectoryPanel.add(workDirPanel)
+        workDirPanel.add(commandBarWorkingDirField, BorderLayout.CENTER)
+        commandBarWorkingDirPanel.add(workDirPanel)
         // 添加提示标签（单独一行，与输入框左对齐）
         val workDirHintPanel = JPanel(BorderLayout())
         workDirHintPanel.add(Box.createHorizontalStrut(JLabel("工作目录:").preferredSize.width), BorderLayout.WEST)
-        workDirHintPanel.add(buttonWorkDirHintLabel, BorderLayout.CENTER)
-        buttonWorkingDirectoryPanel.add(workDirHintPanel)
-        panel.add(buttonWorkingDirectoryPanel)
+        workDirHintPanel.add(commandBarWorkDirHintLabel, BorderLayout.CENTER)
+        commandBarWorkingDirPanel.add(workDirHintPanel)
+        panel.add(commandBarWorkingDirPanel)
 
         // Environment Variables 字段（仅直接命令模式时显示）
-        buttonEnvVariablesPanel = JPanel(BorderLayout())
-        buttonEnvVariablesPanel.add(JLabel("环境变量:"), BorderLayout.WEST)
-        val buttonEnvFieldPanel = JPanel(BorderLayout())
-        buttonEnvVariablesField = JBTextField().apply {
+        commandBarEnvVariablesPanel = JPanel(BorderLayout())
+        commandBarEnvVariablesPanel.add(JLabel("环境变量:"), BorderLayout.WEST)
+        val commandBarEnvFieldPanel = JPanel(BorderLayout())
+        commandBarEnvVariablesField = JBTextField().apply {
             emptyText.text = "KEY1=val1;KEY2=val2"
             document.addDocumentListener(object : DocumentListener {
-                override fun insertUpdate(e: DocumentEvent?) = updateButtonEnvVariables()
-                override fun removeUpdate(e: DocumentEvent?) = updateButtonEnvVariables()
-                override fun changedUpdate(e: DocumentEvent?) = updateButtonEnvVariables()
+                override fun insertUpdate(e: DocumentEvent?) = updateCommandBarEnvVariables()
+                override fun removeUpdate(e: DocumentEvent?) = updateCommandBarEnvVariables()
+                override fun changedUpdate(e: DocumentEvent?) = updateCommandBarEnvVariables()
             })
         }
-        buttonEnvFieldPanel.add(buttonEnvVariablesField, BorderLayout.CENTER)
-        val buttonEnvEditButton = JButton("...").apply {
+        commandBarEnvFieldPanel.add(commandBarEnvVariablesField, BorderLayout.CENTER)
+        val commandBarEnvEditButton = JButton("...").apply {
             toolTipText = "编辑环境变量"
             addActionListener {
                 val currentProject = project ?: ProjectManager.getInstance().openProjects.firstOrNull()
-                val dialog = EnvVariablesDialog(currentProject, buttonEnvVariablesField.text)
+                val dialog = EnvVariablesDialog(currentProject, commandBarEnvVariablesField.text)
                 if (dialog.showAndGet()) {
-                    buttonEnvVariablesField.text = dialog.envVariablesText
+                    commandBarEnvVariablesField.text = dialog.envVariablesText
                 }
             }
         }
-        buttonEnvFieldPanel.add(buttonEnvEditButton, BorderLayout.EAST)
-        buttonEnvVariablesPanel.add(buttonEnvFieldPanel, BorderLayout.CENTER)
-        panel.add(buttonEnvVariablesPanel)
+        commandBarEnvFieldPanel.add(commandBarEnvEditButton, BorderLayout.EAST)
+        commandBarEnvVariablesPanel.add(commandBarEnvFieldPanel, BorderLayout.CENTER)
+        panel.add(commandBarEnvVariablesPanel)
 
         // 简易模式复选框（仅Command 列表模式时显示）
         simpleModePanel = JPanel(BorderLayout())
@@ -792,36 +792,36 @@ class CCBarSettingsPanel(private val project: Project?) {
     }
 
     /**
-     * 创建 Option 面板（列表 + 详情 + 快捷参数表格）
+     * 创建 Command 面板（列表 + 详情 + 快捷参数表格）
      */
-    private fun createOptionPanel(): JComponent {
+    private fun createCommandPanel(): JComponent {
         val panel = JPanel(BorderLayout())
 
-        // Option 列表
-        optionListModel = CollectionListModel()
-        optionList = JBList(optionListModel).apply {
-            cellRenderer = OptionListCellRenderer()
+        // Command 列表
+        commandListModel = CollectionListModel()
+        commandList = JBList(commandListModel).apply {
+            cellRenderer = CommandListCellRenderer()
             selectionMode = ListSelectionModel.SINGLE_SELECTION
-            addListSelectionListener { onOptionSelected() }
+            addListSelectionListener { onCommandSelected() }
         }
 
         val listPanel = BorderLayoutPanel()
         @Suppress("DEPRECATION")
-        val decorator = ToolbarDecorator.createDecorator(optionList)
+        val decorator = ToolbarDecorator.createDecorator(commandList)
             .setAddActionName("添加")
             .setRemoveActionName("删除")
             .setMoveUpActionName("上移")
             .setMoveDownActionName("下移")
             .setAddAction { anActionButton ->
-                // 点击时也显示气泡（兼容键盘操作），使用 AnActionButton 官方 API 获取CommandBar位置
-                anActionButton.preferredPopupPoint.let { showAddOptionBalloon(it) }
+                // 点击时也显示气泡（兼容键盘操作），使用 AnActionButton 官方 API 获取按钮位置
+                anActionButton.preferredPopupPoint.let { showAddCommandBalloon(it) }
             }
-            .setRemoveAction { removeOption() }
-            .setMoveUpAction { moveOptionUp() }
-            .setMoveDownAction { moveOptionDown() }
+            .setRemoveAction { removeCommand() }
+            .setMoveUpAction { moveCommandUp() }
+            .setMoveDownAction { moveCommandDown() }
             .addExtraAction(object : com.intellij.ui.AnActionButton("复制", AllIcons.Actions.Copy) {
-                override fun actionPerformed(e: AnActionEvent) = copyOption()
-                override fun isEnabled(): Boolean = optionList.selectedIndex >= 0
+                override fun actionPerformed(e: AnActionEvent) = copyCommand()
+                override fun isEnabled(): Boolean = commandList.selectedIndex >= 0
             })
         val decoratorPanel = decorator.createPanel()
 
@@ -830,12 +830,12 @@ class CCBarSettingsPanel(private val project: Project?) {
 
         listPanel.addToCenter(decoratorPanel)
 
-        // Option 详情（快捷参数已内嵌在详情面板中）
-        optionDetailOuterPanel = createOptionDetailPanel()
+        // Command 详情（快捷参数已内嵌在详情面板中）
+        commandDetailOuterPanel = createCommandDetailPanel()
 
         val splitter = OnePixelSplitter(false, 0.25f).apply {
             firstComponent = listPanel
-            secondComponent = optionDetailOuterPanel
+            secondComponent = commandDetailOuterPanel
         }
 
         panel.add(splitter, BorderLayout.CENTER)
@@ -843,50 +843,50 @@ class CCBarSettingsPanel(private val project: Project?) {
     }
 
     /**
-     * 创建 Option 详情面板
+     * 创建 Command 详情面板
      */
-    private fun createOptionDetailPanel(): JComponent {
+    private fun createCommandDetailPanel(): JComponent {
         val outerPanel = JPanel(BorderLayout())
-        optionDetailTitledBorder = BorderFactory.createTitledBorder("Command 详情")
+        commandDetailTitledBorder = BorderFactory.createTitledBorder("Command 详情")
         val panel = JPanel().apply {
             layout = BoxLayout(this, BoxLayout.Y_AXIS)
-            border = optionDetailTitledBorder
+            border = commandDetailTitledBorder
         }
 
         // 启用复选框（仅普通 Command显示，分割线不显示）
-        optionEnabledCheckbox = JCheckBox("启用").apply {
+        commandEnabledCheckbox = JCheckBox("启用").apply {
             addActionListener {
                 if (!ignoreUpdate) {
                     selectedCommand?.enabled = isSelected
-                    optionList.repaint()
+                    commandList.repaint()
                 }
             }
         }
-        optionEnabledPanel = optionEnabledCheckbox
+        commandEnabledPanel = commandEnabledCheckbox
 
         // Name（始终显示）+ 启用复选框（同一行）
         val namePanel = JPanel(BorderLayout())
         namePanel.add(JLabel("名称:"), BorderLayout.WEST)
-        optionNameField = JBTextField().apply {
+        commandNameField = JBTextField().apply {
             document.addDocumentListener(object : DocumentListener {
-                override fun insertUpdate(e: DocumentEvent?) = updateOptionName()
-                override fun removeUpdate(e: DocumentEvent?) = updateOptionName()
-                override fun changedUpdate(e: DocumentEvent?) = updateOptionName()
+                override fun insertUpdate(e: DocumentEvent?) = updateCommandName()
+                override fun removeUpdate(e: DocumentEvent?) = updateCommandName()
+                override fun changedUpdate(e: DocumentEvent?) = updateCommandName()
             })
         }
-        namePanel.add(optionNameField, BorderLayout.CENTER)
-        namePanel.add(optionEnabledCheckbox, BorderLayout.EAST)
+        namePanel.add(commandNameField, BorderLayout.CENTER)
+        namePanel.add(commandEnabledCheckbox, BorderLayout.EAST)
         panel.add(namePanel)
 
         // Icon（仅普通 Command显示）
-        optionIconPanel = JPanel(BorderLayout())
-        optionIconPanel.add(JLabel("图标:"), BorderLayout.WEST)
-        optionIconField = TextFieldWithBrowseButton().apply {
+        commandIconPanel = JPanel(BorderLayout())
+        commandIconPanel.add(JLabel("图标:"), BorderLayout.WEST)
+        commandIconField = TextFieldWithBrowseButton().apply {
             (textField as? JBTextField)?.emptyText?.text = "builtin:AllIcons.Actions.Execute"
             textField.document.addDocumentListener(object : DocumentListener {
-                override fun insertUpdate(e: DocumentEvent?) = updateOptionIcon()
-                override fun removeUpdate(e: DocumentEvent?) = updateOptionIcon()
-                override fun changedUpdate(e: DocumentEvent?) = updateOptionIcon()
+                override fun insertUpdate(e: DocumentEvent?) = updateCommandIcon()
+                override fun removeUpdate(e: DocumentEvent?) = updateCommandIcon()
+                override fun changedUpdate(e: DocumentEvent?) = updateCommandIcon()
             })
             addBrowseFolderListener(
                 "选择图标文件",
@@ -898,7 +898,7 @@ class CCBarSettingsPanel(private val project: Project?) {
                 }
             )
         }
-        val optionBuiltinIconBtn = JButton(AllIcons.General.ArrowDown).apply {
+        val commandBuiltinIconBtn = JButton(AllIcons.General.ArrowDown).apply {
             toolTipText = "选择内置图标"
             isBorderPainted = true
             isFocusPainted = false
@@ -909,73 +909,73 @@ class CCBarSettingsPanel(private val project: Project?) {
             addActionListener {
                 val popup = BuiltinIconSelector.createPopup(
                     onIconSelected = { iconPath ->
-                        optionIconField.text = iconPath
+                        commandIconField.text = iconPath
                     },
-                    currentIconPath = optionIconField.text
+                    currentIconPath = commandIconField.text
                 )
                 popup.showUnderneathOf(this)
             }
         }
-        val optionIconFieldPanel = JPanel(BorderLayout()).apply {
-            add(optionIconField, BorderLayout.CENTER)
-            add(optionBuiltinIconBtn, BorderLayout.EAST)
+        val commandIconFieldPanel = JPanel(BorderLayout()).apply {
+            add(commandIconField, BorderLayout.CENTER)
+            add(commandBuiltinIconBtn, BorderLayout.EAST)
         }
-        optionIconPanel.add(optionIconFieldPanel, BorderLayout.CENTER)
-        panel.add(optionIconPanel)
+        commandIconPanel.add(commandIconFieldPanel, BorderLayout.CENTER)
+        panel.add(commandIconPanel)
 
         // Base Command（仅普通 Command显示）— 紧跟图标后
-        optionCommandPanel = JPanel(BorderLayout())
-        optionCommandPanel.add(JLabel("基础命令:"), BorderLayout.WEST)
+        commandBaseCommandPanel = JPanel(BorderLayout())
+        commandBaseCommandPanel.add(JLabel("基础命令:"), BorderLayout.WEST)
         baseCommandField = JBTextField().apply {
             document.addDocumentListener(object : DocumentListener {
-                override fun insertUpdate(e: DocumentEvent?) = updateOptionCommand()
-                override fun removeUpdate(e: DocumentEvent?) = updateOptionCommand()
-                override fun changedUpdate(e: DocumentEvent?) = updateOptionCommand()
+                override fun insertUpdate(e: DocumentEvent?) = updateCommandBaseCommand()
+                override fun removeUpdate(e: DocumentEvent?) = updateCommandBaseCommand()
+                override fun changedUpdate(e: DocumentEvent?) = updateCommandBaseCommand()
             })
         }
-        optionCommandPanel.add(baseCommandField, BorderLayout.CENTER)
-        panel.add(optionCommandPanel)
+        commandBaseCommandPanel.add(baseCommandField, BorderLayout.CENTER)
+        panel.add(commandBaseCommandPanel)
 
         // Default Terminal Name（仅普通 Command显示）— 紧跟图标后
-        optionTerminalNamePanel = JPanel(BorderLayout())
-        optionTerminalNamePanel.add(JLabel("默认终端窗口名称:"), BorderLayout.WEST)
+        commandTerminalNamePanel = JPanel(BorderLayout())
+        commandTerminalNamePanel.add(JLabel("默认终端窗口名称:"), BorderLayout.WEST)
         defaultTerminalNameField = JBTextField().apply {
             document.addDocumentListener(object : DocumentListener {
-                override fun insertUpdate(e: DocumentEvent?) = updateOptionTerminalName()
-                override fun removeUpdate(e: DocumentEvent?) = updateOptionTerminalName()
-                override fun changedUpdate(e: DocumentEvent?) = updateOptionTerminalName()
+                override fun insertUpdate(e: DocumentEvent?) = updateCommandTerminalName()
+                override fun removeUpdate(e: DocumentEvent?) = updateCommandTerminalName()
+                override fun changedUpdate(e: DocumentEvent?) = updateCommandTerminalName()
             })
         }
-        optionTerminalNamePanel.add(defaultTerminalNameField, BorderLayout.CENTER)
-        panel.add(optionTerminalNamePanel)
+        commandTerminalNamePanel.add(defaultTerminalNameField, BorderLayout.CENTER)
+        panel.add(commandTerminalNamePanel)
 
         // Terminal Mode（仅普通 Command显示）— 紧跟终端名称后
-        optionTerminalModePanel = JPanel().apply {
+        commandTerminalModePanel = JPanel().apply {
             layout = BoxLayout(this, BoxLayout.Y_AXIS)
         }
-        val optionTerminalModeRow = JPanel(BorderLayout())
-        optionTerminalModeCheckbox = JCheckBox("在编辑器中打开").apply {
+        val commandTerminalModeRow = JPanel(BorderLayout())
+        commandTerminalModeCheckbox = JCheckBox("在编辑器中打开").apply {
             addActionListener {
-                if (!ignoreUpdate) updateOptionTerminalMode()
+                if (!ignoreUpdate) updateCommandTerminalMode()
             }
         }
-        optionTerminalModeRow.add(optionTerminalModeCheckbox, BorderLayout.WEST)
-        optionTerminalModePanel.add(optionTerminalModeRow)
-        val optionTerminalModeHintPanel = JPanel(BorderLayout())
-        val optionCheckboxSpacer = Box.createHorizontalStrut(JCheckBox().preferredSize.width)
-        optionTerminalModeHintPanel.add(optionCheckboxSpacer, BorderLayout.WEST)
-        optionTerminalModeHintPanel.add(JLabel("默认通过终端工具窗口打开").apply {
+        commandTerminalModeRow.add(commandTerminalModeCheckbox, BorderLayout.WEST)
+        commandTerminalModePanel.add(commandTerminalModeRow)
+        val commandTerminalModeHintPanel = JPanel(BorderLayout())
+        val commandCheckboxSpacer = Box.createHorizontalStrut(JCheckBox().preferredSize.width)
+        commandTerminalModeHintPanel.add(commandCheckboxSpacer, BorderLayout.WEST)
+        commandTerminalModeHintPanel.add(JLabel("默认通过终端工具窗口打开").apply {
             foreground = com.intellij.ui.JBColor.GRAY
             font = font.deriveFont(font.size2D - 1f)
         }, BorderLayout.CENTER)
-        optionTerminalModePanel.add(optionTerminalModeHintPanel)
-        panel.add(optionTerminalModePanel)
+        commandTerminalModePanel.add(commandTerminalModeHintPanel)
+        panel.add(commandTerminalModePanel)
 
         // Working Directory（仅普通 Command显示）
-        optionDirPanel = JPanel(BorderLayout())
-        optionDirPanel.add(JLabel("工作目录:"), BorderLayout.WEST)
-        val optionProjectPath = getCurrentProjectPath()
-        optionWorkDirHintLabel = JLabel("留空时使用项目根路径").apply {
+        commandDirPanel = JPanel(BorderLayout())
+        commandDirPanel.add(JLabel("工作目录:"), BorderLayout.WEST)
+        val commandProjectPath = getCurrentProjectPath()
+        commandWorkDirHintLabel = JLabel("留空时使用项目根路径").apply {
             foreground = com.intellij.ui.JBColor.GRAY
         }
         workingDirectoryField = TextFieldWithBrowseButton().apply {
@@ -986,56 +986,56 @@ class CCBarSettingsPanel(private val project: Project?) {
                 FileChooserDescriptorFactory.createSingleFolderDescriptor()
             )
             // 设置 placeholder
-            (textField as? JBTextField)?.emptyText?.text = optionProjectPath ?: ""
+            (textField as? JBTextField)?.emptyText?.text = commandProjectPath ?: ""
             textField.document.addDocumentListener(object : DocumentListener {
                 override fun insertUpdate(e: DocumentEvent?) {
-                    updateOptionDirectory()
-                    updateOptionWorkDirHintVisibility()
+                    updateCommandDirectory()
+                    updateCommandWorkDirHintVisibility()
                 }
                 override fun removeUpdate(e: DocumentEvent?) {
-                    updateOptionDirectory()
-                    updateOptionWorkDirHintVisibility()
+                    updateCommandDirectory()
+                    updateCommandWorkDirHintVisibility()
                 }
                 override fun changedUpdate(e: DocumentEvent?) {
-                    updateOptionDirectory()
-                    updateOptionWorkDirHintVisibility()
+                    updateCommandDirectory()
+                    updateCommandWorkDirHintVisibility()
                 }
             })
         }
-        optionDirPanel.add(workingDirectoryField, BorderLayout.CENTER)
-        panel.add(optionDirPanel)
+        commandDirPanel.add(workingDirectoryField, BorderLayout.CENTER)
+        panel.add(commandDirPanel)
         // 添加提示标签（单独一行，与输入框左对齐）
-        optionDirHintPanel = JPanel(BorderLayout())
-        optionDirHintPanel.add(Box.createHorizontalStrut(JLabel("工作目录:").preferredSize.width), BorderLayout.WEST)
-        optionDirHintPanel.add(optionWorkDirHintLabel, BorderLayout.CENTER)
-        panel.add(optionDirHintPanel)
+        commandDirHintPanel = JPanel(BorderLayout())
+        commandDirHintPanel.add(Box.createHorizontalStrut(JLabel("工作目录:").preferredSize.width), BorderLayout.WEST)
+        commandDirHintPanel.add(commandWorkDirHintLabel, BorderLayout.CENTER)
+        panel.add(commandDirHintPanel)
 
         // Environment Variables（仅普通 Command显示）
-        optionEnvVariablesPanel = JPanel(BorderLayout())
-        optionEnvVariablesPanel.add(JLabel("环境变量:"), BorderLayout.WEST)
-        val optionEnvFieldPanel = JPanel(BorderLayout())
-        optionEnvVariablesField = JBTextField().apply {
+        commandEnvVariablesPanel = JPanel(BorderLayout())
+        commandEnvVariablesPanel.add(JLabel("环境变量:"), BorderLayout.WEST)
+        val commandEnvFieldPanel = JPanel(BorderLayout())
+        commandEnvVariablesField = JBTextField().apply {
             emptyText.text = "KEY1=val1;KEY2=val2"
             document.addDocumentListener(object : DocumentListener {
-                override fun insertUpdate(e: DocumentEvent?) = updateOptionEnvVariables()
-                override fun removeUpdate(e: DocumentEvent?) = updateOptionEnvVariables()
-                override fun changedUpdate(e: DocumentEvent?) = updateOptionEnvVariables()
+                override fun insertUpdate(e: DocumentEvent?) = updateCommandEnvVariables()
+                override fun removeUpdate(e: DocumentEvent?) = updateCommandEnvVariables()
+                override fun changedUpdate(e: DocumentEvent?) = updateCommandEnvVariables()
             })
         }
-        optionEnvFieldPanel.add(optionEnvVariablesField, BorderLayout.CENTER)
-        val optionEnvEditButton = JButton("...").apply {
+        commandEnvFieldPanel.add(commandEnvVariablesField, BorderLayout.CENTER)
+        val commandEnvEditButton = JButton("...").apply {
             toolTipText = "编辑环境变量"
             addActionListener {
                 val currentProject = project ?: ProjectManager.getInstance().openProjects.firstOrNull()
-                val dialog = EnvVariablesDialog(currentProject, optionEnvVariablesField.text)
+                val dialog = EnvVariablesDialog(currentProject, commandEnvVariablesField.text)
                 if (dialog.showAndGet()) {
-                    optionEnvVariablesField.text = dialog.envVariablesText
+                    commandEnvVariablesField.text = dialog.envVariablesText
                 }
             }
         }
-        optionEnvFieldPanel.add(optionEnvEditButton, BorderLayout.EAST)
-        optionEnvVariablesPanel.add(optionEnvFieldPanel, BorderLayout.CENTER)
-        panel.add(optionEnvVariablesPanel)
+        commandEnvFieldPanel.add(commandEnvEditButton, BorderLayout.EAST)
+        commandEnvVariablesPanel.add(commandEnvFieldPanel, BorderLayout.CENTER)
+        panel.add(commandEnvVariablesPanel)
 
         // QuickParam 列表（单行：标签 + 只读摘要 + 编辑CommandBar）
         quickParamOuterPanel = createQuickParamPanel()
@@ -1149,62 +1149,62 @@ class CCBarSettingsPanel(private val project: Project?) {
         actionButtonsPanelRef = newPanel
     }
 
-    // ==================== Button 列表操作 ====================
+    // ==================== CommandBar 列表操作 ====================
 
-    private fun addButton() {
-        val newButton = CommandBarConfig(
+    private fun addCommandBar() {
+        val newCommandBar = CommandBarConfig(
             id = UUID.randomUUID().toString(),
             name = "New CommandBar",
             icon = "builtin:AllIcons.Actions.Execute"
         )
-        buttonListModel.add(newButton)
-        editingState.commandBars.add(newButton)
-        buttonList.selectedIndex = buttonListModel.size - 1
+        commandBarListModel.add(newCommandBar)
+        editingState.commandBars.add(newCommandBar)
+        commandBarList.selectedIndex = commandBarListModel.size - 1
     }
 
-    private fun removeButton() {
-        val index = buttonList.selectedIndex
+    private fun removeCommandBar() {
+        val index = commandBarList.selectedIndex
         if (index >= 0) {
             val result = Messages.showYesNoDialog(
-                "确定要删除 CommandBar '${buttonListModel.getElementAt(index).name}' 吗？",
+                "确定要删除 CommandBar '${commandBarListModel.getElementAt(index).name}' 吗？",
                 "确认删除",
                 null
             )
             if (result == Messages.YES) {
-                buttonListModel.remove(index)
+                commandBarListModel.remove(index)
                 editingState.commandBars.removeAt(index)
                 selectedCommandBar = null
-                clearButtonDetail()
+                clearCommandBarDetail()
             }
         }
     }
 
-    private fun moveButtonUp() {
-        val index = buttonList.selectedIndex
+    private fun moveCommandBarUp() {
+        val index = commandBarList.selectedIndex
         if (index > 0) {
             Collections.swap(editingState.commandBars, index, index - 1)
-            val item = buttonListModel.getElementAt(index)
-            buttonListModel.remove(index)
-            buttonListModel.add(index - 1, item)
-            buttonList.selectedIndex = index - 1
+            val item = commandBarListModel.getElementAt(index)
+            commandBarListModel.remove(index)
+            commandBarListModel.add(index - 1, item)
+            commandBarList.selectedIndex = index - 1
         }
     }
 
-    private fun moveButtonDown() {
-        val index = buttonList.selectedIndex
-        if (index < buttonListModel.size - 1) {
+    private fun moveCommandBarDown() {
+        val index = commandBarList.selectedIndex
+        if (index < commandBarListModel.size - 1) {
             Collections.swap(editingState.commandBars, index, index + 1)
-            val item = buttonListModel.getElementAt(index)
-            buttonListModel.remove(index)
-            buttonListModel.add(index + 1, item)
-            buttonList.selectedIndex = index + 1
+            val item = commandBarListModel.getElementAt(index)
+            commandBarListModel.remove(index)
+            commandBarListModel.add(index + 1, item)
+            commandBarList.selectedIndex = index + 1
         }
     }
 
-    private fun copyButton() {
-        val index = buttonList.selectedIndex
+    private fun copyCommandBar() {
+        val index = commandBarList.selectedIndex
         if (index < 0) return
-        val source = buttonListModel.getElementAt(index)
+        val source = commandBarListModel.getElementAt(index)
         val copy = source.deepCopy().apply {
             id = UUID.randomUUID().toString()
             name = source.name + "-copy"
@@ -1212,23 +1212,23 @@ class CCBarSettingsPanel(private val project: Project?) {
         }
         val insertIndex = index + 1
         editingState.commandBars.add(insertIndex, copy)
-        buttonListModel.add(insertIndex, copy)
-        buttonList.selectedIndex = insertIndex
+        commandBarListModel.add(insertIndex, copy)
+        commandBarList.selectedIndex = insertIndex
     }
 
-    private fun onButtonSelected() {
+    private fun onCommandBarSelected() {
         if (ignoreUpdate) return
 
-        val index = buttonList.selectedIndex
+        val index = commandBarList.selectedIndex
         if (index >= 0) {
-            selectedCommandBar = buttonListModel.getElementAt(index)
-            updateButtonDetail()
-            updateOptionList()
+            selectedCommandBar = commandBarListModel.getElementAt(index)
+            updateCommandBarDetail()
+            updateCommandList()
             showDetailPanel()
         } else {
             selectedCommandBar = null
-            clearButtonDetail()
-            optionListModel.removeAll()
+            clearCommandBarDetail()
+            commandListModel.removeAll()
             showEmptyPanel()
         }
     }
@@ -1243,19 +1243,19 @@ class CCBarSettingsPanel(private val project: Project?) {
         layout.show(rightContainer, CARD_DETAIL)
     }
 
-    private fun updateButtonDetail() {
+    private fun updateCommandBarDetail() {
         ignoreUpdate = true
         try {
-            val button = selectedCommandBar ?: return
-            buttonEnabledCheckbox.isSelected = button.enabled
-            buttonNameField.text = button.name
-            buttonIconField.text = button.icon
-            buttonCommandField.text = button.command
-            buttonEnvVariablesField.text = button.envVariables
-            buttonWorkingDirectoryField.text = button.workingDirectory
-            buttonTerminalNameField.text = button.defaultTerminalName
-            buttonTerminalModeCheckbox.isSelected = button.terminalMode == TerminalMode.EDITOR
-            simpleModeCheckbox.isSelected = button.simpleMode
+            val commandBar = selectedCommandBar ?: return
+            commandBarEnabledCheckbox.isSelected = commandBar.enabled
+            commandBarNameField.text = commandBar.name
+            commandBarIconField.text = commandBar.icon
+            commandBarCommandField.text = commandBar.command
+            commandBarEnvVariablesField.text = commandBar.envVariables
+            commandBarWorkingDirField.text = commandBar.workingDirectory
+            commandBarTerminalNameField.text = commandBar.defaultTerminalName
+            commandBarTerminalModeCheckbox.isSelected = commandBar.terminalMode == TerminalMode.EDITOR
+            simpleModeCheckbox.isSelected = commandBar.simpleMode
             // 更新直接命令模式相关字段的显示状态
             updateDirectCommandModeVisibility()
             // 更新提示文字状态
@@ -1266,17 +1266,17 @@ class CCBarSettingsPanel(private val project: Project?) {
         }
     }
 
-    private fun clearButtonDetail() {
+    private fun clearCommandBarDetail() {
         ignoreUpdate = true
         try {
-            buttonEnabledCheckbox.isSelected = true
-            buttonNameField.text = ""
-            buttonIconField.text = ""
-            buttonCommandField.text = ""
-            buttonEnvVariablesField.text = ""
-            buttonWorkingDirectoryField.text = ""
-            buttonTerminalNameField.text = ""
-            buttonTerminalModeCheckbox.isSelected = false
+            commandBarEnabledCheckbox.isSelected = true
+            commandBarNameField.text = ""
+            commandBarIconField.text = ""
+            commandBarCommandField.text = ""
+            commandBarEnvVariablesField.text = ""
+            commandBarWorkingDirField.text = ""
+            commandBarTerminalNameField.text = ""
+            commandBarTerminalModeCheckbox.isSelected = false
             simpleModeCheckbox.isSelected = false
             // 重置提示文字状态
             updateCommandHintVisibility()
@@ -1286,45 +1286,45 @@ class CCBarSettingsPanel(private val project: Project?) {
         }
     }
 
-    private fun updateButtonName() {
+    private fun updateCommandBarName() {
         if (ignoreUpdate) return
-        selectedCommandBar?.name = buttonNameField.text
-        buttonList.repaint()
+        selectedCommandBar?.name = commandBarNameField.text
+        commandBarList.repaint()
     }
 
-    private fun updateButtonIcon() {
+    private fun updateCommandBarIcon() {
         if (ignoreUpdate) return
-        val text = buttonIconField.text
+        val text = commandBarIconField.text
         selectedCommandBar?.icon = if (text.isBlank()) "builtin:AllIcons.Actions.Execute" else text
         // 同步更新列表中的图标显示
-        buttonList.repaint()
+        commandBarList.repaint()
     }
 
-    private fun updateButtonCommand() {
+    private fun updateCommandBarCommand() {
         if (ignoreUpdate) return
-        selectedCommandBar?.command = buttonCommandField.text
+        selectedCommandBar?.command = commandBarCommandField.text
         // 切换直接命令模式相关字段的显示状态
         updateDirectCommandModeVisibility()
     }
 
-    private fun updateButtonWorkingDirectory() {
+    private fun updateCommandBarWorkingDir() {
         if (ignoreUpdate) return
-        selectedCommandBar?.workingDirectory = buttonWorkingDirectoryField.text
+        selectedCommandBar?.workingDirectory = commandBarWorkingDirField.text
     }
 
-    private fun updateButtonEnvVariables() {
+    private fun updateCommandBarEnvVariables() {
         if (ignoreUpdate) return
-        selectedCommandBar?.envVariables = buttonEnvVariablesField.text
+        selectedCommandBar?.envVariables = commandBarEnvVariablesField.text
     }
 
-    private fun updateButtonTerminalName() {
+    private fun updateCommandBarTerminalName() {
         if (ignoreUpdate) return
-        selectedCommandBar?.defaultTerminalName = buttonTerminalNameField.text
+        selectedCommandBar?.defaultTerminalName = commandBarTerminalNameField.text
     }
 
-    private fun updateButtonTerminalMode() {
+    private fun updateCommandBarTerminalMode() {
         if (ignoreUpdate) return
-        selectedCommandBar?.terminalMode = if (buttonTerminalModeCheckbox.isSelected) TerminalMode.EDITOR else TerminalMode.TOOL_WINDOW
+        selectedCommandBar?.terminalMode = if (commandBarTerminalModeCheckbox.isSelected) TerminalMode.EDITOR else TerminalMode.TOOL_WINDOW
     }
 
     private fun updateSimpleMode() {
@@ -1337,7 +1337,7 @@ class CCBarSettingsPanel(private val project: Project?) {
      * 更新直接命令提示文字的显示状态
      */
     private fun updateCommandHintVisibility() {
-        buttonCommandHintLabel.text = if (buttonCommandField.text.isBlank()) {
+        commandBarCommandHintLabel.text = if (commandBarCommandField.text.isBlank()) {
             "输入直接命令后将不支持绑定Command 列表"
         } else {
             ""
@@ -1348,7 +1348,7 @@ class CCBarSettingsPanel(private val project: Project?) {
      * 更新工作目录提示文字的显示状态
      */
     private fun updateWorkDirHintVisibility() {
-        buttonWorkDirHintLabel.text = if (buttonWorkingDirectoryField.text.isBlank()) {
+        commandBarWorkDirHintLabel.text = if (commandBarWorkingDirField.text.isBlank()) {
             "留空时使用项目根路径"
         } else {
             ""
@@ -1356,10 +1356,10 @@ class CCBarSettingsPanel(private val project: Project?) {
     }
 
     /**
-     * 更新 Option 工作目录提示文字的显示状态
+     * 更新 Command 工作目录提示文字的显示状态
      */
-    private fun updateOptionWorkDirHintVisibility() {
-        optionWorkDirHintLabel.text = if (workingDirectoryField.text.isBlank()) {
+    private fun updateCommandWorkDirHintVisibility() {
+        commandWorkDirHintLabel.text = if (workingDirectoryField.text.isBlank()) {
             "留空时使用项目根路径"
         } else {
             ""
@@ -1373,12 +1373,12 @@ class CCBarSettingsPanel(private val project: Project?) {
      */
     private fun updateDirectCommandModeVisibility() {
         val isDirectMode = selectedCommandBar?.isDirectCommandMode() == true
-        buttonEnvVariablesPanel.isVisible = isDirectMode
-        buttonWorkingDirectoryPanel.isVisible = isDirectMode
-        buttonTerminalNamePanel.isVisible = isDirectMode
-        buttonTerminalModePanel.isVisible = isDirectMode
+        commandBarEnvVariablesPanel.isVisible = isDirectMode
+        commandBarWorkingDirPanel.isVisible = isDirectMode
+        commandBarTerminalNamePanel.isVisible = isDirectMode
+        commandBarTerminalModePanel.isVisible = isDirectMode
         simpleModePanel.isVisible = !isDirectMode
-        optionPanel.isVisible = !isDirectMode
+        commandPanel.isVisible = !isDirectMode
         if (!isDirectMode) {
             updateSimpleModeVisibility()
         }
@@ -1392,55 +1392,55 @@ class CCBarSettingsPanel(private val project: Project?) {
         quickParamOuterPanel.isVisible = !isSimple
     }
 
-    // ==================== Option 列表操作 ====================
+    // ==================== Command 列表操作 ====================
 
-    private fun updateOptionList() {
-        optionListModel.removeAll()
+    private fun updateCommandList() {
+        commandListModel.removeAll()
         selectedCommandBar?.commands?.let { commands ->
-            for (option in commands) {
-                optionListModel.add(option)
+            for (command in commands) {
+                commandListModel.add(command)
             }
             if (commands.isNotEmpty()) {
-                optionList.selectedIndex = 0
+                commandList.selectedIndex = 0
             } else {
                 selectedCommand = null
-                clearOptionDetail()
+                clearCommandDetail()
                 updateQuickParamSummary()
             }
         }
     }
 
-    private fun addOption() {
-        val button = selectedCommandBar ?: return
-        val newOption = CommandConfig(
+    private fun addCommand() {
+        val commandBar = selectedCommandBar ?: return
+        val newCommand = CommandConfig(
             id = UUID.randomUUID().toString(),
             name = "New Command",
             baseCommand = "",
             defaultTerminalName = ""
         )
-        button.commands.add(newOption)
-        optionListModel.add(newOption)
-        optionList.selectedIndex = optionListModel.size - 1
+        commandBar.commands.add(newCommand)
+        commandListModel.add(newCommand)
+        commandList.selectedIndex = commandListModel.size - 1
     }
 
     /**
-     * 延迟到面板显示后，在 ActionToolbar 中找到添加CommandBar的视觉组件并绑定鼠标悬浮监听。
+     * 延迟到面板显示后，在 ActionToolbar 中找到添加按钮的视觉组件并绑定鼠标悬浮监听。
      * ActionToolbar 的子组件（ActionButton）是延迟创建的，
      * 必须等面板显示后再查找，否则组件尚不存在。
      */
     private fun setupAddButtonHoverListener(decoratorPanel: JPanel) {
         decoratorPanel.addHierarchyListener {
-            if (addOptionButtonRef != null || !decoratorPanel.isShowing) return@addHierarchyListener
+            if (addCommandButtonRef != null || !decoratorPanel.isShowing) return@addHierarchyListener
             SwingUtilities.invokeLater { findAndBindAddButton(decoratorPanel) }
         }
     }
 
     /**
-     * 通过 IntelliJ 平台 API 在 ActionToolbar 中精确匹配添加CommandBar的视觉组件，
+     * 通过 IntelliJ 平台 API 在 ActionToolbar 中精确匹配添加按钮的视觉组件，
      * 并为其绑定鼠标悬浮事件。
      */
     private fun findAndBindAddButton(decoratorPanel: JPanel) {
-        if (addOptionButtonRef != null) return
+        if (addCommandButtonRef != null) return
 
         // 1. 通过 ToolbarDecorator 官方 API 获取 Add 对应的 AnActionButton（Action 对象）
         val addAction = ToolbarDecorator.findAddButton(decoratorPanel) ?: return
@@ -1449,14 +1449,14 @@ class CCBarSettingsPanel(private val project: Project?) {
         val actionsPanel = UIUtil.findComponentOfType(decoratorPanel, CommonActionsPanel::class.java) ?: return
         val toolbarComp = actionsPanel.toolbar.component
 
-        // 3. 遍历 toolbar 子组件，匹配持有 Add Action 的视觉CommandBar
+        // 3. 遍历 toolbar 子组件，匹配持有 Add Action 的视觉按钮
         for (comp in toolbarComp.components) {
             if (comp !is JComponent || comp !is AnActionHolder) continue
             val action = (comp as AnActionHolder).action
             if (action == addAction ||
                 (action is ActionWithDelegate<*> && action.delegate == addAction)) {
-                addOptionButtonRef = comp
-                // 禁用CommandBar的 tooltip，避免与气泡弹窗冲突
+                addCommandButtonRef = comp
+                // 禁用按钮的 tooltip，避免与气泡弹窗冲突
                 suppressActionButtonTooltip(comp)
                 comp.addMouseListener(object : MouseAdapter() {
                     override fun mouseEntered(e: MouseEvent) {
@@ -1464,7 +1464,7 @@ class CCBarSettingsPanel(private val project: Project?) {
                         // ActionToolbar 更新时会重新安装 HelpTooltip，需要每次进入时再次清除
                         suppressActionButtonTooltip(comp)
                         val pt = RelativePoint(comp.parent, Point(comp.x, comp.y + comp.height))
-                        showAddOptionBalloon(pt)
+                        showAddCommandBalloon(pt)
                     }
                     override fun mouseExited(e: MouseEvent) {
                         schedulePopupClose()
@@ -1476,11 +1476,11 @@ class CCBarSettingsPanel(private val project: Project?) {
     }
 
     /**
-     * 显示添加 Command的气泡弹窗
+     * 显示添加 Command 的气泡弹窗
      */
-    private fun showAddOptionBalloon(point: RelativePoint) {
+    private fun showAddCommandBalloon(point: RelativePoint) {
         // 如果已有弹窗正在显示，不重复创建
-        if (addOptionPopup?.isVisible == true) return
+        if (addCommandPopup?.isVisible == true) return
 
         // 气泡内鼠标进出监听：进入取消关闭计时，离开启动关闭计时
         val hoverListener = object : MouseAdapter() {
@@ -1494,14 +1494,14 @@ class CCBarSettingsPanel(private val project: Project?) {
             addMouseListener(hoverListener)
 
             add(createBalloonItem("添加 Command") {
-                addOptionPopup?.cancel()
-                addOption()
+                addCommandPopup?.cancel()
+                addCommand()
             }.also {
                 it.maximumSize = Dimension(Int.MAX_VALUE, it.preferredSize.height)
                 it.addMouseListener(hoverListener)
             })
             add(createBalloonItem("添加分割线") {
-                addOptionPopup?.cancel()
+                addCommandPopup?.cancel()
                 addSeparator()
             }.also {
                 it.maximumSize = Dimension(Int.MAX_VALUE, it.preferredSize.height)
@@ -1509,7 +1509,7 @@ class CCBarSettingsPanel(private val project: Project?) {
             })
         }
 
-        addOptionPopup = JBPopupFactory.getInstance()
+        addCommandPopup = JBPopupFactory.getInstance()
             .createComponentPopupBuilder(panel, null)
             .setRequestFocus(false)
             .setCancelOnClickOutside(true)
@@ -1517,7 +1517,7 @@ class CCBarSettingsPanel(private val project: Project?) {
             .setBorderColor(java.awt.Color.GRAY)
             .createPopup()
 
-        addOptionPopup?.show(point)
+        addCommandPopup?.show(point)
     }
 
     /**
@@ -1547,12 +1547,12 @@ class CCBarSettingsPanel(private val project: Project?) {
     }
 
     /**
-     * 延迟关闭气泡弹窗（给用户从CommandBar移动到气泡的时间）
+     * 延迟关闭气泡弹窗（给用户从按钮移动到气泡的时间）
      */
     private fun schedulePopupClose() {
         popupCloseTimer?.stop()
         popupCloseTimer = javax.swing.Timer(300) {
-            addOptionPopup?.cancel()
+            addCommandPopup?.cancel()
         }.apply { isRepeats = false; start() }
     }
 
@@ -1576,174 +1576,174 @@ class CCBarSettingsPanel(private val project: Project?) {
      * 添加分割线
      */
     private fun addSeparator() {
-        val button = selectedCommandBar ?: return
+        val commandBar = selectedCommandBar ?: return
         val newSeparator = CommandConfig(
             id = UUID.randomUUID().toString(),
             name = "",
             type = CommandType.SEPARATOR
         )
-        button.commands.add(newSeparator)
-        optionListModel.add(newSeparator)
-        optionList.selectedIndex = optionListModel.size - 1
+        commandBar.commands.add(newSeparator)
+        commandListModel.add(newSeparator)
+        commandList.selectedIndex = commandListModel.size - 1
     }
 
-    private fun removeOption() {
-        val button = selectedCommandBar ?: return
-        val index = optionList.selectedIndex
+    private fun removeCommand() {
+        val commandBar = selectedCommandBar ?: return
+        val index = commandList.selectedIndex
         if (index >= 0) {
-            val option = optionListModel.getElementAt(index)
-            val typeName = if (option.isSeparator()) "分割线" else "Command"
+            val command = commandListModel.getElementAt(index)
+            val typeName = if (command.isSeparator()) "分割线" else "Command"
             val result = Messages.showYesNoDialog(
-                "确定要删除${typeName} '${option.name}' 吗？",
+                "确定要删除${typeName} '${command.name}' 吗？",
                 "确认删除",
                 null
             )
             if (result == Messages.YES) {
-                button.commands.removeAt(index)
-                optionListModel.remove(index)
+                commandBar.commands.removeAt(index)
+                commandListModel.remove(index)
                 selectedCommand = null
-                clearOptionDetail()
+                clearCommandDetail()
                 updateQuickParamSummary()
             }
         }
     }
 
-    private fun moveOptionUp() {
-        val button = selectedCommandBar ?: return
-        val index = optionList.selectedIndex
+    private fun moveCommandUp() {
+        val commandBar = selectedCommandBar ?: return
+        val index = commandList.selectedIndex
         if (index > 0) {
-            Collections.swap(button.commands, index, index - 1)
-            val item = optionListModel.getElementAt(index)
-            optionListModel.remove(index)
-            optionListModel.add(index - 1, item)
-            optionList.selectedIndex = index - 1
+            Collections.swap(commandBar.commands, index, index - 1)
+            val item = commandListModel.getElementAt(index)
+            commandListModel.remove(index)
+            commandListModel.add(index - 1, item)
+            commandList.selectedIndex = index - 1
         }
     }
 
-    private fun moveOptionDown() {
-        val button = selectedCommandBar ?: return
-        val index = optionList.selectedIndex
-        if (index < optionListModel.size - 1) {
-            Collections.swap(button.commands, index, index + 1)
-            val item = optionListModel.getElementAt(index)
-            optionListModel.remove(index)
-            optionListModel.add(index + 1, item)
-            optionList.selectedIndex = index + 1
+    private fun moveCommandDown() {
+        val commandBar = selectedCommandBar ?: return
+        val index = commandList.selectedIndex
+        if (index < commandListModel.size - 1) {
+            Collections.swap(commandBar.commands, index, index + 1)
+            val item = commandListModel.getElementAt(index)
+            commandListModel.remove(index)
+            commandListModel.add(index + 1, item)
+            commandList.selectedIndex = index + 1
         }
     }
 
-    private fun copyOption() {
-        val button = selectedCommandBar ?: return
-        val index = optionList.selectedIndex
+    private fun copyCommand() {
+        val commandBar = selectedCommandBar ?: return
+        val index = commandList.selectedIndex
         if (index < 0) return
-        val source = optionListModel.getElementAt(index)
+        val source = commandListModel.getElementAt(index)
         val copy = source.deepCopy().apply {
             id = UUID.randomUUID().toString()
             name = source.name + "-copy"
             quickParams.forEach { sb -> sb.id = UUID.randomUUID().toString() }
         }
         val insertIndex = index + 1
-        button.commands.add(insertIndex, copy)
-        optionListModel.add(insertIndex, copy)
-        optionList.selectedIndex = insertIndex
+        commandBar.commands.add(insertIndex, copy)
+        commandListModel.add(insertIndex, copy)
+        commandList.selectedIndex = insertIndex
     }
 
-    private fun onOptionSelected() {
+    private fun onCommandSelected() {
         if (ignoreUpdate) return
 
-        val index = optionList.selectedIndex
+        val index = commandList.selectedIndex
         if (index >= 0 && selectedCommandBar != null) {
             selectedCommand = selectedCommandBar!!.commands[index]
 
             // 先更新表单数据
-            updateOptionDetail()
+            updateCommandDetail()
 
             if (selectedCommand!!.isSeparator()) {
                 // 分割线：隐藏不需要的字段
-                hideOptionDetailForSeparator()
+                hideCommandDetailForSeparator()
             } else {
                 // 普通 Command：显示所有字段
-                showOptionDetail()
+                showCommandDetail()
                 updateQuickParamSummary()
             }
         } else {
             selectedCommand = null
-            clearOptionDetail()
+            clearCommandDetail()
             updateQuickParamSummary()
-            showOptionDetail()
+            showCommandDetail()
         }
     }
 
     /**
      * 隐藏分割线选中时的详情面板（只显示名称字段）
      */
-    private fun hideOptionDetailForSeparator() {
+    private fun hideCommandDetailForSeparator() {
         // 只在需要时更新可见性
-        if (!optionDetailOuterPanel.isVisible) {
-            optionDetailOuterPanel.isVisible = true
+        if (!commandDetailOuterPanel.isVisible) {
+            commandDetailOuterPanel.isVisible = true
         }
-        if (optionEnabledPanel.isVisible) {
-            optionEnabledPanel.isVisible = false
+        if (commandEnabledPanel.isVisible) {
+            commandEnabledPanel.isVisible = false
         }
-        if (optionIconPanel.isVisible) {
-            optionIconPanel.isVisible = false
+        if (commandIconPanel.isVisible) {
+            commandIconPanel.isVisible = false
         }
-        if (optionCommandPanel.isVisible) {
-            optionCommandPanel.isVisible = false
+        if (commandBaseCommandPanel.isVisible) {
+            commandBaseCommandPanel.isVisible = false
         }
-        if (optionEnvVariablesPanel.isVisible) {
-            optionEnvVariablesPanel.isVisible = false
+        if (commandEnvVariablesPanel.isVisible) {
+            commandEnvVariablesPanel.isVisible = false
         }
-        if (optionDirPanel.isVisible) {
-            optionDirPanel.isVisible = false
+        if (commandDirPanel.isVisible) {
+            commandDirPanel.isVisible = false
         }
-        if (optionDirHintPanel.isVisible) {
-            optionDirHintPanel.isVisible = false
+        if (commandDirHintPanel.isVisible) {
+            commandDirHintPanel.isVisible = false
         }
-        if (optionTerminalNamePanel.isVisible) {
-            optionTerminalNamePanel.isVisible = false
+        if (commandTerminalNamePanel.isVisible) {
+            commandTerminalNamePanel.isVisible = false
         }
-        if (optionTerminalModePanel.isVisible) {
-            optionTerminalModePanel.isVisible = false
+        if (commandTerminalModePanel.isVisible) {
+            commandTerminalModePanel.isVisible = false
         }
         if (quickParamOuterPanel.isVisible) {
             quickParamOuterPanel.isVisible = false
         }
         // 更新标题
-        optionDetailTitledBorder.title = "分割线详情"
+        commandDetailTitledBorder.title = "分割线详情"
     }
 
     /**
      * 显示普通 Command的详情面板（显示所有字段）
      */
-    private fun showOptionDetail() {
+    private fun showCommandDetail() {
         // 只在需要时更新可见性，避免不必要的面板刷新
-        if (!optionDetailOuterPanel.isVisible) {
-            optionDetailOuterPanel.isVisible = true
+        if (!commandDetailOuterPanel.isVisible) {
+            commandDetailOuterPanel.isVisible = true
         }
-        if (!optionEnabledPanel.isVisible) {
-            optionEnabledPanel.isVisible = true
+        if (!commandEnabledPanel.isVisible) {
+            commandEnabledPanel.isVisible = true
         }
-        if (!optionIconPanel.isVisible) {
-            optionIconPanel.isVisible = true
+        if (!commandIconPanel.isVisible) {
+            commandIconPanel.isVisible = true
         }
-        if (!optionCommandPanel.isVisible) {
-            optionCommandPanel.isVisible = true
+        if (!commandBaseCommandPanel.isVisible) {
+            commandBaseCommandPanel.isVisible = true
         }
-        if (!optionEnvVariablesPanel.isVisible) {
-            optionEnvVariablesPanel.isVisible = true
+        if (!commandEnvVariablesPanel.isVisible) {
+            commandEnvVariablesPanel.isVisible = true
         }
-        if (!optionDirPanel.isVisible) {
-            optionDirPanel.isVisible = true
+        if (!commandDirPanel.isVisible) {
+            commandDirPanel.isVisible = true
         }
-        if (!optionDirHintPanel.isVisible) {
-            optionDirHintPanel.isVisible = true
+        if (!commandDirHintPanel.isVisible) {
+            commandDirHintPanel.isVisible = true
         }
-        if (!optionTerminalNamePanel.isVisible) {
-            optionTerminalNamePanel.isVisible = true
+        if (!commandTerminalNamePanel.isVisible) {
+            commandTerminalNamePanel.isVisible = true
         }
-        if (!optionTerminalModePanel.isVisible) {
-            optionTerminalModePanel.isVisible = true
+        if (!commandTerminalModePanel.isVisible) {
+            commandTerminalModePanel.isVisible = true
         }
         // 简易模式下隐藏快捷参数面板
         val shouldShowQuickParams = selectedCommandBar?.simpleMode != true
@@ -1751,82 +1751,82 @@ class CCBarSettingsPanel(private val project: Project?) {
             quickParamOuterPanel.isVisible = shouldShowQuickParams
         }
         // 更新标题
-        optionDetailTitledBorder.title = "Command 详情"
+        commandDetailTitledBorder.title = "Command 详情"
     }
 
-    private fun updateOptionDetail() {
+    private fun updateCommandDetail() {
         ignoreUpdate = true
         try {
-            val option = selectedCommand ?: return
-            optionNameField.text = option.name
-            optionEnabledCheckbox.isSelected = option.enabled
-            optionIconField.text = option.icon
-            baseCommandField.text = option.baseCommand
-            optionEnvVariablesField.text = option.envVariables
-            workingDirectoryField.text = option.workingDirectory
-            defaultTerminalNameField.text = option.defaultTerminalName
-            optionTerminalModeCheckbox.isSelected = option.terminalMode == TerminalMode.EDITOR
+            val command = selectedCommand ?: return
+            commandNameField.text = command.name
+            commandEnabledCheckbox.isSelected = command.enabled
+            commandIconField.text = command.icon
+            baseCommandField.text = command.baseCommand
+            commandEnvVariablesField.text = command.envVariables
+            workingDirectoryField.text = command.workingDirectory
+            defaultTerminalNameField.text = command.defaultTerminalName
+            commandTerminalModeCheckbox.isSelected = command.terminalMode == TerminalMode.EDITOR
             // 更新提示文字状态
-            updateOptionWorkDirHintVisibility()
+            updateCommandWorkDirHintVisibility()
         } finally {
             ignoreUpdate = false
         }
     }
 
-    private fun clearOptionDetail() {
+    private fun clearCommandDetail() {
         ignoreUpdate = true
         try {
-            optionNameField.text = ""
-            optionEnabledCheckbox.isSelected = true
-            optionIconField.text = ""
+            commandNameField.text = ""
+            commandEnabledCheckbox.isSelected = true
+            commandIconField.text = ""
             baseCommandField.text = ""
-            optionEnvVariablesField.text = ""
+            commandEnvVariablesField.text = ""
             workingDirectoryField.text = ""
             defaultTerminalNameField.text = ""
-            optionTerminalModeCheckbox.isSelected = false
+            commandTerminalModeCheckbox.isSelected = false
             // 重置提示文字状态
-            updateOptionWorkDirHintVisibility()
+            updateCommandWorkDirHintVisibility()
         } finally {
             ignoreUpdate = false
         }
     }
 
-    private fun updateOptionName() {
+    private fun updateCommandName() {
         if (ignoreUpdate) return
-        selectedCommand?.name = optionNameField.text
-        optionList.repaint()
+        selectedCommand?.name = commandNameField.text
+        commandList.repaint()
     }
 
-    private fun updateOptionIcon() {
+    private fun updateCommandIcon() {
         if (ignoreUpdate) return
-        val text = optionIconField.text
+        val text = commandIconField.text
         selectedCommand?.icon = if (text.isBlank()) "builtin:AllIcons.Actions.Execute" else text
-        optionList.repaint()
+        commandList.repaint()
     }
 
-    private fun updateOptionCommand() {
+    private fun updateCommandBaseCommand() {
         if (ignoreUpdate) return
         selectedCommand?.baseCommand = baseCommandField.text
     }
 
-    private fun updateOptionDirectory() {
+    private fun updateCommandDirectory() {
         if (ignoreUpdate) return
         selectedCommand?.workingDirectory = workingDirectoryField.text
     }
 
-    private fun updateOptionEnvVariables() {
+    private fun updateCommandEnvVariables() {
         if (ignoreUpdate) return
-        selectedCommand?.envVariables = optionEnvVariablesField.text
+        selectedCommand?.envVariables = commandEnvVariablesField.text
     }
 
-    private fun updateOptionTerminalName() {
+    private fun updateCommandTerminalName() {
         if (ignoreUpdate) return
         selectedCommand?.defaultTerminalName = defaultTerminalNameField.text
     }
 
-    private fun updateOptionTerminalMode() {
+    private fun updateCommandTerminalMode() {
         if (ignoreUpdate) return
-        selectedCommand?.terminalMode = if (optionTerminalModeCheckbox.isSelected) TerminalMode.EDITOR else TerminalMode.TOOL_WINDOW
+        selectedCommand?.terminalMode = if (commandTerminalModeCheckbox.isSelected) TerminalMode.EDITOR else TerminalMode.TOOL_WINDOW
     }
 
     // ==================== QuickParam 操作 ====================
@@ -1839,14 +1839,14 @@ class CCBarSettingsPanel(private val project: Project?) {
     }
 
     private fun openQuickParamEditDialog() {
-        val option = selectedCommand ?: return
+        val command = selectedCommand ?: return
         val currentProject = project ?: ProjectManager.getInstance().openProjects.firstOrNull()
-        val deepCopy = option.quickParams.map { it.deepCopy() }
+        val deepCopy = command.quickParams.map { it.deepCopy() }
         val dialog = QuickParamEditDialog(currentProject, deepCopy)
         if (dialog.showAndGet()) {
             val edited = dialog.getEditedQuickParams()
-            option.quickParams.clear()
-            option.quickParams.addAll(edited)
+            command.quickParams.clear()
+            command.quickParams.addAll(edited)
             updateQuickParamSummary()
         }
     }
@@ -1891,15 +1891,15 @@ class CCBarSettingsPanel(private val project: Project?) {
                             editingSystemState.commandBars = importedList
                         }
 
-                        buttonListModel.removeAll()
+                        commandBarListModel.removeAll()
                         for (btn in importedList) {
-                            buttonListModel.add(btn)
+                            commandBarListModel.add(btn)
                         }
                         selectedCommandBar = null
                         selectedCommand = null
-                        clearButtonDetail()
-                        clearOptionDetail()
-                        optionListModel.removeAll()
+                        clearCommandBarDetail()
+                        clearCommandDetail()
+                        commandListModel.removeAll()
                         updateQuickParamSummary()
 
                         Messages.showInfoMessage("配置导入成功！", "成功")
@@ -1965,15 +1965,15 @@ class CCBarSettingsPanel(private val project: Project?) {
                 editingSystemState.commandBars = defaultButtons
             }
 
-            buttonListModel.removeAll()
+            commandBarListModel.removeAll()
             for (btn in defaultButtons) {
-                buttonListModel.add(btn)
+                commandBarListModel.add(btn)
             }
             selectedCommandBar = null
             selectedCommand = null
-            clearButtonDetail()
-            clearOptionDetail()
-            optionListModel.removeAll()
+            clearCommandBarDetail()
+            clearCommandDetail()
+            commandListModel.removeAll()
             updateQuickParamSummary()
         }
     }
@@ -1998,9 +1998,9 @@ class CCBarSettingsPanel(private val project: Project?) {
     fun validate(): List<String> {
         val errors = mutableListOf<String>()
 
-        for ((buttonIndex, button) in editingState.commandBars.withIndex()) {
+        for ((commandBarIndex, button) in editingState.commandBars.withIndex()) {
             if (button.name.isBlank()) {
-                errors.add("CommandBar ${buttonIndex + 1}: 名称不能为空")
+                errors.add("CommandBar ${commandBarIndex + 1}: 名称不能为空")
             }
             if (editingState.commandBars.count { it.name == button.name } > 1) {
                 errors.add("CommandBar '${button.name}': 名称重复")
@@ -2018,12 +2018,12 @@ class CCBarSettingsPanel(private val project: Project?) {
             } else {
                 // Command 列表模式验证
                 // 过滤掉分割线，只计算启用的普通 Command
-                val enabledNormalOptions = button.commands.filter { !it.isSeparator() && it.enabled }
-                if (enabledNormalOptions.isEmpty()) {
+                val enabledNormalCommands = button.commands.filter { !it.isSeparator() && it.enabled }
+                if (enabledNormalCommands.isEmpty()) {
                     errors.add("CommandBar '${button.name}': 未配置直接命令时，必须至少有一个启用的普通 Command")
                 }
 
-                for ((optionIndex, option) in button.commands.withIndex()) {
+                for ((commandIndex, option) in button.commands.withIndex()) {
                     // 跳过分割线类型的验证
                     if (option.isSeparator()) continue
 
@@ -2031,10 +2031,10 @@ class CCBarSettingsPanel(private val project: Project?) {
                     if (!option.enabled) continue
 
                     if (option.name.isBlank()) {
-                        errors.add("CommandBar '${button.name}' Command ${optionIndex + 1}: 名称不能为空")
+                        errors.add("CommandBar '${button.name}' Command ${commandIndex + 1}: 名称不能为空")
                     }
                     // 只检查启用的普通 Command的名称重复
-                    if (enabledNormalOptions.count { it.name == option.name } > 1) {
+                    if (enabledNormalCommands.count { it.name == option.name } > 1) {
                         errors.add("CommandBar '${button.name}' Command '${option.name}': 名称重复")
                     }
                     if (option.baseCommand.isBlank()) {
@@ -2093,22 +2093,22 @@ class CCBarSettingsPanel(private val project: Project?) {
         }
 
         // 刷新CommandBar列表
-        buttonListModel.removeAll()
+        commandBarListModel.removeAll()
         for (btn in editingState.commandBars) {
-            buttonListModel.add(btn)
+            commandBarListModel.add(btn)
         }
 
         selectedCommandBar = null
         selectedCommand = null
-        clearButtonDetail()
-        clearOptionDetail()
-        optionListModel.removeAll()
+        clearCommandBarDetail()
+        clearCommandDetail()
+        commandListModel.removeAll()
         updateQuickParamSummary()
     }
 
     // ==================== 列表渲染器 ====================
 
-    private class ButtonListCellRenderer : DefaultListCellRenderer() {
+    private class CommandBarListCellRenderer : DefaultListCellRenderer() {
         override fun getListCellRendererComponent(
             list: JList<*>?,
             value: Any?,
@@ -2128,7 +2128,7 @@ class CCBarSettingsPanel(private val project: Project?) {
         }
     }
 
-    private class OptionListCellRenderer : DefaultListCellRenderer() {
+    private class CommandListCellRenderer : DefaultListCellRenderer() {
         override fun getListCellRendererComponent(
             list: JList<*>?,
             value: Any?,
@@ -2155,7 +2155,7 @@ class CCBarSettingsPanel(private val project: Project?) {
 
         private fun createSeparatorRenderer(
             list: JList<*>?,
-            option: CommandConfig,
+            command: CommandConfig,
             isSelected: Boolean
         ): JComponent {
             val panel = JPanel(BorderLayout()).apply {
@@ -2168,7 +2168,7 @@ class CCBarSettingsPanel(private val project: Project?) {
                 border = JBUI.Borders.empty(4, 8)
             }
 
-            if (option.name.isNotBlank()) {
+            if (command.name.isNotBlank()) {
                 // 带标题的分割线：──── 标题 ────
                 // 使用自定义绘制
                 val innerPanel = object : JPanel() {
@@ -2178,7 +2178,7 @@ class CCBarSettingsPanel(private val project: Project?) {
                         g2d.color = com.intellij.ui.JBColor.GRAY
                         g2d.stroke = java.awt.BasicStroke(1f)
 
-                        val labelWidth = graphics.getFontMetrics(font).stringWidth(option.name) + 16
+                        val labelWidth = graphics.getFontMetrics(font).stringWidth(command.name) + 16
                         val centerY = height / 2
                         val leftEnd = (width - labelWidth) / 2
                         val rightStart = leftEnd + labelWidth
@@ -2196,7 +2196,7 @@ class CCBarSettingsPanel(private val project: Project?) {
                 innerPanel.layout = BorderLayout()
                 innerPanel.isOpaque = false
 
-                val label = JLabel(option.name).apply {
+                val label = JLabel(command.name).apply {
                     foreground = com.intellij.ui.JBColor.GRAY
                     horizontalAlignment = SwingConstants.CENTER
                 }

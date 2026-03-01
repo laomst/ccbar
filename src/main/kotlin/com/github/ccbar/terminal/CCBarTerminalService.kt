@@ -25,41 +25,41 @@ object CCBarTerminalService {
     private val LOG = Logger.getInstance(CCBarTerminalService::class.java)
 
     /**
-     * 为 Option 打开终端（Command 列表模式）
+     * 为 Command 打开终端（Command 列表模式）
      */
-    fun openTerminal(project: Project, option: CommandConfig, quickParam: QuickParamConfig?) {
-        val baseCommand = buildCommand(option, quickParam)
-        val defaultOpenInEditor = option.terminalMode == TerminalMode.EDITOR
-        val dialog = CommandPreviewDialog(project, baseCommand, option.defaultTerminalName, defaultOpenInEditor, option.envVariables)
+    fun openTerminal(project: Project, command: CommandConfig, quickParam: QuickParamConfig?) {
+        val baseCommand = buildCommand(command, quickParam)
+        val defaultOpenInEditor = command.terminalMode == TerminalMode.EDITOR
+        val dialog = CommandPreviewDialog(project, baseCommand, command.defaultTerminalName, defaultOpenInEditor, command.envVariables)
         if (!dialog.showAndGet()) {
             return
         }
         val terminalName = dialog.terminalName
-        val command = buildCommandWithEnv(project, dialog.envVariables, dialog.fullCommand)
-        val workingDir = resolveWorkingDirectory(project, option)
+        val finalCommand = buildCommandWithEnv(project, dialog.envVariables, dialog.fullCommand)
+        val workingDir = resolveWorkingDirectory(project, command)
         val openInEditor = dialog.openInEditor
-        createTerminalAndExecute(project, command, terminalName, workingDir, openInEditor)
+        createTerminalAndExecute(project, finalCommand, terminalName, workingDir, openInEditor)
     }
 
     /**
-     * 为 Button 直接命令模式打开终端
+     * 为 CommandBar 直接命令模式打开终端
      */
-    fun openTerminalForCommandBar(project: Project, button: CommandBarConfig) {
-        val defaultName = button.defaultTerminalName.ifBlank { button.name }
-        val defaultOpenInEditor = button.terminalMode == TerminalMode.EDITOR
-        val dialog = CommandPreviewDialog(project, button.command, defaultName, defaultOpenInEditor, button.envVariables)
+    fun openTerminalForCommandBar(project: Project, commandBar: CommandBarConfig) {
+        val defaultName = commandBar.defaultTerminalName.ifBlank { commandBar.name }
+        val defaultOpenInEditor = commandBar.terminalMode == TerminalMode.EDITOR
+        val dialog = CommandPreviewDialog(project, commandBar.command, defaultName, defaultOpenInEditor, commandBar.envVariables)
         if (!dialog.showAndGet()) {
             return
         }
         val terminalName = dialog.terminalName
-        val command = buildCommandWithEnv(project, dialog.envVariables, dialog.fullCommand)
-        val workingDir = resolveWorkingDirectoryForButton(project, button)
+        val finalCommand = buildCommandWithEnv(project, dialog.envVariables, dialog.fullCommand)
+        val workingDir = resolveWorkingDirectoryForCommandBar(project, commandBar)
         val openInEditor = dialog.openInEditor
-        createTerminalAndExecute(project, command, terminalName, workingDir, openInEditor)
+        createTerminalAndExecute(project, finalCommand, terminalName, workingDir, openInEditor)
     }
 
-    private fun buildCommand(option: CommandConfig, quickParam: QuickParamConfig?): String {
-        val baseCommand = option.baseCommand
+    private fun buildCommand(command: CommandConfig, quickParam: QuickParamConfig?): String {
+        val baseCommand = command.baseCommand
         val params = quickParam?.params?.trim() ?: ""
         return if (params.isNotEmpty()) "$baseCommand $params" else baseCommand
     }
@@ -137,8 +137,8 @@ object CCBarTerminalService {
         }
     }
 
-    private fun resolveWorkingDirectory(project: Project, option: CommandConfig): String {
-        val configuredDir = option.workingDirectory.trim()
+    private fun resolveWorkingDirectory(project: Project, command: CommandConfig): String {
+        val configuredDir = command.workingDirectory.trim()
 
         if (configuredDir.isNotEmpty()) {
             val dir = File(configuredDir)
@@ -157,8 +157,8 @@ object CCBarTerminalService {
         return project.basePath ?: System.getProperty("user.home")
     }
 
-    private fun resolveWorkingDirectoryForButton(project: Project, button: CommandBarConfig): String {
-        val configuredDir = button.workingDirectory.trim()
+    private fun resolveWorkingDirectoryForCommandBar(project: Project, commandBar: CommandBarConfig): String {
+        val configuredDir = commandBar.workingDirectory.trim()
 
         if (configuredDir.isNotEmpty()) {
             val dir = File(configuredDir)
