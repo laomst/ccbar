@@ -1,9 +1,9 @@
 package com.github.ccbar.actions
 
-import com.github.ccbar.settings.ButtonConfig
-import com.github.ccbar.settings.OptionConfig
-import com.github.ccbar.settings.OptionType
-import com.github.ccbar.settings.SubButtonConfig
+import com.github.ccbar.settings.CommandBarConfig
+import com.github.ccbar.settings.CommandConfig
+import com.github.ccbar.settings.CommandType
+import com.github.ccbar.settings.QuickParamConfig
 import com.github.ccbar.terminal.CCBarTerminalService
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.project.Project
@@ -33,8 +33,8 @@ import javax.swing.UIManager
 
 /**
  * CCBar 弹出菜单构建器
- * 构建包含 Option 行和内联 SubButton 的弹出面板
- * 两行布局：第一行 命令预览 | 名称，第二行 子按钮列表（小号文字）
+ * 构建包含 Command 行和内联 QuickParam 的弹出面板
+ * 两行布局：第一行 命令预览 | 名称，第二行 快捷参数列表（小号文字）
  */
 object CCBarPopupBuilder {
 
@@ -44,8 +44,8 @@ object CCBarPopupBuilder {
     // 第一行高度
     private const val ROW_HEIGHT = 28
 
-    // 第二行高度（子按钮行，小号文字）
-    private const val SUB_ROW_HEIGHT = 22
+    // 第二行高度（快捷参数行，小号文字）
+    private const val QUICK_PARAM_ROW_HEIGHT = 22
 
     // 悬浮高亮圆角半径
     private const val HOVER_ARC = 8
@@ -54,12 +54,12 @@ object CCBarPopupBuilder {
     private val PREVIEW_FOREGROUND: Color
         get() = JBColor(Color(80, 80, 80), Color(180, 180, 180))
 
-    // 子按钮文字颜色（绿色调）
-    private val SUB_BUTTON_FOREGROUND: Color
+    // 快捷参数文字颜色（绿色调）
+    private val QUICK_PARAM_FOREGROUND: Color
         get() = JBColor(Color(0, 120, 0), Color(0, 170, 0))
 
-    // 子按钮分隔符颜色
-    private val SUB_BUTTON_SEPARATOR_COLOR: Color
+    // 快捷参数分隔符颜色
+    private val QUICK_PARAM_SEPARATOR_COLOR: Color
         get() = JBColor(Color(180, 180, 180), Color(100, 100, 100))
 
     // 标签文字颜色
@@ -74,7 +74,7 @@ object CCBarPopupBuilder {
     /**
      * 构建弹出菜单
      */
-    fun buildPopup(project: Project, buttonConfig: ButtonConfig): JBPopup {
+    fun buildPopup(project: Project, commandBarConfig: CommandBarConfig): JBPopup {
         val mainPanel = JPanel().apply {
             layout = BoxLayout(this, BoxLayout.Y_AXIS)
             border = JBUI.Borders.empty(12)
@@ -82,26 +82,26 @@ object CCBarPopupBuilder {
             background = UIManager.getColor("MainToolbar.background") ?: JBColor.PanelBackground
         }
 
-        val simpleMode = buttonConfig.simpleMode
+        val simpleMode = commandBarConfig.simpleMode
 
-        // 计算所有选项标题的最大宽度
-        val labelWidth = calculateMaxLabelWidth(buttonConfig)
+        // 计算所有Command标题的最大宽度
+        val labelWidth = calculateMaxLabelWidth(commandBarConfig)
 
-        // 计算所有选项命令预览的最大宽度（简易模式下不需要）
-        val previewWidth = if (simpleMode) 0 else calculateMaxPreviewWidth(buttonConfig)
+        // 计算所有Command命令预览的最大宽度（简易模式下不需要）
+        val previewWidth = if (simpleMode) 0 else calculateMaxPreviewWidth(commandBarConfig)
 
         // 先创建 popup，后续在回调中使用
         lateinit var popup: JBPopup
 
         // 为每个 Option 创建一行
-        for (option in buttonConfig.options) {
+        for (option in commandBarConfig.commands) {
             if (option.isSeparator()) {
                 mainPanel.add(createSeparatorRow(option))
             } else if (simpleMode) {
-                val row = createSimpleOptionRow(project, option, labelWidth) { popup.closeOk(null) }
+                val row = createSimpleCommandRow(project, option, labelWidth) { popup.closeOk(null) }
                 mainPanel.add(row)
             } else {
-                val optionBlock = createOptionBlock(project, option, labelWidth, previewWidth) { popup.closeOk(null) }
+                val optionBlock = createCommandBlock(project, option, labelWidth, previewWidth) { popup.closeOk(null) }
                 mainPanel.add(optionBlock)
             }
             // 添加行间距
@@ -167,13 +167,13 @@ object CCBarPopupBuilder {
     }
 
     /**
-     * 计算所有选项标题的最大宽度
+     * 计算所有Command标题的最大宽度
      */
-    private fun calculateMaxLabelWidth(buttonConfig: ButtonConfig): Int {
+    private fun calculateMaxLabelWidth(commandBarConfig: CommandBarConfig): Int {
         val fontMetrics = JBLabel().getFontMetrics(JBLabel().font)
         var maxWidth = 60 // 最小宽度
 
-        for (option in buttonConfig.options) {
+        for (option in commandBarConfig.commands) {
             if (!option.isSeparator()) {
                 val textWidth = fontMetrics.stringWidth(option.name)
                 val iconWidth = if (option.icon.isNotBlank()) 16 + 4 else 0  // 图标宽度 + 间距
@@ -188,19 +188,19 @@ object CCBarPopupBuilder {
     }
 
     /**
-     * 计算所有选项命令预览的最大宽度
+     * 计算所有Command命令预览的最大宽度
      */
-    private fun calculateMaxPreviewWidth(buttonConfig: ButtonConfig): Int {
+    private fun calculateMaxPreviewWidth(commandBarConfig: CommandBarConfig): Int {
         val fontMetrics = JBLabel().getFontMetrics(JBLabel().font)
         var maxWidth = 0
 
-        for (option in buttonConfig.options) {
+        for (option in commandBarConfig.commands) {
             if (!option.isSeparator()) {
                 // 计算基础命令宽度
                 var textWidth = fontMetrics.stringWidth(option.baseCommand)
                 // 同时考虑带参数的完整命令宽度
-                for (subButton in option.subButtons) {
-                    val fullCommand = buildFullCommand(option.baseCommand, subButton.params)
+                for (quickParam in option.quickParams) {
+                    val fullCommand = buildFullCommand(option.baseCommand, quickParam.params)
                     val fullWidth = fontMetrics.stringWidth(fullCommand)
                     if (fullWidth > textWidth) {
                         textWidth = fullWidth
@@ -219,7 +219,7 @@ object CCBarPopupBuilder {
     /**
      * 创建分割线行
      */
-    private fun createSeparatorRow(option: OptionConfig): JComponent {
+    private fun createSeparatorRow(option: CommandConfig): JComponent {
         val panel = JPanel(BorderLayout()).apply {
             isOpaque = false
             border = BorderFactory.createEmptyBorder(4, 0, 4, 0)
@@ -276,9 +276,9 @@ object CCBarPopupBuilder {
     }
 
     /**
-     * 创建简易模式的选项行（仅显示名称，整行悬浮高亮）
+     * 创建简易模式的Command行（仅显示名称，整行悬浮高亮）
      */
-    private fun createSimpleOptionRow(project: Project, option: OptionConfig, labelWidth: Int, onClose: () -> Unit): JPanel {
+    private fun createSimpleCommandRow(project: Project, option: CommandConfig, labelWidth: Int, onClose: () -> Unit): JPanel {
         val hoverPanel = createHoverPanel {
             onClose()
             CCBarTerminalService.openTerminal(project, option, null)
@@ -304,17 +304,17 @@ object CCBarPopupBuilder {
     }
 
     /**
-     * 创建 Option 块（两行布局，整块悬浮高亮）
+     * 创建 Command 块（两行布局，整块悬浮高亮）
      * 第一行：命令预览 | 名称
-     * 第二行：子按钮列表（小号文字）
+     * 第二行：快捷参数列表（小号文字）
      */
-    private fun createOptionBlock(project: Project, option: OptionConfig, labelWidth: Int, previewWidth: Int, onClose: () -> Unit): JPanel {
+    private fun createCommandBlock(project: Project, option: CommandConfig, labelWidth: Int, previewWidth: Int, onClose: () -> Unit): JPanel {
         val hoverPanel = createHoverPanel {
             onClose()
             CCBarTerminalService.openTerminal(project, option, null)
         }
 
-        // 命令预览标签（需要被子按钮 hover 更新）
+        // 命令预览标签（需要被快捷参数 hover 更新）
         val commandPreview = JBLabel(option.baseCommand).apply {
             icon = com.github.ccbar.icons.CCBarIcons.loadIcon("builtin:/debugger/executeCurrentStatement.svg")
             preferredSize = Dimension(previewWidth, ROW_HEIGHT)
@@ -339,21 +339,21 @@ object CCBarPopupBuilder {
         firstRow.add(optionLabel)
         hoverPanel.add(firstRow)
 
-        // 第二行：子按钮列表（仅在有子按钮时显示）
-        if (option.subButtons.isNotEmpty()) {
+        // 第二行：快捷参数列表（仅在有快捷参数时显示）
+        if (option.quickParams.isNotEmpty()) {
             val secondRow = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
                 isOpaque = false
                 border = JBUI.Borders.emptyLeft(4)
             }
 
-            for ((index, subButton) in option.subButtons.withIndex()) {
-                val btn = createSubButtonLabel(project, option, subButton, commandPreview, onClose)
+            for ((index, quickParam) in option.quickParams.withIndex()) {
+                val btn = createQuickParamLabel(project, option, quickParam, commandPreview, onClose)
                 secondRow.add(btn)
-                if (index < option.subButtons.size - 1) {
+                if (index < option.quickParams.size - 1) {
                     val separator = JBLabel("|").apply {
-                        foreground = SUB_BUTTON_SEPARATOR_COLOR
+                        foreground = QUICK_PARAM_SEPARATOR_COLOR
                         font = font.deriveFont(font.size2D - 2f)
-                        preferredSize = Dimension(preferredSize.width, SUB_ROW_HEIGHT)
+                        preferredSize = Dimension(preferredSize.width, QUICK_PARAM_ROW_HEIGHT)
                     }
                     secondRow.add(separator)
                 }
@@ -366,31 +366,31 @@ object CCBarPopupBuilder {
     }
 
     /**
-     * 创建 SubButton 标签（小号纯文本）
-     * 点击子按钮会消费事件，不触发 hoverPanel 的点击
+     * 创建 快捷参数标签（小号纯文本）
+     * 点击快捷参数会消费事件，不触发 hoverPanel 的点击
      */
-    private fun createSubButtonLabel(
+    private fun createQuickParamLabel(
         project: Project,
-        option: OptionConfig,
-        subButton: SubButtonConfig,
+        option: CommandConfig,
+        quickParam: QuickParamConfig,
         commandPreview: JBLabel,
         onClose: () -> Unit
     ): JBLabel {
-        val fullCommand = buildFullCommand(option.baseCommand, subButton.params)
+        val fullCommand = buildFullCommand(option.baseCommand, quickParam.params)
 
-        return JBLabel(subButton.name).apply {
+        return JBLabel(quickParam.name).apply {
             font = font.deriveFont(font.size2D - 2f)
-            foreground = SUB_BUTTON_FOREGROUND
+            foreground = QUICK_PARAM_FOREGROUND
             cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
             toolTipText = "执行: $fullCommand"
             border = JBUI.Borders.empty(0, 4)
-            preferredSize = Dimension(preferredSize.width, SUB_ROW_HEIGHT)
+            preferredSize = Dimension(preferredSize.width, QUICK_PARAM_ROW_HEIGHT)
 
             addMouseListener(object : MouseAdapter() {
                 override fun mouseClicked(e: MouseEvent?) {
                     e?.consume()
                     onClose()
-                    CCBarTerminalService.openTerminal(project, option, subButton)
+                    CCBarTerminalService.openTerminal(project, option, quickParam)
                 }
 
                 override fun mouseEntered(e: MouseEvent?) {
@@ -399,7 +399,7 @@ object CCBarPopupBuilder {
                 }
 
                 override fun mouseExited(e: MouseEvent?) {
-                    foreground = SUB_BUTTON_FOREGROUND
+                    foreground = QUICK_PARAM_FOREGROUND
                     commandPreview.text = option.baseCommand
                 }
             })

@@ -1,8 +1,8 @@
 package com.github.ccbar.terminal
 
-import com.github.ccbar.settings.ButtonConfig
-import com.github.ccbar.settings.OptionConfig
-import com.github.ccbar.settings.SubButtonConfig
+import com.github.ccbar.settings.CommandBarConfig
+import com.github.ccbar.settings.CommandConfig
+import com.github.ccbar.settings.QuickParamConfig
 import com.github.ccbar.settings.TerminalMode
 import com.github.ccbar.terminal.editor.TerminalEditorService
 import com.intellij.notification.Notification
@@ -25,10 +25,10 @@ object CCBarTerminalService {
     private val LOG = Logger.getInstance(CCBarTerminalService::class.java)
 
     /**
-     * 为 Option 打开终端（选项列表模式）
+     * 为 Option 打开终端（Command 列表模式）
      */
-    fun openTerminal(project: Project, option: OptionConfig, subButton: SubButtonConfig?) {
-        val baseCommand = buildCommand(option, subButton)
+    fun openTerminal(project: Project, option: CommandConfig, quickParam: QuickParamConfig?) {
+        val baseCommand = buildCommand(option, quickParam)
         val defaultOpenInEditor = option.terminalMode == TerminalMode.EDITOR
         val dialog = CommandPreviewDialog(project, baseCommand, option.defaultTerminalName, defaultOpenInEditor, option.envVariables)
         if (!dialog.showAndGet()) {
@@ -44,7 +44,7 @@ object CCBarTerminalService {
     /**
      * 为 Button 直接命令模式打开终端
      */
-    fun openTerminalForButton(project: Project, button: ButtonConfig) {
+    fun openTerminalForCommandBar(project: Project, button: CommandBarConfig) {
         val defaultName = button.defaultTerminalName.ifBlank { button.name }
         val defaultOpenInEditor = button.terminalMode == TerminalMode.EDITOR
         val dialog = CommandPreviewDialog(project, button.command, defaultName, defaultOpenInEditor, button.envVariables)
@@ -58,9 +58,9 @@ object CCBarTerminalService {
         createTerminalAndExecute(project, command, terminalName, workingDir, openInEditor)
     }
 
-    private fun buildCommand(option: OptionConfig, subButton: SubButtonConfig?): String {
+    private fun buildCommand(option: CommandConfig, quickParam: QuickParamConfig?): String {
         val baseCommand = option.baseCommand
-        val params = subButton?.params?.trim() ?: ""
+        val params = quickParam?.params?.trim() ?: ""
         return if (params.isNotEmpty()) "$baseCommand $params" else baseCommand
     }
 
@@ -137,7 +137,7 @@ object CCBarTerminalService {
         }
     }
 
-    private fun resolveWorkingDirectory(project: Project, option: OptionConfig): String {
+    private fun resolveWorkingDirectory(project: Project, option: CommandConfig): String {
         val configuredDir = option.workingDirectory.trim()
 
         if (configuredDir.isNotEmpty()) {
@@ -157,7 +157,7 @@ object CCBarTerminalService {
         return project.basePath ?: System.getProperty("user.home")
     }
 
-    private fun resolveWorkingDirectoryForButton(project: Project, button: ButtonConfig): String {
+    private fun resolveWorkingDirectoryForButton(project: Project, button: CommandBarConfig): String {
         val configuredDir = button.workingDirectory.trim()
 
         if (configuredDir.isNotEmpty()) {

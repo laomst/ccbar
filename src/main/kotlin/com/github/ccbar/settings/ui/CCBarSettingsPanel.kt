@@ -64,7 +64,7 @@ class CCBarSettingsPanel(private val project: Project?) {
     private val editingState: CCBarSettings.State
         get() = if (currentConfigMode == ConfigMode.PROJECT && editingProjectState.enabled) {
             // 项目配置模式：使用包装器将项目配置伪装成系统配置格式
-            CCBarSettings.State(editingProjectState.buttons)
+            CCBarSettings.State(editingProjectState.commandBars)
         } else {
             editingSystemState
         }
@@ -73,11 +73,11 @@ class CCBarSettingsPanel(private val project: Project?) {
     private var isProjectConfigEnabled: Boolean = false
 
     // UI 组件
-    private lateinit var buttonListModel: CollectionListModel<ButtonConfig>
-    private lateinit var buttonList: JBList<ButtonConfig>
-    private lateinit var optionListModel: CollectionListModel<OptionConfig>
-    private lateinit var optionList: JBList<OptionConfig>
-    private lateinit var subButtonSummaryField: JBTextField
+    private lateinit var buttonListModel: CollectionListModel<CommandBarConfig>
+    private lateinit var buttonList: JBList<CommandBarConfig>
+    private lateinit var optionListModel: CollectionListModel<CommandConfig>
+    private lateinit var optionList: JBList<CommandConfig>
+    private lateinit var quickParamSummaryField: JBTextField
 
     // Button 详情字段
     private lateinit var buttonNameField: JBTextField
@@ -104,7 +104,7 @@ class CCBarSettingsPanel(private val project: Project?) {
     private lateinit var buttonTerminalModePanel: JComponent
     private lateinit var buttonTerminalModeCheckbox: JCheckBox
 
-    // Button 简易模式复选框（仅选项列表模式时显示）
+    // Button 简易模式复选框（仅Command 列表模式时显示）
     private lateinit var simpleModePanel: JComponent
     private lateinit var simpleModeCheckbox: JCheckBox
 
@@ -127,9 +127,9 @@ class CCBarSettingsPanel(private val project: Project?) {
     // Option 提示标签（用于动态更新文字）
     private lateinit var optionWorkDirHintLabel: JLabel
 
-    // Option 详情面板和 SubButton 面板（用于控制显示/隐藏）
+    // Option 详情面板和 快捷参数面板（用于控制显示/隐藏）
     private lateinit var optionDetailOuterPanel: JComponent
-    private lateinit var subButtonOuterPanel: JComponent
+    private lateinit var quickParamOuterPanel: JComponent
 
     // Option 详情面板中各个字段的容器（用于控制分割线时只显示名称）
     private lateinit var optionCommandPanel: JPanel
@@ -145,19 +145,19 @@ class CCBarSettingsPanel(private val project: Project?) {
     private lateinit var optionDetailTitledBorder: javax.swing.border.TitledBorder
 
     // 当前选中的 Button 和 Option
-    private var selectedButton: ButtonConfig? = null
-    private var selectedOption: OptionConfig? = null
+    private var selectedCommandBar: CommandBarConfig? = null
+    private var selectedCommand: CommandConfig? = null
 
     // 忽略更新标志（用于批量更新时避免循环）
     private var ignoreUpdate = false
 
-    // 添加选项气泡弹窗
+    // 添加 Command气泡弹窗
     private var addOptionPopup: JBPopup? = null
 
     // 气泡延迟关闭计时器
     private var popupCloseTimer: javax.swing.Timer? = null
 
-    // 添加按钮的 UI 组件引用（用于气泡锚定）
+    // 添加CommandBar的 UI 组件引用（用于气泡锚定）
     private var addOptionButtonRef: JComponent? = null
 
     // 卡片布局常量
@@ -212,7 +212,7 @@ class CCBarSettingsPanel(private val project: Project?) {
         }
         mainPanel.add(contentPanel, BorderLayout.CENTER)
 
-        // 底部操作按钮
+        // 底部操作CommandBar
         mainPanel.add(createActionButtonsPanel(), BorderLayout.SOUTH)
 
         return mainPanel
@@ -233,7 +233,7 @@ class CCBarSettingsPanel(private val project: Project?) {
         }
         panel.add(infoLabel, BorderLayout.CENTER)
 
-        // 右侧操作按钮
+        // 右侧操作CommandBar
         val actionButton = JButton()
         panel.add(actionButton, BorderLayout.EAST)
 
@@ -253,7 +253,7 @@ class CCBarSettingsPanel(private val project: Project?) {
             actionButton.actionListeners.forEach { actionButton.removeActionListener(it) }
             actionButton.addActionListener { disableProjectConfig() }
         } else {
-            infoLabel.text = "启用项目配置后，可以为当前项目设置独立的按钮配置。项目配置存储在 .idea 目录中，跟随项目。"
+            infoLabel.text = "启用项目配置后，可以为当前项目设置独立的CommandBar 配置。项目配置存储在 .idea 目录中，跟随项目。"
             actionButton.text = "启用项目配置"
             actionButton.actionListeners.forEach { actionButton.removeActionListener(it) }
             actionButton.addActionListener { enableProjectConfig() }
@@ -309,7 +309,7 @@ class CCBarSettingsPanel(private val project: Project?) {
                 // 刷新配置面板数据
                 refreshConfigPanel()
 
-                // 更新底部按钮面板
+                // 更新底部CommandBar面板
                 updateActionButtonsPanel()
             }
         }
@@ -361,12 +361,12 @@ class CCBarSettingsPanel(private val project: Project?) {
 
     /**
      * 保存当前编辑状态
-     * 注意：由于 buttonListModel 中的元素和 editingState.buttons 中的元素是同一个对象引用，
+     * 注意：由于 buttonListModel 中的元素和 editingState.commandBars 中的元素是同一个对象引用，
      * 用户的修改会直接反映到 editingProjectState 或 editingSystemState 中，
      * 所以不需要额外的深拷贝操作。
      */
     private fun saveCurrentEditingState() {
-        // SubButton 数据已通过对话框直接同步到数据模型，无需额外操作
+        // 快捷参数数据已通过对话框直接同步到数据模型，无需额外操作
         // 不需要深拷贝，因为修改已经直接反映到 editingProjectState/editingSystemState 中
     }
 
@@ -374,19 +374,19 @@ class CCBarSettingsPanel(private val project: Project?) {
      * 刷新配置面板
      */
     private fun refreshConfigPanel() {
-        // 重新加载按钮列表
+        // 重新加载CommandBar列表
         buttonListModel.removeAll()
-        for (btn in editingState.buttons) {
+        for (btn in editingState.commandBars) {
             buttonListModel.add(btn)
         }
 
         // 清空选中状态
-        selectedButton = null
-        selectedOption = null
+        selectedCommandBar = null
+        selectedCommand = null
         clearButtonDetail()
         clearOptionDetail()
         optionListModel.removeAll()
-        updateSubButtonSummary()
+        updateQuickParamSummary()
 
         showEmptyPanel()
     }
@@ -398,8 +398,8 @@ class CCBarSettingsPanel(private val project: Project?) {
      */
     private fun enableProjectConfig() {
         // 如果项目配置没有数据，才复制系统配置
-        if (editingProjectState.buttons.isEmpty()) {
-            editingProjectState.buttons = editingSystemState.deepCopy().buttons
+        if (editingProjectState.commandBars.isEmpty()) {
+            editingProjectState.commandBars = editingSystemState.deepCopy().commandBars
         }
 
         editingProjectState.enabled = true
@@ -432,7 +432,7 @@ class CCBarSettingsPanel(private val project: Project?) {
             null
         )
         if (result == Messages.YES) {
-            editingProjectState.buttons = editingSystemState.deepCopy().buttons
+            editingProjectState.commandBars = editingSystemState.deepCopy().commandBars
             refreshConfigPanel()
         }
     }
@@ -462,7 +462,7 @@ class CCBarSettingsPanel(private val project: Project?) {
         }
         newMainPanel.add(contentPanel, BorderLayout.CENTER)
 
-        // 底部操作按钮
+        // 底部操作CommandBar
         newMainPanel.add(createActionButtonsPanel(), BorderLayout.SOUTH)
 
         // 替换面板
@@ -476,11 +476,11 @@ class CCBarSettingsPanel(private val project: Project?) {
     }
 
     /**
-     * 创建空状态面板（未选中按钮时显示）
+     * 创建空状态面板（未选中CommandBar时显示）
      */
     private fun createEmptyPanel(): JComponent {
         val panel = JPanel(BorderLayout())
-        val label = JLabel("请从左侧选择一个按钮", SwingConstants.CENTER)
+        val label = JLabel("请从左侧选择一个 CommandBar", SwingConstants.CENTER)
         label.foreground = com.intellij.ui.JBColor.GRAY
         panel.add(label, BorderLayout.CENTER)
         return panel
@@ -490,7 +490,7 @@ class CCBarSettingsPanel(private val project: Project?) {
      * 创建 Button 列表面板
      */
     private fun createButtonListPanel(): JComponent {
-        buttonListModel = CollectionListModel(editingState.buttons)
+        buttonListModel = CollectionListModel(editingState.commandBars)
         buttonList = JBList(buttonListModel).apply {
             cellRenderer = ButtonListCellRenderer()
             selectionMode = ListSelectionModel.SINGLE_SELECTION
@@ -544,7 +544,7 @@ class CCBarSettingsPanel(private val project: Project?) {
         val outerPanel = JPanel(BorderLayout())
         val panel = JPanel().apply {
             layout = BoxLayout(this, BoxLayout.Y_AXIS)
-            border = BorderFactory.createTitledBorder("Button 详情")
+            border = BorderFactory.createTitledBorder("CommandBar 详情")
         }
 
         // Name 字段
@@ -560,7 +560,7 @@ class CCBarSettingsPanel(private val project: Project?) {
         namePanel.add(buttonNameField, BorderLayout.CENTER)
         panel.add(namePanel)
 
-        // Icon 字段（包含输入框 + 内置图标下拉按钮 + 文件浏览按钮）
+        // Icon 字段（包含输入框 + 内置图标下拉CommandBar + 文件浏览CommandBar）
         val iconPanel = JPanel(BorderLayout())
         iconPanel.add(JLabel("图标:"), BorderLayout.WEST)
 
@@ -584,7 +584,7 @@ class CCBarSettingsPanel(private val project: Project?) {
             )
         }
 
-        // 创建内置图标选择下拉按钮
+        // 创建内置图标选择下拉CommandBar
         val builtinIconBtn = JButton(AllIcons.General.ArrowDown).apply {
             toolTipText = "选择内置图标"
             isBorderPainted = true
@@ -605,7 +605,7 @@ class CCBarSettingsPanel(private val project: Project?) {
             }
         }
 
-        // 创建组合面板（输入框 + 下拉按钮）
+        // 创建组合面板（输入框 + 下拉CommandBar）
         val iconFieldPanel = JPanel(BorderLayout()).apply {
             add(buttonIconField, BorderLayout.CENTER)
             add(builtinIconBtn, BorderLayout.EAST)
@@ -617,7 +617,7 @@ class CCBarSettingsPanel(private val project: Project?) {
         // Command 字段
         val commandPanel = JPanel(BorderLayout())
         commandPanel.add(JLabel("直接命令:"), BorderLayout.WEST)
-        buttonCommandHintLabel = JLabel("输入直接命令后将不支持绑定选项列表").apply {
+        buttonCommandHintLabel = JLabel("输入直接命令后将不支持绑定Command 列表").apply {
             foreground = com.intellij.ui.JBColor.GRAY
         }
         buttonCommandField = JBTextField().apply {
@@ -749,9 +749,9 @@ class CCBarSettingsPanel(private val project: Project?) {
         buttonEnvVariablesPanel.add(buttonEnvFieldPanel, BorderLayout.CENTER)
         panel.add(buttonEnvVariablesPanel)
 
-        // 简易模式复选框（仅选项列表模式时显示）
+        // 简易模式复选框（仅Command 列表模式时显示）
         simpleModePanel = JPanel(BorderLayout())
-        simpleModeCheckbox = JCheckBox("简易模式（弹出菜单仅显示选项名称）").apply {
+        simpleModeCheckbox = JCheckBox("简易模式（弹出菜单仅显示Command名称）").apply {
             addActionListener {
                 if (!ignoreUpdate) updateSimpleMode()
             }
@@ -764,7 +764,7 @@ class CCBarSettingsPanel(private val project: Project?) {
     }
 
     /**
-     * 创建 Option 面板（列表 + 详情 + SubButton 表格）
+     * 创建 Option 面板（列表 + 详情 + 快捷参数表格）
      */
     private fun createOptionPanel(): JComponent {
         val panel = JPanel(BorderLayout())
@@ -785,7 +785,7 @@ class CCBarSettingsPanel(private val project: Project?) {
             .setMoveUpActionName("上移")
             .setMoveDownActionName("下移")
             .setAddAction { anActionButton ->
-                // 点击时也显示气泡（兼容键盘操作），使用 AnActionButton 官方 API 获取按钮位置
+                // 点击时也显示气泡（兼容键盘操作），使用 AnActionButton 官方 API 获取CommandBar位置
                 anActionButton.preferredPopupPoint.let { showAddOptionBalloon(it) }
             }
             .setRemoveAction { removeOption() }
@@ -797,12 +797,12 @@ class CCBarSettingsPanel(private val project: Project?) {
             })
         val decoratorPanel = decorator.createPanel()
 
-        // 在添加按钮上设置鼠标悬浮监听
+        // 在添加CommandBar上设置鼠标悬浮监听
         setupAddButtonHoverListener(decoratorPanel)
 
         listPanel.addToCenter(decoratorPanel)
 
-        // Option 详情（SubButton 已内嵌在详情面板中）
+        // Option 详情（快捷参数已内嵌在详情面板中）
         optionDetailOuterPanel = createOptionDetailPanel()
 
         val splitter = OnePixelSplitter(false, 0.25f).apply {
@@ -819,7 +819,7 @@ class CCBarSettingsPanel(private val project: Project?) {
      */
     private fun createOptionDetailPanel(): JComponent {
         val outerPanel = JPanel(BorderLayout())
-        optionDetailTitledBorder = BorderFactory.createTitledBorder("Option 详情")
+        optionDetailTitledBorder = BorderFactory.createTitledBorder("Command 详情")
         val panel = JPanel().apply {
             layout = BoxLayout(this, BoxLayout.Y_AXIS)
             border = optionDetailTitledBorder
@@ -838,7 +838,7 @@ class CCBarSettingsPanel(private val project: Project?) {
         namePanel.add(optionNameField, BorderLayout.CENTER)
         panel.add(namePanel)
 
-        // Icon（仅普通选项显示）
+        // Icon（仅普通 Command显示）
         optionIconPanel = JPanel(BorderLayout())
         optionIconPanel.add(JLabel("图标:"), BorderLayout.WEST)
         optionIconField = TextFieldWithBrowseButton().apply {
@@ -883,7 +883,7 @@ class CCBarSettingsPanel(private val project: Project?) {
         optionIconPanel.add(optionIconFieldPanel, BorderLayout.CENTER)
         panel.add(optionIconPanel)
 
-        // Base Command（仅普通选项显示）— 紧跟图标后
+        // Base Command（仅普通 Command显示）— 紧跟图标后
         optionCommandPanel = JPanel(BorderLayout())
         optionCommandPanel.add(JLabel("基础命令:"), BorderLayout.WEST)
         baseCommandField = JBTextField().apply {
@@ -896,7 +896,7 @@ class CCBarSettingsPanel(private val project: Project?) {
         optionCommandPanel.add(baseCommandField, BorderLayout.CENTER)
         panel.add(optionCommandPanel)
 
-        // Default Terminal Name（仅普通选项显示）— 紧跟图标后
+        // Default Terminal Name（仅普通 Command显示）— 紧跟图标后
         optionTerminalNamePanel = JPanel(BorderLayout())
         optionTerminalNamePanel.add(JLabel("默认终端窗口名称:"), BorderLayout.WEST)
         defaultTerminalNameField = JBTextField().apply {
@@ -909,7 +909,7 @@ class CCBarSettingsPanel(private val project: Project?) {
         optionTerminalNamePanel.add(defaultTerminalNameField, BorderLayout.CENTER)
         panel.add(optionTerminalNamePanel)
 
-        // Terminal Mode（仅普通选项显示）— 紧跟终端名称后
+        // Terminal Mode（仅普通 Command显示）— 紧跟终端名称后
         optionTerminalModePanel = JPanel().apply {
             layout = BoxLayout(this, BoxLayout.Y_AXIS)
         }
@@ -931,7 +931,7 @@ class CCBarSettingsPanel(private val project: Project?) {
         optionTerminalModePanel.add(optionTerminalModeHintPanel)
         panel.add(optionTerminalModePanel)
 
-        // Working Directory（仅普通选项显示）
+        // Working Directory（仅普通 Command显示）
         optionDirPanel = JPanel(BorderLayout())
         optionDirPanel.add(JLabel("工作目录:"), BorderLayout.WEST)
         val optionProjectPath = getCurrentProjectPath()
@@ -970,7 +970,7 @@ class CCBarSettingsPanel(private val project: Project?) {
         optionDirHintPanel.add(optionWorkDirHintLabel, BorderLayout.CENTER)
         panel.add(optionDirHintPanel)
 
-        // Environment Variables（仅普通选项显示）
+        // Environment Variables（仅普通 Command显示）
         optionEnvVariablesPanel = JPanel(BorderLayout())
         optionEnvVariablesPanel.add(JLabel("环境变量:"), BorderLayout.WEST)
         val optionEnvFieldPanel = JPanel(BorderLayout())
@@ -997,30 +997,30 @@ class CCBarSettingsPanel(private val project: Project?) {
         optionEnvVariablesPanel.add(optionEnvFieldPanel, BorderLayout.CENTER)
         panel.add(optionEnvVariablesPanel)
 
-        // SubButton 列表（单行：标签 + 只读摘要 + 编辑按钮）
-        subButtonOuterPanel = createSubButtonPanel()
-        panel.add(subButtonOuterPanel)
+        // QuickParam 列表（单行：标签 + 只读摘要 + 编辑CommandBar）
+        quickParamOuterPanel = createQuickParamPanel()
+        panel.add(quickParamOuterPanel)
 
         outerPanel.add(panel, BorderLayout.NORTH)
         return outerPanel
     }
 
     /**
-     * 创建 SubButton 表格面板
+     * 创建 快捷参数表格面板
      */
-    private fun createSubButtonPanel(): JComponent {
+    private fun createQuickParamPanel(): JComponent {
         val panel = JPanel(BorderLayout())
 
-        panel.add(JLabel("SubButton 列表:"), BorderLayout.WEST)
+        panel.add(JLabel("快捷参数列表:"), BorderLayout.WEST)
 
-        subButtonSummaryField = JBTextField().apply {
+        quickParamSummaryField = JBTextField().apply {
             isEditable = false
         }
-        panel.add(subButtonSummaryField, BorderLayout.CENTER)
+        panel.add(quickParamSummaryField, BorderLayout.CENTER)
 
         val editButton = JButton(AllIcons.Actions.Edit).apply {
-            toolTipText = "编辑 SubButton 列表"
-            addActionListener { openSubButtonEditDialog() }
+            toolTipText = "编辑快捷参数列表"
+            addActionListener { openQuickParamEditDialog() }
         }
         panel.add(editButton, BorderLayout.EAST)
 
@@ -1028,7 +1028,7 @@ class CCBarSettingsPanel(private val project: Project?) {
     }
 
     /**
-     * 创建操作按钮面板（Import/Export/Reset）
+     * 创建操作CommandBar面板（Import/Export/Reset）
      * 系统配置：导入、导出
      * 项目配置：导入、导出、重置为系统配置
      */
@@ -1053,7 +1053,7 @@ class CCBarSettingsPanel(private val project: Project?) {
         exportButton.addActionListener { exportConfig() }
         panel.add(exportButton)
 
-        // 仅项目配置模式下显示"重置为系统配置"按钮
+        // 仅项目配置模式下显示"重置为系统配置"CommandBar
         if (project != null && currentConfigMode == ConfigMode.PROJECT) {
             panel.add(Box.createHorizontalStrut(JBUI.scale(8)))
 
@@ -1066,14 +1066,14 @@ class CCBarSettingsPanel(private val project: Project?) {
     }
 
     /**
-     * 更新底部按钮面板
+     * 更新底部CommandBar面板
      */
     private fun updateActionButtonsPanel() {
         if (!::actionButtonsPanelRef.isInitialized) return
 
         val parent = actionButtonsPanelRef.parent ?: return
 
-        // 创建新的按钮面板
+        // 创建新的CommandBar面板
         val newPanel = JPanel().apply {
             layout = BoxLayout(this, BoxLayout.X_AXIS)
             border = JBUI.Borders.empty(8)
@@ -1091,7 +1091,7 @@ class CCBarSettingsPanel(private val project: Project?) {
         exportButton.addActionListener { exportConfig() }
         newPanel.add(exportButton)
 
-        // 仅项目配置模式下显示"重置为系统配置"按钮
+        // 仅项目配置模式下显示"重置为系统配置"CommandBar
         if (project != null && currentConfigMode == ConfigMode.PROJECT) {
             newPanel.add(Box.createHorizontalStrut(JBUI.scale(8)))
 
@@ -1112,13 +1112,13 @@ class CCBarSettingsPanel(private val project: Project?) {
     // ==================== Button 列表操作 ====================
 
     private fun addButton() {
-        val newButton = ButtonConfig(
+        val newButton = CommandBarConfig(
             id = UUID.randomUUID().toString(),
-            name = "New Button",
+            name = "New CommandBar",
             icon = "builtin:/actions/execute.svg"
         )
         buttonListModel.add(newButton)
-        editingState.buttons.add(newButton)
+        editingState.commandBars.add(newButton)
         buttonList.selectedIndex = buttonListModel.size - 1
     }
 
@@ -1126,14 +1126,14 @@ class CCBarSettingsPanel(private val project: Project?) {
         val index = buttonList.selectedIndex
         if (index >= 0) {
             val result = Messages.showYesNoDialog(
-                "确定要删除按钮 '${buttonListModel.getElementAt(index).name}' 吗？",
+                "确定要删除 CommandBar '${buttonListModel.getElementAt(index).name}' 吗？",
                 "确认删除",
                 null
             )
             if (result == Messages.YES) {
                 buttonListModel.remove(index)
-                editingState.buttons.removeAt(index)
-                selectedButton = null
+                editingState.commandBars.removeAt(index)
+                selectedCommandBar = null
                 clearButtonDetail()
             }
         }
@@ -1142,7 +1142,7 @@ class CCBarSettingsPanel(private val project: Project?) {
     private fun moveButtonUp() {
         val index = buttonList.selectedIndex
         if (index > 0) {
-            Collections.swap(editingState.buttons, index, index - 1)
+            Collections.swap(editingState.commandBars, index, index - 1)
             val item = buttonListModel.getElementAt(index)
             buttonListModel.remove(index)
             buttonListModel.add(index - 1, item)
@@ -1153,7 +1153,7 @@ class CCBarSettingsPanel(private val project: Project?) {
     private fun moveButtonDown() {
         val index = buttonList.selectedIndex
         if (index < buttonListModel.size - 1) {
-            Collections.swap(editingState.buttons, index, index + 1)
+            Collections.swap(editingState.commandBars, index, index + 1)
             val item = buttonListModel.getElementAt(index)
             buttonListModel.remove(index)
             buttonListModel.add(index + 1, item)
@@ -1168,10 +1168,10 @@ class CCBarSettingsPanel(private val project: Project?) {
         val copy = source.deepCopy().apply {
             id = UUID.randomUUID().toString()
             name = source.name + "-copy"
-            options.forEach { it.id = UUID.randomUUID().toString(); it.subButtons.forEach { sb -> sb.id = UUID.randomUUID().toString() } }
+            commands.forEach { it.id = UUID.randomUUID().toString(); it.quickParams.forEach { sb -> sb.id = UUID.randomUUID().toString() } }
         }
         val insertIndex = index + 1
-        editingState.buttons.add(insertIndex, copy)
+        editingState.commandBars.add(insertIndex, copy)
         buttonListModel.add(insertIndex, copy)
         buttonList.selectedIndex = insertIndex
     }
@@ -1181,12 +1181,12 @@ class CCBarSettingsPanel(private val project: Project?) {
 
         val index = buttonList.selectedIndex
         if (index >= 0) {
-            selectedButton = buttonListModel.getElementAt(index)
+            selectedCommandBar = buttonListModel.getElementAt(index)
             updateButtonDetail()
             updateOptionList()
             showDetailPanel()
         } else {
-            selectedButton = null
+            selectedCommandBar = null
             clearButtonDetail()
             optionListModel.removeAll()
             showEmptyPanel()
@@ -1206,7 +1206,7 @@ class CCBarSettingsPanel(private val project: Project?) {
     private fun updateButtonDetail() {
         ignoreUpdate = true
         try {
-            val button = selectedButton ?: return
+            val button = selectedCommandBar ?: return
             buttonNameField.text = button.name
             buttonIconField.text = button.icon
             buttonCommandField.text = button.command
@@ -1246,48 +1246,48 @@ class CCBarSettingsPanel(private val project: Project?) {
 
     private fun updateButtonName() {
         if (ignoreUpdate) return
-        selectedButton?.name = buttonNameField.text
+        selectedCommandBar?.name = buttonNameField.text
         buttonList.repaint()
     }
 
     private fun updateButtonIcon() {
         if (ignoreUpdate) return
         val text = buttonIconField.text
-        selectedButton?.icon = if (text.isBlank()) "builtin:/actions/execute.svg" else text
+        selectedCommandBar?.icon = if (text.isBlank()) "builtin:/actions/execute.svg" else text
         // 同步更新列表中的图标显示
         buttonList.repaint()
     }
 
     private fun updateButtonCommand() {
         if (ignoreUpdate) return
-        selectedButton?.command = buttonCommandField.text
+        selectedCommandBar?.command = buttonCommandField.text
         // 切换直接命令模式相关字段的显示状态
         updateDirectCommandModeVisibility()
     }
 
     private fun updateButtonWorkingDirectory() {
         if (ignoreUpdate) return
-        selectedButton?.workingDirectory = buttonWorkingDirectoryField.text
+        selectedCommandBar?.workingDirectory = buttonWorkingDirectoryField.text
     }
 
     private fun updateButtonEnvVariables() {
         if (ignoreUpdate) return
-        selectedButton?.envVariables = buttonEnvVariablesField.text
+        selectedCommandBar?.envVariables = buttonEnvVariablesField.text
     }
 
     private fun updateButtonTerminalName() {
         if (ignoreUpdate) return
-        selectedButton?.defaultTerminalName = buttonTerminalNameField.text
+        selectedCommandBar?.defaultTerminalName = buttonTerminalNameField.text
     }
 
     private fun updateButtonTerminalMode() {
         if (ignoreUpdate) return
-        selectedButton?.terminalMode = if (buttonTerminalModeCheckbox.isSelected) TerminalMode.EDITOR else TerminalMode.TOOL_WINDOW
+        selectedCommandBar?.terminalMode = if (buttonTerminalModeCheckbox.isSelected) TerminalMode.EDITOR else TerminalMode.TOOL_WINDOW
     }
 
     private fun updateSimpleMode() {
         if (ignoreUpdate) return
-        selectedButton?.simpleMode = simpleModeCheckbox.isSelected
+        selectedCommandBar?.simpleMode = simpleModeCheckbox.isSelected
         updateSimpleModeVisibility()
     }
 
@@ -1296,7 +1296,7 @@ class CCBarSettingsPanel(private val project: Project?) {
      */
     private fun updateCommandHintVisibility() {
         buttonCommandHintLabel.text = if (buttonCommandField.text.isBlank()) {
-            "输入直接命令后将不支持绑定选项列表"
+            "输入直接命令后将不支持绑定Command 列表"
         } else {
             ""
         }
@@ -1327,10 +1327,10 @@ class CCBarSettingsPanel(private val project: Project?) {
     /**
      * 更新直接命令模式相关字段的显示状态
      * - 终端名称字段：仅在直接命令模式下显示
-     * - Options 面板：仅在选项列表模式下显示
+     * - Options 面板：仅在Command 列表模式下显示
      */
     private fun updateDirectCommandModeVisibility() {
-        val isDirectMode = selectedButton?.isDirectCommandMode() == true
+        val isDirectMode = selectedCommandBar?.isDirectCommandMode() == true
         buttonEnvVariablesPanel.isVisible = isDirectMode
         buttonWorkingDirectoryPanel.isVisible = isDirectMode
         buttonTerminalNamePanel.isVisible = isDirectMode
@@ -1343,46 +1343,46 @@ class CCBarSettingsPanel(private val project: Project?) {
     }
 
     /**
-     * 更新简易模式下子按钮面板的显示状态
+     * 更新简易模式下快捷参数面板的显示状态
      */
     private fun updateSimpleModeVisibility() {
-        val isSimple = selectedButton?.simpleMode == true
-        subButtonOuterPanel.isVisible = !isSimple
+        val isSimple = selectedCommandBar?.simpleMode == true
+        quickParamOuterPanel.isVisible = !isSimple
     }
 
     // ==================== Option 列表操作 ====================
 
     private fun updateOptionList() {
         optionListModel.removeAll()
-        selectedButton?.options?.let { options ->
-            for (option in options) {
+        selectedCommandBar?.commands?.let { commands ->
+            for (option in commands) {
                 optionListModel.add(option)
             }
-            if (options.isNotEmpty()) {
+            if (commands.isNotEmpty()) {
                 optionList.selectedIndex = 0
             } else {
-                selectedOption = null
+                selectedCommand = null
                 clearOptionDetail()
-                updateSubButtonSummary()
+                updateQuickParamSummary()
             }
         }
     }
 
     private fun addOption() {
-        val button = selectedButton ?: return
-        val newOption = OptionConfig(
+        val button = selectedCommandBar ?: return
+        val newOption = CommandConfig(
             id = UUID.randomUUID().toString(),
-            name = "New Option",
+            name = "New Command",
             baseCommand = "",
             defaultTerminalName = ""
         )
-        button.options.add(newOption)
+        button.commands.add(newOption)
         optionListModel.add(newOption)
         optionList.selectedIndex = optionListModel.size - 1
     }
 
     /**
-     * 延迟到面板显示后，在 ActionToolbar 中找到添加按钮的视觉组件并绑定鼠标悬浮监听。
+     * 延迟到面板显示后，在 ActionToolbar 中找到添加CommandBar的视觉组件并绑定鼠标悬浮监听。
      * ActionToolbar 的子组件（ActionButton）是延迟创建的，
      * 必须等面板显示后再查找，否则组件尚不存在。
      */
@@ -1394,7 +1394,7 @@ class CCBarSettingsPanel(private val project: Project?) {
     }
 
     /**
-     * 通过 IntelliJ 平台 API 在 ActionToolbar 中精确匹配添加按钮的视觉组件，
+     * 通过 IntelliJ 平台 API 在 ActionToolbar 中精确匹配添加CommandBar的视觉组件，
      * 并为其绑定鼠标悬浮事件。
      */
     private fun findAndBindAddButton(decoratorPanel: JPanel) {
@@ -1407,14 +1407,14 @@ class CCBarSettingsPanel(private val project: Project?) {
         val actionsPanel = UIUtil.findComponentOfType(decoratorPanel, CommonActionsPanel::class.java) ?: return
         val toolbarComp = actionsPanel.toolbar.component
 
-        // 3. 遍历 toolbar 子组件，匹配持有 Add Action 的视觉按钮
+        // 3. 遍历 toolbar 子组件，匹配持有 Add Action 的视觉CommandBar
         for (comp in toolbarComp.components) {
             if (comp !is JComponent || comp !is AnActionHolder) continue
             val action = (comp as AnActionHolder).action
             if (action == addAction ||
                 (action is ActionWithDelegate<*> && action.delegate == addAction)) {
                 addOptionButtonRef = comp
-                // 禁用按钮的 tooltip，避免与气泡弹窗冲突
+                // 禁用CommandBar的 tooltip，避免与气泡弹窗冲突
                 suppressActionButtonTooltip(comp)
                 comp.addMouseListener(object : MouseAdapter() {
                     override fun mouseEntered(e: MouseEvent) {
@@ -1434,7 +1434,7 @@ class CCBarSettingsPanel(private val project: Project?) {
     }
 
     /**
-     * 显示添加选项的气泡弹窗
+     * 显示添加 Command的气泡弹窗
      */
     private fun showAddOptionBalloon(point: RelativePoint) {
         // 如果已有弹窗正在显示，不重复创建
@@ -1451,7 +1451,7 @@ class CCBarSettingsPanel(private val project: Project?) {
             border = JBUI.Borders.empty(2)
             addMouseListener(hoverListener)
 
-            add(createBalloonItem("添加选项") {
+            add(createBalloonItem("添加 Command") {
                 addOptionPopup?.cancel()
                 addOption()
             }.also {
@@ -1505,7 +1505,7 @@ class CCBarSettingsPanel(private val project: Project?) {
     }
 
     /**
-     * 延迟关闭气泡弹窗（给用户从按钮移动到气泡的时间）
+     * 延迟关闭气泡弹窗（给用户从CommandBar移动到气泡的时间）
      */
     private fun schedulePopupClose() {
         popupCloseTimer?.stop()
@@ -1534,43 +1534,43 @@ class CCBarSettingsPanel(private val project: Project?) {
      * 添加分割线
      */
     private fun addSeparator() {
-        val button = selectedButton ?: return
-        val newSeparator = OptionConfig(
+        val button = selectedCommandBar ?: return
+        val newSeparator = CommandConfig(
             id = UUID.randomUUID().toString(),
             name = "",
-            type = OptionType.SEPARATOR
+            type = CommandType.SEPARATOR
         )
-        button.options.add(newSeparator)
+        button.commands.add(newSeparator)
         optionListModel.add(newSeparator)
         optionList.selectedIndex = optionListModel.size - 1
     }
 
     private fun removeOption() {
-        val button = selectedButton ?: return
+        val button = selectedCommandBar ?: return
         val index = optionList.selectedIndex
         if (index >= 0) {
             val option = optionListModel.getElementAt(index)
-            val typeName = if (option.isSeparator()) "分割线" else "选项"
+            val typeName = if (option.isSeparator()) "分割线" else "Command"
             val result = Messages.showYesNoDialog(
                 "确定要删除${typeName} '${option.name}' 吗？",
                 "确认删除",
                 null
             )
             if (result == Messages.YES) {
-                button.options.removeAt(index)
+                button.commands.removeAt(index)
                 optionListModel.remove(index)
-                selectedOption = null
+                selectedCommand = null
                 clearOptionDetail()
-                updateSubButtonSummary()
+                updateQuickParamSummary()
             }
         }
     }
 
     private fun moveOptionUp() {
-        val button = selectedButton ?: return
+        val button = selectedCommandBar ?: return
         val index = optionList.selectedIndex
         if (index > 0) {
-            Collections.swap(button.options, index, index - 1)
+            Collections.swap(button.commands, index, index - 1)
             val item = optionListModel.getElementAt(index)
             optionListModel.remove(index)
             optionListModel.add(index - 1, item)
@@ -1579,10 +1579,10 @@ class CCBarSettingsPanel(private val project: Project?) {
     }
 
     private fun moveOptionDown() {
-        val button = selectedButton ?: return
+        val button = selectedCommandBar ?: return
         val index = optionList.selectedIndex
         if (index < optionListModel.size - 1) {
-            Collections.swap(button.options, index, index + 1)
+            Collections.swap(button.commands, index, index + 1)
             val item = optionListModel.getElementAt(index)
             optionListModel.remove(index)
             optionListModel.add(index + 1, item)
@@ -1591,17 +1591,17 @@ class CCBarSettingsPanel(private val project: Project?) {
     }
 
     private fun copyOption() {
-        val button = selectedButton ?: return
+        val button = selectedCommandBar ?: return
         val index = optionList.selectedIndex
         if (index < 0) return
         val source = optionListModel.getElementAt(index)
         val copy = source.deepCopy().apply {
             id = UUID.randomUUID().toString()
             name = source.name + "-copy"
-            subButtons.forEach { sb -> sb.id = UUID.randomUUID().toString() }
+            quickParams.forEach { sb -> sb.id = UUID.randomUUID().toString() }
         }
         val insertIndex = index + 1
-        button.options.add(insertIndex, copy)
+        button.commands.add(insertIndex, copy)
         optionListModel.add(insertIndex, copy)
         optionList.selectedIndex = insertIndex
     }
@@ -1610,24 +1610,24 @@ class CCBarSettingsPanel(private val project: Project?) {
         if (ignoreUpdate) return
 
         val index = optionList.selectedIndex
-        if (index >= 0 && selectedButton != null) {
-            selectedOption = selectedButton!!.options[index]
+        if (index >= 0 && selectedCommandBar != null) {
+            selectedCommand = selectedCommandBar!!.commands[index]
 
             // 先更新表单数据
             updateOptionDetail()
 
-            if (selectedOption!!.isSeparator()) {
+            if (selectedCommand!!.isSeparator()) {
                 // 分割线：隐藏不需要的字段
                 hideOptionDetailForSeparator()
             } else {
-                // 普通选项：显示所有字段
+                // 普通 Command：显示所有字段
                 showOptionDetail()
-                updateSubButtonSummary()
+                updateQuickParamSummary()
             }
         } else {
-            selectedOption = null
+            selectedCommand = null
             clearOptionDetail()
-            updateSubButtonSummary()
+            updateQuickParamSummary()
             showOptionDetail()
         }
     }
@@ -1661,15 +1661,15 @@ class CCBarSettingsPanel(private val project: Project?) {
         if (optionTerminalModePanel.isVisible) {
             optionTerminalModePanel.isVisible = false
         }
-        if (subButtonOuterPanel.isVisible) {
-            subButtonOuterPanel.isVisible = false
+        if (quickParamOuterPanel.isVisible) {
+            quickParamOuterPanel.isVisible = false
         }
         // 更新标题
         optionDetailTitledBorder.title = "分割线详情"
     }
 
     /**
-     * 显示普通选项的详情面板（显示所有字段）
+     * 显示普通 Command的详情面板（显示所有字段）
      */
     private fun showOptionDetail() {
         // 只在需要时更新可见性，避免不必要的面板刷新
@@ -1697,19 +1697,19 @@ class CCBarSettingsPanel(private val project: Project?) {
         if (!optionTerminalModePanel.isVisible) {
             optionTerminalModePanel.isVisible = true
         }
-        // 简易模式下隐藏子按钮面板
-        val shouldShowSubButtons = selectedButton?.simpleMode != true
-        if (subButtonOuterPanel.isVisible != shouldShowSubButtons) {
-            subButtonOuterPanel.isVisible = shouldShowSubButtons
+        // 简易模式下隐藏快捷参数面板
+        val shouldShowQuickParams = selectedCommandBar?.simpleMode != true
+        if (quickParamOuterPanel.isVisible != shouldShowQuickParams) {
+            quickParamOuterPanel.isVisible = shouldShowQuickParams
         }
         // 更新标题
-        optionDetailTitledBorder.title = "Option 详情"
+        optionDetailTitledBorder.title = "Command 详情"
     }
 
     private fun updateOptionDetail() {
         ignoreUpdate = true
         try {
-            val option = selectedOption ?: return
+            val option = selectedCommand ?: return
             optionNameField.text = option.name
             optionIconField.text = option.icon
             baseCommandField.text = option.baseCommand
@@ -1743,61 +1743,61 @@ class CCBarSettingsPanel(private val project: Project?) {
 
     private fun updateOptionName() {
         if (ignoreUpdate) return
-        selectedOption?.name = optionNameField.text
+        selectedCommand?.name = optionNameField.text
         optionList.repaint()
     }
 
     private fun updateOptionIcon() {
         if (ignoreUpdate) return
         val text = optionIconField.text
-        selectedOption?.icon = if (text.isBlank()) "builtin:/actions/execute.svg" else text
+        selectedCommand?.icon = if (text.isBlank()) "builtin:/actions/execute.svg" else text
         optionList.repaint()
     }
 
     private fun updateOptionCommand() {
         if (ignoreUpdate) return
-        selectedOption?.baseCommand = baseCommandField.text
+        selectedCommand?.baseCommand = baseCommandField.text
     }
 
     private fun updateOptionDirectory() {
         if (ignoreUpdate) return
-        selectedOption?.workingDirectory = workingDirectoryField.text
+        selectedCommand?.workingDirectory = workingDirectoryField.text
     }
 
     private fun updateOptionEnvVariables() {
         if (ignoreUpdate) return
-        selectedOption?.envVariables = optionEnvVariablesField.text
+        selectedCommand?.envVariables = optionEnvVariablesField.text
     }
 
     private fun updateOptionTerminalName() {
         if (ignoreUpdate) return
-        selectedOption?.defaultTerminalName = defaultTerminalNameField.text
+        selectedCommand?.defaultTerminalName = defaultTerminalNameField.text
     }
 
     private fun updateOptionTerminalMode() {
         if (ignoreUpdate) return
-        selectedOption?.terminalMode = if (optionTerminalModeCheckbox.isSelected) TerminalMode.EDITOR else TerminalMode.TOOL_WINDOW
+        selectedCommand?.terminalMode = if (optionTerminalModeCheckbox.isSelected) TerminalMode.EDITOR else TerminalMode.TOOL_WINDOW
     }
 
-    // ==================== SubButton 操作 ====================
+    // ==================== QuickParam 操作 ====================
 
-    private fun updateSubButtonSummary() {
-        if (::subButtonSummaryField.isInitialized) {
-            val names = selectedOption?.subButtons?.map { it.name } ?: emptyList()
-            subButtonSummaryField.text = if (names.isEmpty()) "" else names.joinToString(" | ")
+    private fun updateQuickParamSummary() {
+        if (::quickParamSummaryField.isInitialized) {
+            val names = selectedCommand?.quickParams?.map { it.name } ?: emptyList()
+            quickParamSummaryField.text = if (names.isEmpty()) "" else names.joinToString(" | ")
         }
     }
 
-    private fun openSubButtonEditDialog() {
-        val option = selectedOption ?: return
+    private fun openQuickParamEditDialog() {
+        val option = selectedCommand ?: return
         val currentProject = project ?: ProjectManager.getInstance().openProjects.firstOrNull()
-        val deepCopy = option.subButtons.map { it.deepCopy() }
-        val dialog = SubButtonEditDialog(currentProject, deepCopy)
+        val deepCopy = option.quickParams.map { it.deepCopy() }
+        val dialog = QuickParamEditDialog(currentProject, deepCopy)
         if (dialog.showAndGet()) {
-            val edited = dialog.getEditedSubButtons()
-            option.subButtons.clear()
-            option.subButtons.addAll(edited)
-            updateSubButtonSummary()
+            val edited = dialog.getEditedQuickParams()
+            option.quickParams.clear()
+            option.quickParams.addAll(edited)
+            updateQuickParamSummary()
         }
     }
 
@@ -1824,7 +1824,7 @@ class CCBarSettingsPanel(private val project: Project?) {
                 val gson = com.google.gson.Gson()
 
                 // 解析 JSON
-                val importedButtons = gson.fromJson(content, Array<ButtonConfig>::class.java)
+                val importedButtons = gson.fromJson(content, Array<CommandBarConfig>::class.java)
 
                 if (importedButtons != null && importedButtons.isNotEmpty()) {
                     val result = Messages.showYesNoDialog(
@@ -1836,21 +1836,21 @@ class CCBarSettingsPanel(private val project: Project?) {
                         // 直接修改对应的配置状态，而不是通过 editingState getter（项目配置模式下会返回临时对象）
                         val importedList = importedButtons.toMutableList()
                         if (currentConfigMode == ConfigMode.PROJECT && editingProjectState.enabled) {
-                            editingProjectState.buttons = importedList
+                            editingProjectState.commandBars = importedList
                         } else {
-                            editingSystemState.buttons = importedList
+                            editingSystemState.commandBars = importedList
                         }
 
                         buttonListModel.removeAll()
                         for (btn in importedList) {
                             buttonListModel.add(btn)
                         }
-                        selectedButton = null
-                        selectedOption = null
+                        selectedCommandBar = null
+                        selectedCommand = null
                         clearButtonDetail()
                         clearOptionDetail()
                         optionListModel.removeAll()
-                        updateSubButtonSummary()
+                        updateQuickParamSummary()
 
                         Messages.showInfoMessage("配置导入成功！", "成功")
                     }
@@ -1886,7 +1886,7 @@ class CCBarSettingsPanel(private val project: Project?) {
                     .setPrettyPrinting()
                     .create()
 
-                val json = gson.toJson(editingState.buttons)
+                val json = gson.toJson(editingState.commandBars)
 
                 result.file.writeText(json, Charsets.UTF_8)
 
@@ -1908,23 +1908,23 @@ class CCBarSettingsPanel(private val project: Project?) {
         )
         if (result == Messages.YES) {
             // 直接修改对应的配置状态，而不是通过 editingState getter（项目配置模式下会返回临时对象）
-            val defaultButtons = CCBarSettings.createDefaultButtons()
+            val defaultButtons = CCBarSettings.createDefaultCommandBars()
             if (currentConfigMode == ConfigMode.PROJECT && editingProjectState.enabled) {
-                editingProjectState.buttons = defaultButtons
+                editingProjectState.commandBars = defaultButtons
             } else {
-                editingSystemState.buttons = defaultButtons
+                editingSystemState.commandBars = defaultButtons
             }
 
             buttonListModel.removeAll()
             for (btn in defaultButtons) {
                 buttonListModel.add(btn)
             }
-            selectedButton = null
-            selectedOption = null
+            selectedCommandBar = null
+            selectedCommand = null
             clearButtonDetail()
             clearOptionDetail()
             optionListModel.removeAll()
-            updateSubButtonSummary()
+            updateQuickParamSummary()
         }
     }
 
@@ -1933,7 +1933,7 @@ class CCBarSettingsPanel(private val project: Project?) {
     fun isModified(): Boolean {
         // 检查系统配置是否修改
         val systemSettings = CCBarSettings.getInstance()
-        val systemModified = editingSystemState.buttons != systemSettings.state.buttons
+        val systemModified = editingSystemState.commandBars != systemSettings.state.commandBars
 
         // 检查项目配置是否修改（如果有项目）
         var projectModified = false
@@ -1948,52 +1948,52 @@ class CCBarSettingsPanel(private val project: Project?) {
     fun validate(): List<String> {
         val errors = mutableListOf<String>()
 
-        for ((buttonIndex, button) in editingState.buttons.withIndex()) {
+        for ((buttonIndex, button) in editingState.commandBars.withIndex()) {
             if (button.name.isBlank()) {
-                errors.add("Button ${buttonIndex + 1}: 名称不能为空")
+                errors.add("CommandBar ${buttonIndex + 1}: 名称不能为空")
             }
-            if (editingState.buttons.count { it.name == button.name } > 1) {
-                errors.add("Button '${button.name}': 名称重复")
+            if (editingState.commandBars.count { it.name == button.name } > 1) {
+                errors.add("CommandBar '${button.name}': 名称重复")
             }
 
             // 直接命令模式验证
             if (button.isDirectCommandMode()) {
                 if (button.defaultTerminalName.isBlank()) {
-                    errors.add("Button '${button.name}': 直接命令模式下，终端名称不能为空")
+                    errors.add("CommandBar '${button.name}': 直接命令模式下，终端名称不能为空")
                 }
                 // 直接命令模式下不验证 Options
             } else {
-                // 选项列表模式验证
-                // 过滤掉分割线，只计算普通选项
-                val normalOptions = button.options.filter { !it.isSeparator() }
+                // Command 列表模式验证
+                // 过滤掉分割线，只计算普通 Command
+                val normalOptions = button.commands.filter { !it.isSeparator() }
                 if (normalOptions.isEmpty()) {
-                    errors.add("Button '${button.name}': 未配置直接命令时，必须至少有一个普通选项")
+                    errors.add("CommandBar '${button.name}': 未配置直接命令时，必须至少有一个普通 Command")
                 }
 
-                for ((optionIndex, option) in button.options.withIndex()) {
+                for ((optionIndex, option) in button.commands.withIndex()) {
                     // 跳过分割线类型的验证
                     if (option.isSeparator()) continue
 
                     if (option.name.isBlank()) {
-                        errors.add("Button '${button.name}' Option ${optionIndex + 1}: 名称不能为空")
+                        errors.add("CommandBar '${button.name}' Command ${optionIndex + 1}: 名称不能为空")
                     }
-                    // 只检查普通选项的名称重复
+                    // 只检查普通 Command的名称重复
                     if (normalOptions.count { it.name == option.name } > 1) {
-                        errors.add("Button '${button.name}' Option '${option.name}': 名称重复")
+                        errors.add("CommandBar '${button.name}' Command '${option.name}': 名称重复")
                     }
                     if (option.baseCommand.isBlank()) {
-                        errors.add("Button '${button.name}' Option '${option.name}': 基础命令不能为空")
+                        errors.add("CommandBar '${button.name}' Command '${option.name}': 基础命令不能为空")
                     }
                     if (option.defaultTerminalName.isBlank()) {
-                        errors.add("Button '${button.name}' Option '${option.name}': 终端名称不能为空")
+                        errors.add("CommandBar '${button.name}' Command '${option.name}': 终端名称不能为空")
                     }
 
-                    for ((subButtonIndex, subButton) in option.subButtons.withIndex()) {
-                        if (subButton.name.isBlank()) {
-                            errors.add("Button '${button.name}' Option '${option.name}' SubButton ${subButtonIndex + 1}: 名称不能为空")
+                    for ((quickParamIndex, quickParam) in option.quickParams.withIndex()) {
+                        if (quickParam.name.isBlank()) {
+                            errors.add("CommandBar '${button.name}' Command '${option.name}' QuickParam ${quickParamIndex + 1}: 名称不能为空")
                         }
-                        if (option.subButtons.count { it.name == subButton.name } > 1) {
-                            errors.add("Button '${button.name}' Option '${option.name}' SubButton '${subButton.name}': 名称重复")
+                        if (option.quickParams.count { it.name == quickParam.name } > 1) {
+                            errors.add("CommandBar '${button.name}' Command '${option.name}' QuickParam '${quickParam.name}': 名称重复")
                         }
                     }
                 }
@@ -2033,18 +2033,18 @@ class CCBarSettingsPanel(private val project: Project?) {
             }
         }
 
-        // 刷新按钮列表
+        // 刷新CommandBar列表
         buttonListModel.removeAll()
-        for (btn in editingState.buttons) {
+        for (btn in editingState.commandBars) {
             buttonListModel.add(btn)
         }
 
-        selectedButton = null
-        selectedOption = null
+        selectedCommandBar = null
+        selectedCommand = null
         clearButtonDetail()
         clearOptionDetail()
         optionListModel.removeAll()
-        updateSubButtonSummary()
+        updateQuickParamSummary()
     }
 
     // ==================== 列表渲染器 ====================
@@ -2058,7 +2058,7 @@ class CCBarSettingsPanel(private val project: Project?) {
             cellHasFocus: Boolean
         ): JComponent {
             val component = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus)
-            if (value is ButtonConfig) {
+            if (value is CommandBarConfig) {
                 text = value.name
                 icon = CCBarIcons.loadIcon(value.icon)
             }
@@ -2075,13 +2075,13 @@ class CCBarSettingsPanel(private val project: Project?) {
             cellHasFocus: Boolean
         ): JComponent {
             // 处理分割线类型
-            if (value is OptionConfig && value.isSeparator()) {
+            if (value is CommandConfig && value.isSeparator()) {
                 return createSeparatorRenderer(list, value, isSelected)
             }
 
-            // 普通选项渲染
+            // 普通 Command渲染
             val component = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus)
-            if (value is OptionConfig) {
+            if (value is CommandConfig) {
                 text = value.name
                 icon = if (value.icon.isNotBlank()) CCBarIcons.loadIcon(value.icon) else null
             }
@@ -2090,7 +2090,7 @@ class CCBarSettingsPanel(private val project: Project?) {
 
         private fun createSeparatorRenderer(
             list: JList<*>?,
-            option: OptionConfig,
+            option: CommandConfig,
             isSelected: Boolean
         ): JComponent {
             val panel = JPanel(BorderLayout()).apply {

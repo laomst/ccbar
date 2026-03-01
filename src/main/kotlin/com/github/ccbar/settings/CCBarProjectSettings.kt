@@ -9,7 +9,7 @@ import com.intellij.openapi.project.Project
 /**
  * CCBar 项目级配置管理类
  * 存储在 .idea/ccbar.xml
- * 用于为每个项目设置独立的按钮配置
+ * 用于为每个项目设置独立的CommandBar 配置
  */
 @State(
     name = "com.github.ccbar.settings.CCBarProjectSettings",
@@ -22,14 +22,14 @@ class CCBarProjectSettings : PersistentStateComponent<CCBarProjectSettings.Proje
      */
     data class ProjectState(
         var enabled: Boolean = false,  // 是否启用项目配置
-        var buttons: MutableList<ButtonConfig> = mutableListOf()  // 按钮配置（复用现有数据结构）
+        var commandBars: MutableList<CommandBarConfig> = mutableListOf()  // CommandBar 配置（复用现有数据结构）
     ) {
         /**
          * 深拷贝
          */
         fun deepCopy(): ProjectState = ProjectState(
             enabled = enabled,
-            buttons = buttons.map { it.deepCopy() }.toMutableList()
+            commandBars = commandBars.map { it.deepCopy() }.toMutableList()
         )
     }
 
@@ -47,7 +47,7 @@ class CCBarProjectSettings : PersistentStateComponent<CCBarProjectSettings.Proje
      */
     fun enable() {
         val systemSettings = CCBarSettings.getInstance()
-        myState.buttons = systemSettings.state.deepCopy().buttons
+        myState.commandBars = systemSettings.state.deepCopy().commandBars
         myState.enabled = true
     }
 
@@ -65,7 +65,7 @@ class CCBarProjectSettings : PersistentStateComponent<CCBarProjectSettings.Proje
      */
     fun resetToSystem() {
         val systemSettings = CCBarSettings.getInstance()
-        myState.buttons = systemSettings.state.deepCopy().buttons
+        myState.commandBars = systemSettings.state.deepCopy().commandBars
     }
 
     /**
@@ -74,11 +74,11 @@ class CCBarProjectSettings : PersistentStateComponent<CCBarProjectSettings.Proje
     fun isEnabled(): Boolean = myState.enabled
 
     /**
-     * 获取当前有效的按钮配置
+     * 获取当前有效的CommandBar 配置
      * 如果启用了项目配置，返回项目配置；否则返回 null（表示应使用系统配置）
      */
-    fun getEffectiveButtons(): MutableList<ButtonConfig>? {
-        return if (myState.enabled) myState.buttons else null
+    fun getEffectiveCommandBars(): MutableList<CommandBarConfig>? {
+        return if (myState.enabled) myState.commandBars else null
     }
 
     companion object {

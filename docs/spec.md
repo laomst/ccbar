@@ -18,35 +18,35 @@
 插件的配置采用三层结构：
 
 ```
-Button（工具栏按钮）
-  ├── [直接命令模式] 直接执行 Button.command
-  └── [选项列表模式]
-        └── Option（选项，绑定 baseCommand + 可选工作目录）
-              └── SubButton（子按钮，绑定 params 纯文本）
+CommandBar（工具栏按钮）
+  ├── [直接命令模式] 直接执行 CommandBar.command
+  └── [命令列表模式]
+        └── Command（命令，绑定 baseCommand + 可选工作目录）
+              └── QuickParam（快捷参数，绑定 params 纯文本）
 ```
 
 **命令生成规则：**
 ```
-直接命令模式：最终执行命令 = Button.command
-选项列表模式：最终执行命令 = Option.baseCommand + (SubButton.params 不为空 ? " " + SubButton.params : "")
+直接命令模式：最终执行命令 = CommandBar.command
+命令列表模式：最终执行命令 = Command.baseCommand + (QuickParam.params 不为空 ? " " + QuickParam.params : "")
 ```
 
-- **Button**：工具栏上的入口按钮。支持两种模式：
-  - **直接命令模式**：Button 绑定 command 字段，点击后直接执行命令（不弹出菜单）
-  - **选项列表模式**：Button 不绑定 command，点击后弹出 Option 列表
-    - **简易模式**（可选）：开启后弹出菜单仅显示选项名称，不展示命令预览和子按钮
-- **Option**：按钮下的选项分组，绑定基础命令（baseCommand）和可选的工作目录。**点击 Option 本身直接执行 baseCommand（不带参数）**。
-- **SubButton**：选项下的子按钮，绑定参数文本（params）。点击后执行 Option.baseCommand + params。params 为纯文本，第一阶段不支持变量替换。
+- **CommandBar**：工具栏上的入口按钮。支持两种模式：
+  - **直接命令模式**：CommandBar 绑定 command 字段，点击后直接执行命令（不弹出菜单）
+  - **命令列表模式**：CommandBar 不绑定 command，点击后弹出 Command 列表
+    - **简易模式**（可选）：开启后弹出菜单仅显示命令名称，不展示命令预览和快捷参数
+- **Command**：按钮下的命令分组，绑定基础命令（baseCommand）和可选的工作目录。**点击 Command 本身直接执行 baseCommand（不带参数）**。
+- **QuickParam**：命令下的快捷参数，绑定参数文本（params）。点击后执行 Command.baseCommand + params。params 为纯文本，第一阶段不支持变量替换。
 
-### 2.2 Button 模式切换
+### 2.2 CommandBar 模式切换
 
 | 模式 | 触发条件 | 点击行为 |
 |------|----------|----------|
-| 直接命令模式 | `Button.command` 不为空 | 直接执行命令 + 命名弹窗 |
-| 选项列表模式 | `Button.command` 为空 | 弹出 Option 列表 |
-| 选项列表模式（简易） | `Button.command` 为空且 `simpleMode = true` | 弹出仅含名称的 Option 列表 |
+| 直接命令模式 | `CommandBar.command` 不为空 | 直接执行命令 + 命名弹窗 |
+| 命令列表模式 | `CommandBar.command` 为空 | 弹出 Command 列表 |
+| 命令列表模式（简易） | `CommandBar.command` 为空且 `simpleMode = true` | 弹出仅含名称的 Command 列表 |
 
-**按钮启用条件**：`command` 不为空 OR `options` 不为空
+**按钮启用条件**：`command` 不为空 OR `commands` 不为空
 
 ---
 
@@ -59,28 +59,28 @@ Button（工具栏按钮）
 
 ### 3.2 按钮点击行为
 
-**直接命令模式**（Button.command 不为空）：
-- 点击 Button 后直接弹出终端命名对话框
-- 用户确认名称后执行 Button.command
-- 工作目录：优先使用 Button.workingDirectory，否则使用项目根目录
+**直接命令模式**（CommandBar.command 不为空）：
+- 点击 CommandBar 后直接弹出终端命名对话框
+- 用户确认名称后执行 CommandBar.command
+- 工作目录：优先使用 CommandBar.workingDirectory，否则使用项目根目录
 
-**选项列表模式**（Button.command 为空）：
-- 点击快捷按钮后弹出选项菜单
-- 每个 Option 行采用**三列布局**：命令预览输入框 | 子按钮列表 | 选项名称
+**命令列表模式**（CommandBar.command 为空）：
+- 点击快捷按钮后弹出命令菜单
+- 每个 Command 行采用**三列布局**：命令预览输入框 | 快捷参数列表 | 命令名称
 - **布局宽度动态计算**：
   - 按钮宽度：根据按钮文字动态计算，确保完整显示
   - 命令预览框宽度：根据所有命令中最长的命令文本动态计算（有最大宽度限制）
-  - 选项名称宽度：根据所有选项中最长的名称动态计算
+  - 命令名称宽度：根据所有命令中最长的名称动态计算
   - 宽度补偿：当某行按钮总宽度小于所有行中最大按钮总宽度时，命令预览框自动补偿差值，确保每行"预览框+按钮"总宽度一致
 - **命令预览输入框**：
   - 文字**右对齐**显示
-  - 默认显示 `Option.baseCommand`（基础命令）
-  - 鼠标悬浮到子按钮时，显示完整命令 `Option.baseCommand + SubButton.params`
+  - 默认显示 `Command.baseCommand`（基础命令）
+  - 鼠标悬浮到快捷参数时，显示完整命令 `Command.baseCommand + QuickParam.params`
   - 输入框为只读状态，但**可点击**执行基础命令
-- **选项名称**：**左对齐**显示，可点击
-- **点击选项名称**：执行 Option.baseCommand（不带参数）
-- **点击命令预览输入框**：执行 Option.baseCommand（不带参数）
-- **点击子按钮**：执行 Option.baseCommand + SubButton.params
+- **命令名称**：**左对齐**显示，可点击
+- **点击命令名称**：执行 Command.baseCommand（不带参数）
+- **点击命令预览输入框**：执行 Command.baseCommand（不带参数）
+- **点击快捷参数**：执行 Command.baseCommand + QuickParam.params
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
@@ -89,33 +89,33 @@ Button（工具栏按钮）
 │        claude │ [Dev]                   │ System                 │
 └──────────────────────────────────────────────────────────────────┘
     ↑ 右对齐      ↑ 动态宽度，按钮数量不限      ↑ 左对齐
-    ↑ 点击命令预览或选项名称都执行基础命令
-                   ↑ 悬浮子按钮时命令预览显示完整命令
+    ↑ 点击命令预览或命令名称都执行基础命令
+                   ↑ 悬浮快捷参数时命令预览显示完整命令
 ```
 
-### 3.3 子按钮（参数绑定）
-- 每个子按钮绑定不同的参数变体（纯文本）
-- 点击子按钮后执行：Option.baseCommand + SubButton.params
-- 子按钮可显示图标或文字标签
+### 3.3 快捷参数（参数绑定）
+- 每个快捷参数绑定不同的参数变体（纯文本）
+- 点击快捷参数后执行：Command.baseCommand + QuickParam.params
+- 快捷参数可显示图标或文字标签
 
 ### 3.4 命令配置
 - 支持在设置面板中配置：
   - 快捷按钮列表（名称、图标）
-  - 每个按钮下的选项列表（分组名称、基础命令、工作目录）
-  - 每个选项下的子按钮列表（按钮名称 + 绑定参数）
+  - 每个按钮下的命令列表（分组名称、基础命令、工作目录）
+  - 每个命令下的快捷参数列表（参数名称 + 绑定参数）
 - 配置为**应用级全局**，所有项目共享同一套配置
 - 支持配置的导入/导出（JSON 格式）
 
 ### 3.5 终端自动执行
 - 每次点击**始终新建**终端 Tab（不复用已有终端）
 - 自动将完整命令输入终端并执行
-- 终端工作目录默认为当前项目根目录，如果 Option 配置了自定义工作目录则使用自定义值
+- 终端工作目录默认为当前项目根目录，如果 Command 配置了自定义工作目录则使用自定义值
 
 ### 3.6 终端窗口管理
 - 支持两种终端打开模式：
   - **工具窗口模式**（默认）：在 Terminal 工具窗口中新建终端标签页
   - **编辑器模式**：在编辑器区域以编辑器 Tab 形式打开终端，适合长时间运行的 AI 编程助手场景
-- 终端打开模式可在 Button（直接命令模式）和 Option 上分别配置
+- 终端打开模式可在 CommandBar（直接命令模式）和 Command 上分别配置
 - 用户可在 CommandPreviewDialog 中临时切换终端打开模式
 
 #### 两种模式的能力对比
@@ -139,9 +139,9 @@ Button（工具栏按钮）
 - 工具窗口模式适合传统的终端使用场景，可享受 Terminal 工具窗口的完整管理能力
 
 ### 3.7 终端命名与参数配置弹窗
-- 点击 Option 或子按钮后，**每次都弹出**命令预览与参数配置对话框
+- 点击 Command 或快捷参数后，**每次都弹出**命令预览与参数配置对话框
 - 弹框采用三行布局：
-  - **第一行**：终端标签名称输入框（默认名称来自 Option 配置的 `defaultTerminalName` 字段）+ "在编辑器中打开"复选框（默认值取决于对应配置的 terminalMode）
+  - **第一行**：终端标签名称输入框（默认名称来自 Command 配置的 `defaultTerminalName` 字段）+ "在编辑器中打开"复选框（默认值取决于对应配置的 terminalMode）
   - **第二行**：环境变量展示框（只读）+ `[…]` 编辑按钮，点击打开环境变量列表编辑对话框
   - **第三行**：命令输入框（可编辑，预填基础命令 + 空格）
 - 最终执行命令 = 环境变量注入语句 + 命令（如果有环境变量）
@@ -149,7 +149,7 @@ Button（工具栏按钮）
 - 点击"取消"取消本次操作，不创建终端
 
 ### 3.8 环境变量配置
-- Option 和 Button（直接命令模式）均支持配置环境变量
+- Command 和 CommandBar（直接命令模式）均支持配置环境变量
 - 环境变量以 `KEY1=val1;KEY2=val2` 格式存储
 - 设置面板中提供可编辑文本框 + `[…]` 按钮，文本框可直接输入编辑，也可点击按钮打开表格形式的编辑对话框
 - 编辑对话框为两列表格（变量名、值），支持添加/删除/上移/下移
@@ -162,20 +162,20 @@ Button（工具栏按钮）
 
 **Claude Code 按钮的完整结构：**
 
-| 工具栏按钮 | 选项（分组） | 选项基础命令 | 悬浮子按钮 | 绑定参数 | 最终执行命令 |
+| 工具栏按钮 | 命令（分组） | 命令基础命令 | 悬浮快捷参数 | 绑定参数 | 最终执行命令 |
 |------------|--------------|-------------|------------|----------|-------------|
-| 🤖 Claude | Model | `claude` | *(点击 Model)* | *(无)* | `claude` |
+| Claude | Model | `claude` | *(点击 Model)* | *(无)* | `claude` |
 | | | | [Sonnet] | `--model sonnet` | `claude --model sonnet` |
 | | | | [Opus] | `--model opus` | `claude --model opus` |
-| | Workspace | `claude` | [🏠 Home] | `--workspace ~/project-a` | `claude --workspace ~/project-a` |
-| | | | [💼 Work] | `--workspace ~/project-b` | `claude --workspace ~/project-b` |
-| | System | `claude` | [⚙️ Dev] | `--system-prompt "你是..."` | `claude --system-prompt "你是..."` |
+| | Workspace | `claude` | [Home] | `--workspace ~/project-a` | `claude --workspace ~/project-a` |
+| | | | [Work] | `--workspace ~/project-b` | `claude --workspace ~/project-b` |
+| | System | `claude` | [Dev] | `--system-prompt "你是..."` | `claude --system-prompt "你是..."` |
 
 **交互流程：**
-1. 点击工具栏 `🤖 Claude` 按钮
-2. 弹出下拉菜单，每行显示三列：命令预览（右对齐）| 子按钮列表（动态宽度）| 选项名称（左对齐）
-3. 鼠标悬浮到子按钮时，命令预览显示完整命令
-4. 点击选项名称、命令预览输入框或子按钮
+1. 点击工具栏 `Claude` 按钮
+2. 弹出下拉菜单，每行显示三列：命令预览（右对齐）| 快捷参数列表（动态宽度）| 命令名称（左对齐）
+3. 鼠标悬浮到快捷参数时，命令预览显示完整命令
+4. 点击命令名称、命令预览输入框或快捷参数
 5. 弹出命令预览与参数配置对话框
 6. 用户可输入追加参数（可选），可修改终端名称
 7. 点击"执行"
@@ -198,8 +198,8 @@ Button（工具栏按钮）
 │               │        claude │ [Dev]             │ System             │          │
 │               └────────────────────────────────────────────────────────┘          │
 │               ↑ 右对齐    ↑ 动态宽度按钮列表       ↑ 左对齐                        │
-│               ↑ 点击命令预览或选项名称执行基础命令                                 │
-│                              ↑ 悬浮子按钮时预览显示完整命令                       │
+│               ↑ 点击命令预览或命令名称执行基础命令                                 │
+│                              ↑ 悬浮快捷参数时预览显示完整命令                       │
 │                     │                                                            │
 │                     ▼ 点击 [Sonnet] 或点击 "Model" / 命令预览框                  │
 │               ┌───────────────────────────────────────┐                          │
@@ -237,18 +237,18 @@ Button（工具栏按钮）
 └─────────────────────────────────────────────────────────────────────────────────┘
 
 说明：
-- 每行 Option 采用三列布局：命令预览输入框（右对齐）| 子按钮列表（动态宽度）| 选项名称（左对齐）
+- 每行 Command 采用三列布局：命令预览输入框（右对齐）| 快捷参数列表（动态宽度）| 命令名称（左对齐）
 - 按钮宽度根据文字动态计算，数量不限
 - 命令预览框宽度根据最长命令动态计算，按钮少的行会自动补偿宽度保持对齐
-- 命令预览输入框默认显示基础命令，悬浮子按钮时显示完整命令
-- 点击选项名称或命令预览输入框：执行 Option.baseCommand（不带参数）
-- 点击子按钮：执行 Option.baseCommand + SubButton.params
+- 命令预览输入框默认显示基础命令，悬浮快捷参数时显示完整命令
+- 点击命令名称或命令预览输入框：执行 Command.baseCommand（不带参数）
+- 点击快捷参数：执行 Command.baseCommand + QuickParam.params
 - 点击后弹出命令预览与参数配置对话框（两行布局）
 - 第一行：终端标签名称；第二行：基础命令 + 追加参数输入框
 - 最终执行命令 = 基础命令 + 空格 + 追加参数
 - 点击"执行"后在 Terminal 工具窗口中新建终端标签页
 - 点击"取消"取消操作，不创建终端
-- 终端工作目录：优先使用 Option 配置的自定义目录，否则使用当前项目根目录
+- 终端工作目录：优先使用 Command 配置的自定义目录，否则使用当前项目根目录
 ```
 
 ---
@@ -257,7 +257,7 @@ Button（工具栏按钮）
 
 ```json
 {
-  "buttons": [
+  "commandBars": [
     {
       "id": "quick-npm-test",
       "name": "NPM Test",
@@ -266,7 +266,7 @@ Button（工具栏按钮）
       "workingDirectory": "",
       "defaultTerminalName": "NPM Test",
       "envVariables": "",
-      "options": []
+      "commands": []
     },
     {
       "id": "claude-code",
@@ -276,7 +276,7 @@ Button（工具栏按钮）
       "workingDirectory": "",
       "defaultTerminalName": "",
       "envVariables": "",
-      "options": [
+      "commands": [
         {
           "id": "model",
           "name": "Model",
@@ -284,7 +284,7 @@ Button（工具栏按钮）
           "workingDirectory": "",
           "defaultTerminalName": "Claude - Model",
           "envVariables": "ANTHROPIC_MODEL=claude-sonnet-4-20250514",
-          "subButtons": [
+          "quickParams": [
             {
               "id": "sonnet",
               "name": "Sonnet",
@@ -304,7 +304,7 @@ Button（工具栏按钮）
           "workingDirectory": "",
           "defaultTerminalName": "Claude - Workspace",
           "envVariables": "",
-          "subButtons": [
+          "quickParams": [
             {
               "id": "workspace-a",
               "name": "Project A",
@@ -324,7 +324,7 @@ Button（工具栏按钮）
           "workingDirectory": "",
           "defaultTerminalName": "Claude - System",
           "envVariables": "",
-          "subButtons": [
+          "quickParams": [
             {
               "id": "developer",
               "name": "Developer",
@@ -338,7 +338,7 @@ Button（工具栏按钮）
       "id": "dev-tools",
       "name": "Dev Tools",
       "icon": "TOOLS_ICON",
-      "options": [
+      "commands": [
         {
           "id": "scripts",
           "name": "Scripts",
@@ -346,7 +346,7 @@ Button（工具栏按钮）
           "workingDirectory": "",
           "defaultTerminalName": "npm Scripts",
           "envVariables": "",
-          "subButtons": [
+          "quickParams": [
             {
               "name": "Test",
               "params": "test"
@@ -369,12 +369,12 @@ Button（工具栏按钮）
 
 **命令生成规则：**
 ```
-最终执行命令 = Option.baseCommand + (SubButton.params 不为空 ? " " + SubButton.params : "")
+最终执行命令 = Command.baseCommand + (QuickParam.params 不为空 ? " " + QuickParam.params : "")
 ```
 
 **工作目录解析规则：**
 ```
-终端工作目录 = Option.workingDirectory 不为空 ? Option.workingDirectory : 当前项目根目录
+终端工作目录 = Command.workingDirectory 不为空 ? Command.workingDirectory : 当前项目根目录
 ```
 
 ---
@@ -387,24 +387,24 @@ Button（工具栏按钮）
 
 ### 6.2 界面布局
 
-**选项列表模式**（Button.command 为空）：
+**命令列表模式**（CommandBar.command 为空）：
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
 │  Settings: CCBar                                                                │
 ├─────────────────────────────────────────────────────────────────────────────────┤
 │  ┌─────────────────────┐  ┌───────────────────────────────────────────────────┐ │
-│  │ Toolbar Buttons     │  │ Button Details                                  │ │
+│  │ Toolbar Buttons     │  │ CommandBar Details                               │ │
 │  │                     │  │                                                   │ │
 │  │ ▶ Claude Code       │  │ Name:       [Claude Code                    ]   │ │
 │  │   Dev Tools         │  │ Icon:       [Browse...                      ]   │ │
 │  │                     │  │ Command:    [                              ]   │ │
 │  │ [+][-][↑][↓]       │  │ [✓] 简易模式                                    │ │
 │  └─────────────────────┘  │ ─────────────────────────────────────────────────  │ │
-│                           │ Options (分组)                                   │ │
+│                           │ Commands (分组)                                  │ │
 │  ┌─────────────────────┐  │                                                   │ │
-│  │ Options             │  │ ┌──────────────────────────────────────────────┐ │ │
-│  │                     │  │ │ Option: Model                                │ │ │
+│  │ Commands            │  │ ┌──────────────────────────────────────────────┐ │ │
+│  │                     │  │ │ Command: Model                              │ │ │
 │  │ ▶ Model             │  │ │ Icon:              [Browse...          ]   │ │ │
 │  │   Workspace         │  │ │ Base Command:      [claude              ]   │ │ │
 │  │                     │  │ │ Term Name: [Claude - Model              ]   │ │ │
@@ -412,7 +412,7 @@ Button（工具栏按钮）
 │  └─────────────────────┘  │ │     默认通过终端工具窗口打开                 │ │ │
 │                           │ │ Working Directory: [                    ]   │ │ │
 │                           │ │ Env Variables: [                   ][…]   │ │ │
-│                           │ │ Sub Buttons:                                 │ │ │
+│                           │ │ Quick Params:                               │ │ │
 │                           │ │ [Sonnet | Opus                     ][✏️]   │ │ │
 │                           │ │ (只读摘要 + 编辑按钮，简易模式下隐藏)        │ │ │
 │                           │ └──────────────────────────────────────────────┘ │ │
@@ -420,14 +420,14 @@ Button（工具栏按钮）
 └─────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-**直接命令模式**（Button.command 不为空）：
+**直接命令模式**（CommandBar.command 不为空）：
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
 │  Settings: CCBar                                                                │
 ├─────────────────────────────────────────────────────────────────────────────────┤
 │  ┌─────────────────────┐  ┌───────────────────────────────────────────────────┐ │
-│  │ Toolbar Buttons     │  │ Button Details                                  │ │
+│  │ Toolbar Buttons     │  │ CommandBar Details                               │ │
 │  │                     │  │                                                   │ │
 │  │   Claude Code       │  │ Name:       [NPM Test                       ]   │ │
 │  │ ▶ NPM Test          │  │ Icon:       [Browse...                      ]   │ │
@@ -439,7 +439,7 @@ Button（工具栏按钮）
 │                           │ Env Vars:   [                         ][…]   │ │
 │                           │                                                   │ │
 │                           │ ─────────────────────────────────────────────────  │ │
-│                           │ ℹ️ 直接命令模式下，Options 配置不可用              │ │
+│                           │ ℹ️ 直接命令模式下，Commands 配置不可用              │ │
 │                           │                                                   │ │
 │                           └───────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────────────────────────┘
@@ -467,18 +467,18 @@ Button（工具栏按钮）
 2. 点击 `[-]` 按钮（需确认）
 
 #### 6.3.4 调整顺序
-1. 选中某个按钮/选项/子按钮
+1. 选中某个按钮/命令/快捷参数
 2. 点击 `[↑]` 上移或 `[↓]` 下移
 
-#### 6.3.5 新增选项（Option）
-1. 在 Options 列表下方点击 `[+]`
-2. 输入 Option 名称、Base Command、Working Directory（可选）、Default Terminal Name
+#### 6.3.5 新增命令（Command）
+1. 在 Commands 列表下方点击 `[+]`
+2. 输入 Command 名称、Base Command、Working Directory（可选）、Default Terminal Name
 3. 点击 Apply 保存
 
-#### 6.3.6 编辑子按钮
-1. 选中某个 Option
-2. 在 Sub Buttons 区域点击编辑按钮（✏️）打开 SubButton 编辑对话框
-3. 对话框中以表格形式（名称、参数两列）编辑子按钮，支持添加/删除/上移/下移
+#### 6.3.6 编辑快捷参数
+1. 选中某个 Command
+2. 在 Quick Params 区域点击编辑按钮打开 QuickParam 编辑对话框
+3. 对话框中以表格形式（名称、参数两列）编辑快捷参数，支持添加/删除/上移/下移
 4. 点击「确定」保存修改，点击「取消」放弃修改
 
 #### 6.3.7 导入/导出配置
@@ -490,21 +490,21 @@ Button（工具栏按钮）
 
 | 字段 | 验证规则 |
 |------|----------|
-| Button Name | 必填，唯一 |
-| Button Icon | 必填，内置图标名称或有效的文件路径 |
-| Button Command | 可选，为空时必须配置 Options |
-| Button Work Dir | 可选，留空表示使用当前项目根目录；如填写须为有效路径 |
-| Button Term Name | 直接命令模式下必填 |
-| Option Name | 必填，同一按钮下唯一 |
+| CommandBar Name | 必填，唯一 |
+| CommandBar Icon | 必填，内置图标名称或有效的文件路径 |
+| CommandBar Command | 可选，为空时必须配置 Commands |
+| CommandBar Work Dir | 可选，留空表示使用当前项目根目录；如填写须为有效路径 |
+| CommandBar Term Name | 直接命令模式下必填 |
+| Command Name | 必填，同一按钮下唯一 |
 | Base Command | 必填 |
 | Working Directory | 可选，留空表示使用当前项目根目录；如填写须为有效路径 |
 | Default Terminal Name | 必填，命名弹窗中的默认终端名称 |
-| Sub Button Name | 必填，同一 Option 下唯一 |
+| QuickParam Name | 必填，同一 Command 下唯一 |
 | Params | 可选，允许空字符串 |
 
 **模式互斥规则**：
-- 直接命令模式（Button.command 不为空）：Options 配置被忽略
-- 选项列表模式（Button.command 为空）：必须至少有一个 Option
+- 直接命令模式（CommandBar.command 不为空）：Commands 配置被忽略
+- 命令列表模式（CommandBar.command 为空）：必须至少有一个 Command
 
 ---
 
@@ -527,38 +527,38 @@ Button（工具栏按钮）
 
 ```kotlin
 data class PluginConfig(
-    var buttons: List<ButtonConfig> = emptyList()
+    var commandBars: List<CommandBarConfig> = emptyList()
 )
 
-data class ButtonConfig(
+data class CommandBarConfig(
     var id: String = "",
     var name: String = "",
     var icon: String = "",  // 内置图标名称或自定义图标文件路径
     // 直接命令模式字段
-    var command: String = "",  // 直接命令，为空则使用选项列表模式
+    var command: String = "",  // 直接命令，为空则使用命令列表模式
     var workingDirectory: String = "",  // 工作目录，留空使用项目根目录
     var defaultTerminalName: String = "",  // 直接命令模式的默认终端名称
     var terminalMode: String = "",  // 终端打开模式：""=工具窗口, "editor"=编辑器
-    var simpleMode: Boolean = false,  // 简易模式：仅显示选项名称，隐藏命令预览和子按钮
-    var options: List<OptionConfig> = emptyList()
+    var simpleMode: Boolean = false,  // 简易模式：仅显示命令名称，隐藏命令预览和快捷参数
+    var commands: List<CommandConfig> = emptyList()
 )
 
-data class OptionConfig(
+data class CommandConfig(
     var id: String = "",
     var name: String = "",
     var baseCommand: String = "",
     var workingDirectory: String = "",  // 可选，留空则使用当前项目根目录
     var defaultTerminalName: String = "",  // 命名弹窗中的默认终端名称
-    var subButtons: List<SubButtonConfig> = emptyList(),
-    var type: String = "",  // 可选，空值或"option"=普通选项, "separator"=分割线
+    var quickParams: List<QuickParamConfig> = emptyList(),
+    var type: String = "",  // 可选，空值或"command"=普通命令, "separator"=分割线
     var terminalMode: String = ""  // 终端打开模式：""=工具窗口, "editor"=编辑器
 )
 
-data class SubButtonConfig(
+data class QuickParamConfig(
     var id: String = "",
     var name: String = "",
     var params: String = "",
-    var icon: String = ""  // 可选，支持自定义子按钮图标
+    var icon: String = ""  // 可选，支持自定义快捷参数图标
 )
 ```
 
@@ -585,21 +585,21 @@ data class SubButtonConfig(
 
 ```kotlin
 private val defaultConfig = PluginConfig(
-    buttons = listOf(
-        ButtonConfig(
+    commandBars = listOf(
+        CommandBarConfig(
             id = "claude-code-default",
             name = "Claude Code",
             icon = "builtin:AllIcons.Actions.Execute",
-            options = listOf(
-                OptionConfig(
+            commands = listOf(
+                CommandConfig(
                     id = "model",
                     name = "Model",
                     baseCommand = "claude",
                     workingDirectory = "",
                     defaultTerminalName = "Claude - Model",
-                    subButtons = listOf(
-                        SubButtonConfig(id = "sonnet", name = "Sonnet", params = "--model sonnet"),
-                        SubButtonConfig(id = "opus", name = "Opus", params = "--model opus")
+                    quickParams = listOf(
+                        QuickParamConfig(id = "sonnet", name = "Sonnet", params = "--model sonnet"),
+                        QuickParamConfig(id = "opus", name = "Opus", params = "--model opus")
                     )
                 )
             )
@@ -639,19 +639,19 @@ private val defaultConfig = PluginConfig(
 | 功能 | 优先级 | 说明 |
 |------|--------|------|
 | 多快捷按钮 | P0 | 支持添加多个工具栏按钮 |
-| Button 直接命令模式 | P0 | Button 可绑定直接命令，点击后直接执行（不弹出菜单） |
-| 下拉选项菜单（内联子按钮） | P0 | 点击弹出菜单，子按钮内联显示在 Option 行右侧 |
-| Option 可点击 | P0 | 点击 Option 名称执行 baseCommand（不带参数） |
-| 命令配置面板 | P0 | 可视化配置按钮、选项、子按钮，支持排序 |
+| CommandBar 直接命令模式 | P0 | CommandBar 可绑定直接命令，点击后直接执行（不弹出菜单） |
+| 下拉命令菜单（内联快捷参数） | P0 | 点击弹出菜单，快捷参数内联显示在 Command 行右侧 |
+| Command 可点击 | P0 | 点击 Command 名称执行 baseCommand（不带参数） |
+| 命令配置面板 | P0 | 可视化配置按钮、命令、快捷参数，支持排序 |
 | 终端始终新建 | P0 | 每次执行都新建终端 Tab |
-| 终端命名弹窗 | P0 | 每次执行前弹出命名对话框，默认名称来自 Option/Button 配置 |
+| 终端命名弹窗 | P0 | 每次执行前弹出命名对话框，默认名称来自 Command/CommandBar 配置 |
 | 终端打开到工具窗口 | P0 | 在 Terminal 工具窗口中新建终端标签页 |
 | 自定义图标 | P0 | 支持 IDEA 内置图标和自定义 SVG/PNG |
-| Option/Button 工作目录 | P0 | 支持 Option/Button 级自定义工作目录，默认项目根目录 |
+| Command/CommandBar 工作目录 | P0 | 支持 Command/CommandBar 级自定义工作目录，默认项目根目录 |
 | 导入/导出配置 | P1 | 支持 JSON 格式配置导入导出 |
 | 项目级配置 | P1 | 支持为每个项目设置独立的按钮配置，存储在 .idea/ccbar.xml |
 | 命令编辑支持 | P2 | 支持命令模板/变量替换 |
-| 环境变量配置 | P2 | 支持为 Option/SubButton 配置环境变量 |
+| 环境变量配置 | P2 | 支持为 Command/QuickParam 配置环境变量 |
 
 ---
 
@@ -662,7 +662,7 @@ private val defaultConfig = PluginConfig(
 - 动态变量（如 `${projectDir}`、`${fileName}` 等）
 - 命令执行结果通知
 - 支持多平台（VSCode、Cursor 等）
-- 跨 Option 参数组合（同时选 Model + Workspace 生成组合命令）
+- 跨 Command 参数组合（同时选 Model + Workspace 生成组合命令）
 - 环境变量配置
 - 终端复用策略（同名终端检测与复用）
 - ~~自定义 Shell 路径~~（**已搁置** — Story-08，技术调研已完成，详见 `docs/specs/story-08/`）

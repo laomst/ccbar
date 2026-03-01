@@ -9,7 +9,7 @@
 ```
 Button（工具栏按钮）
   └── Option（绑定 baseCommand + workingDirectory + defaultTerminalName）
-        └── SubButton（绑定 params）
+        └── QuickParam（绑定 params）
 ```
 
 **Option 列表渲染**：
@@ -18,13 +18,13 @@ Button（工具栏按钮）
 
 **配置结构**：
 ```kotlin
-data class OptionConfig(
+data class CommandConfig(
     var id: String = "",
     var name: String = "",
     var baseCommand: String = "",
     var workingDirectory: String = "",
     var defaultTerminalName: String = "",
-    var subButtons: MutableList<SubButtonConfig> = mutableListOf()
+    var quickParams: MutableList<QuickParamConfig> = mutableListOf()
 )
 ```
 
@@ -42,7 +42,7 @@ data class OptionConfig(
 
 ### 2.1 数据模型变更
 
-**OptionConfig 新增字段**：
+**CommandConfig 新增字段**：
 
 | 字段 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
@@ -50,13 +50,13 @@ data class OptionConfig(
 
 **配置结构**：
 ```kotlin
-data class OptionConfig(
+data class CommandConfig(
     var id: String = "",
     var name: String = "",
     var baseCommand: String = "",
     var workingDirectory: String = "",
     var defaultTerminalName: String = "",
-    var subButtons: MutableList<SubButtonConfig> = mutableListOf(),
+    var quickParams: MutableList<QuickParamConfig> = mutableListOf(),
     // 新增字段
     var type: String = ""  // 空值或"option"=普通选项, "separator"=分割线
 ) {
@@ -68,7 +68,7 @@ data class OptionConfig(
     /**
      * 判断是否为普通选项类型（默认）
      */
-    fun isOption(): Boolean = type != "separator"
+    fun isCommand(): Boolean = type != "separator"
 }
 ```
 
@@ -85,7 +85,7 @@ data class OptionConfig(
 
 | 项类型 | 渲染效果 | 可点击 |
 |--------|----------|--------|
-| 普通选项 | 三列布局：选项名称 \| 命令预览 \| 子按钮 | ✅ 是 |
+| 普通选项 | 三列布局：选项名称 \| 命令预览 \| 快捷参数 | ✅ 是 |
 | 分割线 | 水平分隔线（占满宽度） | ❌ 否 |
 
 ### 2.3 交互行为
@@ -109,20 +109,20 @@ data class OptionConfig(
 
 | 操作 | 说明 |
 |------|------|
-| 点击"添加选项" | 创建 type="" 的 OptionConfig，可编辑所有字段 |
-| 点击"添加分割线" | 创建 type="separator" 的 OptionConfig，详情面板隐藏 |
+| 点击"添加选项" | 创建 type="" 的 CommandConfig，可编辑所有字段 |
+| 点击"添加分割线" | 创建 type="separator" 的 CommandConfig，详情面板隐藏 |
 
 #### 2.3.2 设置面板 - 选中分割线
 
 当用户选中分割线类型的项时：
 - **Option 详情面板**：隐藏所有字段，显示提示信息
-- **SubButton 表格**：隐藏，显示提示信息
+- **QuickParam 表格**：隐藏，显示提示信息
 
 #### 2.3.3 弹框 - 渲染分割线
 
 分割线在弹框中渲染为：
 - 占满宽度的水平分隔线
-- 可选显示标题（来自 OptionConfig.name）
+- 可选显示标题（来自 CommandConfig.name）
 
 ### 2.4 视觉规范
 
@@ -165,23 +165,23 @@ data class OptionConfig(
 **文件**：`CCBarSettings.kt`
 
 ```kotlin
-// OptionConfig 类型常量
-object OptionType {
+// CommandConfig 类型常量
+object CommandType {
     const val OPTION = "option"
     const val SEPARATOR = "separator"
 }
 
-data class OptionConfig(
+data class CommandConfig(
     var id: String = "",
     var name: String = "",
     var baseCommand: String = "",
     var workingDirectory: String = "",
     var defaultTerminalName: String = "",
-    var subButtons: MutableList<SubButtonConfig> = mutableListOf(),
+    var quickParams: MutableList<QuickParamConfig> = mutableListOf(),
     // 新增字段
     var type: String = ""  // 空值或"option"=普通选项, "separator"=分割线
 ) {
-    fun deepCopy(): OptionConfig = OptionConfig(
+    fun deepCopy(): CommandConfig = CommandConfig(
         id = id,
         name = name,
         baseCommand = baseCommand,
@@ -194,7 +194,7 @@ data class OptionConfig(
     /**
      * 判断是否为分割线类型
      */
-    fun isSeparator(): Boolean = type == OptionType.SEPARATOR
+    fun isSeparator(): Boolean = type == CommandType.SEPARATOR
 }
 ```
 
@@ -213,20 +213,20 @@ private class OptionListCellRenderer : DefaultListCellRenderer() {
         isSelected: Boolean,
         cellHasFocus: Boolean
     ): JComponent {
-        if (value is OptionConfig && value.isSeparator()) {
+        if (value is CommandConfig && value.isSeparator()) {
             // 分割线渲染
             return createSeparatorRenderer(value, isSelected)
         }
 
         // 普通选项渲染（原有逻辑）
         val component = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus)
-        if (value is OptionConfig) {
+        if (value is CommandConfig) {
             text = value.name
         }
         return component as JComponent
     }
 
-    private fun createSeparatorRenderer(option: OptionConfig, isSelected: Boolean): JComponent {
+    private fun createSeparatorRenderer(option: CommandConfig, isSelected: Boolean): JComponent {
         val panel = JPanel(BorderLayout())
         panel.isOpaque = true
         panel.background = if (isSelected) list.selectionBackground else list.background
@@ -278,12 +278,12 @@ private fun showAddOptionPopup(component: java.awt.Component) {
 
 private fun addSeparator() {
     val button = selectedButton ?: return
-    val newSeparator = OptionConfig(
+    val newSeparator = CommandConfig(
         id = UUID.randomUUID().toString(),
         name = "",
-        type = OptionType.SEPARATOR
+        type = CommandType.SEPARATOR
     )
-    button.options.add(newSeparator)
+    button.commands.add(newSeparator)
     optionListModel.add(newSeparator)
     optionList.selectedIndex = optionListModel.size - 1
 }
@@ -297,7 +297,7 @@ private fun onOptionSelected() {
 
     val index = optionList.selectedIndex
     if (index >= 0 && selectedButton != null) {
-        selectedOption = selectedButton!!.options[index]
+        selectedOption = selectedButton!!.commands[index]
 
         if (selectedOption!!.isSeparator()) {
             // 分割线：隐藏详情面板，显示提示
@@ -305,12 +305,12 @@ private fun onOptionSelected() {
         } else {
             // 普通选项：显示详情面板
             updateOptionDetail()
-            updateSubButtonTable()
+            updateQuickParamTable()
         }
     } else {
         selectedOption = null
         clearOptionDetail()
-        updateSubButtonTable()
+        updateQuickParamTable()
     }
 }
 
@@ -319,7 +319,7 @@ private fun hideOptionDetailForSeparator() {
     optionDetailPanel.isVisible = false
     // 显示分割线提示
     separatorHintPanel.isVisible = true
-    // 隐藏 SubButton 表格
+    // 隐藏 QuickParam 表格
     subButtonPanel.isVisible = false
 }
 ```
@@ -329,7 +329,7 @@ private fun hideOptionDetailForSeparator() {
 **文件**：`CCBarPopupBuilder.kt`
 
 ```kotlin
-fun buildPopup(project: Project, buttonConfig: ButtonConfig): JBPopup {
+fun buildPopup(project: Project, buttonConfig: CommandBarConfig): JBPopup {
     val mainPanel = JPanel().apply {
         layout = BoxLayout(this, BoxLayout.Y_AXIS)
         border = JBUI.Borders.empty(12)
@@ -338,7 +338,7 @@ fun buildPopup(project: Project, buttonConfig: ButtonConfig): JBPopup {
 
     lateinit var popup: JBPopup
 
-    for (option in buttonConfig.options) {
+    for (option in buttonConfig.commands) {
         if (option.isSeparator()) {
             // 分割线渲染
             mainPanel.add(createSeparatorRow(option))
@@ -358,7 +358,7 @@ fun buildPopup(project: Project, buttonConfig: ButtonConfig): JBPopup {
     return popup
 }
 
-private fun createSeparatorRow(option: OptionConfig): JComponent {
+private fun createSeparatorRow(option: CommandConfig): JComponent {
     val panel = JPanel(BorderLayout()).apply {
         isOpaque = false
         border = JBUI.Borders.emptyVertical(4)
@@ -397,12 +397,12 @@ private fun createSeparatorRow(option: OptionConfig): JComponent {
 fun validate(): List<String> {
     val errors = mutableListOf<String>()
 
-    for ((buttonIndex, button) in editingState.buttons.withIndex()) {
+    for ((buttonIndex, button) in editingState.commandBars.withIndex()) {
         // ... Button 验证
 
         if (!button.isDirectCommandMode()) {
             // 过滤掉分割线，只验证普通选项
-            val normalOptions = button.options.filter { !it.isSeparator() }
+            val normalOptions = button.commands.filter { !it.isSeparator() }
 
             if (normalOptions.isEmpty()) {
                 errors.add("Button '${button.name}': 未配置直接命令时，必须至少有一个普通选项")
@@ -426,17 +426,17 @@ fun validate(): List<String> {
 
 | 文件 | 修改内容 |
 |------|----------|
-| `CCBarSettings.kt` | OptionConfig 新增 type 字段；新增 isSeparator() 方法；修改 deepCopy() |
+| `CCBarSettings.kt` | CommandConfig 新增 type 字段；新增 isSeparator() 方法；修改 deepCopy() |
 | `CCBarSettingsPanel.kt` | 修改 OptionListCellRenderer；[+] 按钮改为下拉菜单；分割线选中时隐藏详情；修改验证逻辑 |
 | `CCBarPopupBuilder.kt` | 识别分割线类型并使用专用渲染；新增 createSeparatorRow() 方法 |
 
 ### 4.2 不受影响的部分
 
 - Button 配置和逻辑
-- SubButton 配置和逻辑
+- QuickParam 配置和逻辑
 - 终端创建和命令执行的核心逻辑
 - 配置导入/导出（JSON 格式向后兼容）
-- CCBarButtonAction
+- CCBarCommandBarAction
 
 ### 4.3 向后兼容性
 
@@ -450,7 +450,7 @@ fun validate(): List<String> {
 
 ### 5.1 功能验收
 
-- [x] OptionConfig 新增 type 字段，支持 "separator" 类型
+- [x] CommandConfig 新增 type 字段，支持 "separator" 类型
 - [x] 设置面板 [+] 按钮点击时显示选择对话框（添加选项/添加分割线）
 - [x] 设置面板 Option 列表中分割线使用专用渲染
 - [x] 选中分割线时，详情面板隐藏

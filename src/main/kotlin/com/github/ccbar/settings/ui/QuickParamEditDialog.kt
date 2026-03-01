@@ -1,6 +1,6 @@
 package com.github.ccbar.settings.ui
 
-import com.github.ccbar.settings.SubButtonConfig
+import com.github.ccbar.settings.QuickParamConfig
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.ui.ToolbarDecorator
@@ -14,12 +14,12 @@ import javax.swing.JPanel
 import javax.swing.table.DefaultTableModel
 
 /**
- * SubButton 编辑对话框
- * 提供表格形式编辑 SubButton（名称、参数），支持增删和上下移动
+ * 快捷参数编辑对话框
+ * 提供表格形式编辑快捷参数（名称、参数），支持增删和上下移动
  */
-class SubButtonEditDialog(
+class QuickParamEditDialog(
     project: Project?,
-    private val initialSubButtons: List<SubButtonConfig>
+    private val initialQuickParams: List<QuickParamConfig>
 ) : DialogWrapper(project) {
 
     private val tableModel = object : DefaultTableModel(arrayOf("名称", "参数"), 0) {
@@ -29,28 +29,28 @@ class SubButtonEditDialog(
     private val table = JBTable(tableModel)
 
     /**
-     * 获取编辑后的 SubButton 列表
+     * 获取编辑后的快捷参数列表
      */
-    fun getEditedSubButtons(): List<SubButtonConfig> {
+    fun getEditedQuickParams(): List<QuickParamConfig> {
         if (table.isEditing) {
             table.cellEditor?.stopCellEditing()
         }
-        val result = mutableListOf<SubButtonConfig>()
+        val result = mutableListOf<QuickParamConfig>()
         for (i in 0 until tableModel.rowCount) {
             val name = (tableModel.getValueAt(i, 0) as? String)?.trim() ?: ""
             val params = (tableModel.getValueAt(i, 1) as? String)?.trim() ?: ""
-            val id = if (i < initialSubButtons.size) initialSubButtons[i].id else UUID.randomUUID().toString()
-            result.add(SubButtonConfig(id = id, name = name, params = params))
+            val id = if (i < initialQuickParams.size) initialQuickParams[i].id else UUID.randomUUID().toString()
+            result.add(QuickParamConfig(id = id, name = name, params = params))
         }
         return result
     }
 
     init {
-        title = "SubButton 编辑"
+        title = "快捷参数编辑"
         setOKButtonText("确定")
         setCancelButtonText("取消")
 
-        for (sb in initialSubButtons) {
+        for (sb in initialQuickParams) {
             tableModel.addRow(arrayOf(sb.name, sb.params))
         }
 
@@ -72,7 +72,7 @@ class SubButtonEditDialog(
                 if (table.isEditing) {
                     table.cellEditor?.stopCellEditing()
                 }
-                tableModel.addRow(arrayOf("New SubButton", ""))
+                tableModel.addRow(arrayOf("New QuickParam", ""))
                 val newRow = tableModel.rowCount - 1
                 table.setRowSelectionInterval(newRow, newRow)
                 table.editCellAt(newRow, 0)

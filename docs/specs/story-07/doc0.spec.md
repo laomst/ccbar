@@ -6,17 +6,17 @@
 
 目前按钮在绑定选项列表模式下，弹出菜单采用两行布局展示每个选项：
 - **第一行**：命令预览 | 选项名称
-- **第二行**：子按钮列表（小号文字）
+- **第二行**：快捷参数列表（小号文字）
 
-设置面板中，选中某个选项后会显示完整的配置区域，包括子按钮（SubButton）表格。
+设置面板中，选中某个选项后会显示完整的配置区域，包括快捷参数（QuickParam）表格。
 
 ### 1.2 用户需求
 
-部分场景下，用户只需要简单地从选项列表中选择一个执行，不需要子按钮的参数组合能力。此时完整的弹出菜单显得过于复杂，设置面板中的子按钮配置也是多余的。
+部分场景下，用户只需要简单地从选项列表中选择一个执行，不需要快捷参数的参数组合能力。此时完整的弹出菜单显得过于复杂，设置面板中的快捷参数配置也是多余的。
 
 需要为按钮增加**简易模式**开关：
-1. **设置面板**：开启简易模式后，隐藏子按钮配置区域
-2. **弹出菜单**：开启简易模式后，选项只展示名称，不展示命令预览区域和子按钮
+1. **设置面板**：开启简易模式后，隐藏快捷参数配置区域
+2. **弹出菜单**：开启简易模式后，选项只展示名称，不展示命令预览区域和快捷参数
 
 ## 2. 需求分析
 
@@ -30,14 +30,14 @@
 - 复选框位置：在选项列表上方，与模式选择区域相邻
 - 仅当按钮处于选项列表模式时显示该复选框
 - 开启简易模式后：
-  - 隐藏子按钮表格面板（`SubButton 列表` 区域）
+  - 隐藏快捷参数表格面板（`QuickParam 列表` 区域）
   - 选项详情中仍保留基础命令、工作目录等配置
 
 ### 2.3 弹出菜单变化
 
 - 开启简易模式后，每个选项仅展示为**单行纯文本名称**
 - 不显示命令预览区域
-- 不显示子按钮行
+- 不显示快捷参数行
 - 点击选项名称直接执行 `option.baseCommand`
 - 分割线渲染不受影响
 
@@ -45,19 +45,19 @@
 
 | 操作 | 标准模式 | 简易模式 |
 |------|---------|---------|
-| 弹出菜单 - 选项展示 | 两行（命令预览+名称+子按钮） | 单行（仅名称） |
+| 弹出菜单 - 选项展示 | 两行（命令预览+名称+快捷参数） | 单行（仅名称） |
 | 弹出菜单 - 点击选项 | 执行 baseCommand | 执行 baseCommand |
-| 弹出菜单 - 点击子按钮 | 执行 baseCommand + params | 无子按钮 |
-| 设置面板 - 子按钮区域 | 显示 | 隐藏 |
+| 弹出菜单 - 点击快捷参数 | 执行 baseCommand + params | 无快捷参数 |
+| 设置面板 - 快捷参数区域 | 显示 | 隐藏 |
 
 ## 3. 技术方案
 
 ### 3.1 数据结构变更
 
-在 `ButtonConfig` 中新增字段：
+在 `CommandBarConfig` 中新增字段：
 
 ```kotlin
-data class ButtonConfig(
+data class CommandBarConfig(
     // ... 现有字段 ...
     var simpleMode: Boolean = false  // 简易模式开关，默认关闭
 )
@@ -68,17 +68,17 @@ data class ButtonConfig(
 **CCBarSettingsPanel.kt**：
 - 新增 `simpleModeCheckbox: JBCheckBox` 组件
 - 在选项列表面板上方添加复选框
-- 绑定 `ButtonConfig.simpleMode` 字段的读写
-- 监听 checkbox 变化，动态显示/隐藏子按钮面板
+- 绑定 `CommandBarConfig.simpleMode` 字段的读写
+- 监听 checkbox 变化，动态显示/隐藏快捷参数面板
 - 仅在选项列表模式下显示该复选框
 
 ### 3.3 弹出菜单修改
 
 **CCBarPopupBuilder.kt**：
-- `buildPopup()` 方法接收 `ButtonConfig`，已包含 `simpleMode` 字段
+- `buildPopup()` 方法接收 `CommandBarConfig`，已包含 `simpleMode` 字段
 - 当 `simpleMode = true` 时：
   - 跳过 `calculateMaxPreviewWidth()` 计算
-  - `createOptionBlock()` 中只创建名称标签，不创建命令预览和子按钮行
+  - `createOptionBlock()` 中只创建名称标签，不创建命令预览和快捷参数行
   - 或提供独立的 `createSimpleOptionRow()` 方法
 
 ## 4. 影响范围
@@ -87,8 +87,8 @@ data class ButtonConfig(
 
 | 文件 | 修改内容 |
 |------|---------|
-| `CCBarSettings.kt` | `ButtonConfig` 增加 `simpleMode` 字段及 `deepCopy()` |
-| `CCBarSettingsPanel.kt` | 增加简易模式复选框，控制子按钮面板显隐 |
+| `CCBarSettings.kt` | `CommandBarConfig` 增加 `simpleMode` 字段及 `deepCopy()` |
+| `CCBarSettingsPanel.kt` | 增加简易模式复选框，控制快捷参数面板显隐 |
 | `CCBarPopupBuilder.kt` | 简易模式下简化选项渲染 |
 
 ### 4.2 不受影响的部分
@@ -102,10 +102,10 @@ data class ButtonConfig(
 
 ### 5.1 功能验收
 
-- [ ] ButtonConfig 新增 simpleMode 字段，默认值为 false
+- [ ] CommandBarConfig 新增 simpleMode 字段，默认值为 false
 - [ ] 配置持久化正确保存和读取 simpleMode
-- [ ] 开启简易模式后，设置面板隐藏子按钮表格
-- [ ] 关闭简易模式后，设置面板恢复显示子按钮表格
+- [ ] 开启简易模式后，设置面板隐藏快捷参数表格
+- [ ] 关闭简易模式后，设置面板恢复显示快捷参数表格
 - [ ] 开启简易模式后，弹出菜单只展示选项名称
 - [ ] 简易模式下点击选项名称正确执行 baseCommand
 
@@ -118,12 +118,12 @@ data class ButtonConfig(
 ### 5.3 兼容性验收
 
 - [ ] 已有配置（无 simpleMode 字段）可正常加载，默认为 false
-- [ ] 简易模式下已配置的子按钮数据不丢失（仅隐藏 UI，不删除数据）
+- [ ] 简易模式下已配置的快捷参数数据不丢失（仅隐藏 UI，不删除数据）
 
 ## 6. 风险评估
 
 - **低风险**：新增布尔字段，向后兼容，默认值 false 不影响现有行为
-- **注意**：简易模式仅隐藏子按钮 UI，不应删除已有的子按钮数据，便于用户随时切换回标准模式
+- **注意**：简易模式仅隐藏快捷参数 UI，不应删除已有的快捷参数数据，便于用户随时切换回标准模式
 
 ## 7. 后续优化建议
 

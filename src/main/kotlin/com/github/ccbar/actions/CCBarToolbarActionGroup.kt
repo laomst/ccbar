@@ -1,6 +1,6 @@
 package com.github.ccbar.actions
 
-import com.github.ccbar.settings.ButtonConfig
+import com.github.ccbar.settings.CommandBarConfig
 import com.github.ccbar.settings.CCBarProjectSettings
 import com.github.ccbar.settings.CCBarSettings
 import com.intellij.openapi.actionSystem.ActionGroup
@@ -12,7 +12,7 @@ import com.intellij.openapi.project.Project
 
 /**
  * CCBar 工具栏动态 ActionGroup
- * 根据配置动态生成工具栏按钮
+ * 根据配置动态生成工具栏 CommandBar
  * 优先使用项目配置（如果启用），否则使用系统配置
  */
 class CCBarToolbarActionGroup : ActionGroup(), DumbAware {
@@ -25,15 +25,15 @@ class CCBarToolbarActionGroup : ActionGroup(), DumbAware {
 
     override fun getChildren(e: AnActionEvent?): Array<AnAction> {
         val project = e?.project
-        val buttons = getEffectiveButtons(project)
-        val currentVersion = buttons.hashCode()
+        val commandBars = getEffectiveCommandBars(project)
+        val currentVersion = commandBars.hashCode()
 
         if (currentVersion != lastConfigVersion) {
-            cachedChildren = if (buttons.isEmpty()) {
+            cachedChildren = if (commandBars.isEmpty()) {
                 emptyArray()
             } else {
-                buttons.map { buttonConfig ->
-                    CCBarButtonAction(buttonConfig)
+                commandBars.map { commandBarConfig ->
+                    CCBarCommandBarAction(commandBarConfig)
                 }.toTypedArray()
             }
             lastConfigVersion = currentVersion
@@ -44,20 +44,20 @@ class CCBarToolbarActionGroup : ActionGroup(), DumbAware {
 
     override fun update(e: AnActionEvent) {
         val project = e.project
-        val buttons = getEffectiveButtons(project)
-        e.presentation.isVisible = buttons.isNotEmpty()
+        val commandBars = getEffectiveCommandBars(project)
+        e.presentation.isVisible = commandBars.isNotEmpty()
         e.presentation.isEnabled = true
     }
 
     /**
-     * 获取当前有效的按钮配置
+     * 获取当前有效的CommandBar 配置
      * 优先级：项目配置（启用时） > 系统配置
      */
-    private fun getEffectiveButtons(project: Project?): List<ButtonConfig> {
+    private fun getEffectiveCommandBars(project: Project?): List<CommandBarConfig> {
         // 如果有项目，检查项目配置
         if (project != null) {
             val projectSettings = CCBarProjectSettings.getInstance(project)
-            val projectButtons = projectSettings.getEffectiveButtons()
+            val projectButtons = projectSettings.getEffectiveCommandBars()
             if (projectButtons != null) {
                 return projectButtons
             }
@@ -65,6 +65,6 @@ class CCBarToolbarActionGroup : ActionGroup(), DumbAware {
 
         // 使用系统配置
         val systemSettings = CCBarSettings.getInstance()
-        return systemSettings.state.buttons
+        return systemSettings.state.commandBars
     }
 }

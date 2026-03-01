@@ -24,7 +24,7 @@ ccbar/
 │       ├── kotlin/com/github/ccbar/
 │       │   ├── actions/                    # Action 相关
 │       │   │   ├── CCBarToolbarActionGroup.kt  # 工具栏动态 ActionGroup
-│       │   │   ├── CCBarButtonAction.kt        # 工具栏按钮 Action
+│       │   │   ├── CCBarCommandBarAction.kt    # 工具栏按钮 Action
 │       │   │   └── CCBarPopupBuilder.kt        # 自定义弹出菜单构建
 │       │   ├── terminal/                   # 终端相关
 │       │   │   └── CCBarTerminalService.kt     # 终端创建服务（工具窗口 API）
@@ -162,13 +162,13 @@ intellijPlatform {
 
 ```
 CCBarToolbarActionGroup (ActionGroup, 注册到 MainToolbarRight)
-  ├── CCBarButtonAction("Claude Code")   ← 动态生成，每个 Button 对应一个
-  ├── CCBarButtonAction("Dev Tools")
+  ├── CCBarCommandBarAction("Claude Code")   ← 动态生成，每个 CommandBar 对应一个
+  ├── CCBarCommandBarAction("Dev Tools")
   └── ...
 ```
 
 - `CCBarToolbarActionGroup` 继承 `ActionGroup`，重写 `getChildren()` 根据配置动态返回按钮 Action
-- 每个 `CCBarButtonAction` 是一个独立的 toolbar 按钮
+- 每个 `CCBarCommandBarAction` 是一个独立的 toolbar 按钮
 - 点击按钮时通过 `JBPopup` 弹出自定义菜单（见 4.2）
 - 按钮图标通过配置的 `icon` 字段加载（支持内置图标和自定义文件）
 
@@ -181,13 +181,13 @@ CCBarToolbarActionGroup (ActionGroup, 注册到 MainToolbarRight)
 
 **方案：JBPopupFactory + 自定义 Swing 面板**
 
-为匹配 spec 中子按钮内联显示的布局，使用 `JBPopupFactory.createComponentPopupBuilder()` 构建自定义弹出面板。
+为匹配 spec 中快捷参数内联显示的布局，使用 `JBPopupFactory.createComponentPopupBuilder()` 构建自定义弹出面板。
 
 ```
 ┌──────────────────────────────────────┐
 │ Model     [Default][Sonnet][Opus]    │  ← 每行是一个 JPanel (FlowLayout)
-│ Workspace [Home][Work]               │  ← Option 名称是 JLabel（可点击）
-│ System    [Dev]                      │  ← SubButton 是 JButton
+│ Workspace [Home][Work]               │  ← Command 名称是 JLabel（可点击）
+│ System    [Dev]                      │  ← QuickParam 是 JButton
 └──────────────────────────────────────┘
 ```
 
@@ -195,12 +195,12 @@ CCBarToolbarActionGroup (ActionGroup, 注册到 MainToolbarRight)
 
 ```
 JPanel (BoxLayout.Y_AXIS)            ← 弹出菜单主面板
-  ├── OptionRowPanel (FlowLayout)    ← 每个 Option 一行
+  ├── CommandRowPanel (FlowLayout)   ← 每个 Command 一行
   │   ├── JLabel("Model")           ← 点击执行 baseCommand
   │   ├── JButton("Default")        ← 点击执行 baseCommand + params
   │   ├── JButton("Sonnet")
   │   └── JButton("Opus")
-  ├── OptionRowPanel
+  ├── CommandRowPanel
   │   ├── JLabel("Workspace")
   │   ├── JButton("Home")
   │   └── JButton("Work")
@@ -224,8 +224,8 @@ popup.showUnderneathOf(actionEvent.inputEvent.component)
 ```
 
 **交互逻辑：**
-1. 点击 Option 名称 → 弹出终端命名对话框 → 执行 `baseCommand`
-2. 点击 SubButton → 弹出终端命名对话框 → 执行 `baseCommand + params`
+1. 点击 Command 名称 → 弹出终端命名对话框 → 执行 `baseCommand`
+2. 点击 QuickParam → 弹出终端命名对话框 → 执行 `baseCommand + params`
 3. 点击后自动关闭弹出菜单
 
 ### 4.3 终端命名对话框
@@ -282,10 +282,10 @@ if (terminalName != null) {
 ```kotlin
 object CCBarTerminalService {
 
-    fun openTerminal(project: Project, option: OptionConfig, subButton: SubButtonConfig?) {
-        val command = buildCommand(option, subButton)
-        val terminalName = showNameDialog(project, option) ?: return
-        val workingDir = resolveWorkingDirectory(project, option)
+    fun openTerminal(project: Project, command: CommandConfig, quickParam: QuickParamConfig?) {
+        val cmd = buildCommand(command, quickParam)
+        val terminalName = showNameDialog(project, command) ?: return
+        val workingDir = resolveWorkingDirectory(project, command)
 
         if (isReworkedTerminalAvailable()) {
             openWithReworkedTerminal(project, command, terminalName, workingDir)
@@ -359,7 +359,7 @@ private fun openWithClassicTerminal(
 class CCBarSettings : PersistentStateComponent<CCBarSettings.State> {
 
     data class State(
-        var buttons: MutableList<ButtonConfig> = mutableListOf()
+        var commandBars: MutableList<CommandBarConfig> = mutableListOf()
     )
 
     private var myState = State()
@@ -395,21 +395,21 @@ class CCBarSettings : PersistentStateComponent<CCBarSettings.State> {
 ```
 CCBarSettingsPanel (Configurable + NoScroll)
 ├── JBSplitter (左右分割)
-│   ├── 左侧：ButtonListPanel
-│   │   └── JBList<ButtonConfig> + ToolbarDecorator [+][-][↑][↓]
-│   └── 右侧：ButtonDetailPanel
-│       ├── Button 基本信息 (Kotlin UI DSL v2 panel)
+│   ├── 左侧：CommandBarListPanel
+│   │   └── JBList<CommandBarConfig> + ToolbarDecorator [+][-][↑][↓]
+│   └── 右侧：CommandBarDetailPanel
+│       ├── CommandBar 基本信息 (Kotlin UI DSL v2 panel)
 │       │   ├── Name: TextField
 │       │   └── Icon: TextFieldWithBrowseButton
-│       ├── OptionListPanel
-│       │   └── JBList<OptionConfig> + ToolbarDecorator [+][-][↑][↓]
-│       ├── OptionDetailPanel (Kotlin UI DSL v2 panel)
+│       ├── CommandListPanel
+│       │   └── JBList<CommandConfig> + ToolbarDecorator [+][-][↑][↓]
+│       ├── CommandDetailPanel (Kotlin UI DSL v2 panel)
 │       │   ├── Name: TextField
 │       │   ├── Base Command: TextField
 │       │   ├── Working Directory: TextFieldWithBrowseButton
 │       │   └── Default Terminal Name: TextField
-│       └── SubButtonTablePanel
-│           └── TableView<SubButtonConfig> + ToolbarDecorator [+][-][↑][↓]
+│       └── QuickParamTablePanel
+│           └── TableView<QuickParamConfig> + ToolbarDecorator [+][-][↑][↓]
 │               ├── 列: Name (可编辑)
 │               └── 列: Params (可编辑)
 └── ActionButtonsPanel
@@ -421,9 +421,9 @@ CCBarSettingsPanel (Configurable + NoScroll)
 
 | 组件 | IntelliJ API | 用途 |
 |------|-------------|------|
-| 左右分割 | `JBSplitter` | Button 列表与详情分割 |
-| 列表 + 工具栏 | `JBList` + `CollectionListModel` + `ToolbarDecorator` | Button/Option 列表的增删排序 |
-| 可编辑表格 | `TableView` + `ListTableModel` + `ColumnInfo` | SubButton 表格编辑 |
+| 左右分割 | `JBSplitter` | CommandBar 列表与详情分割 |
+| 列表 + 工具栏 | `JBList` + `CollectionListModel` + `ToolbarDecorator` | CommandBar/Command 列表的增删排序 |
+| 可编辑表格 | `TableView` + `ListTableModel` + `ColumnInfo` | QuickParam 表格编辑 |
 | 表单区域 | Kotlin UI DSL v2 `panel { }` | 详情字段绑定 |
 | 文件浏览 | `TextFieldWithBrowseButton` | 图标文件选择、工作目录选择 |
 | 确认对话框 | `Messages.showYesNoDialog()` | 删除/重置确认 |
@@ -517,7 +517,7 @@ IntelliJ 2024.2+ 默认启用 New UI。本插件需要确保：
 
 ### Phase 3: 设置界面
 - 设置面板主框架（JBSplitter + JBList）
-- Button / Option / SubButton 的 CRUD 操作
+- CommandBar / Command / QuickParam 的 CRUD 操作
 - 数据验证
 
 ### Phase 4: 完善功能

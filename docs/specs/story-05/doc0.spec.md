@@ -160,7 +160,7 @@ override fun getChildren(e: AnActionEvent?): Array<AnAction> {
 // 项目级配置 State
 data class ProjectState(
     var enabled: Boolean = false,  // 是否启用
-    var buttons: MutableList<ButtonConfig> = mutableListOf()  // 复用现有结构
+    var commandBars: MutableList<CommandBarConfig> = mutableListOf()  // 复用现有结构
 )
 ```
 
@@ -201,7 +201,7 @@ class CCBarProjectSettings : PersistentStateComponent<CCBarProjectSettings.Proje
 
     data class ProjectState(
         var enabled: Boolean = false,
-        var buttons: MutableList<ButtonConfig> = mutableListOf()
+        var commandBars: MutableList<CommandBarConfig> = mutableListOf()
     )
 
     // ... 实现略
@@ -225,12 +225,12 @@ override fun getChildren(e: AnActionEvent?): Array<AnAction> {
     val buttons = if (project != null) {
         val projectSettings = CCBarProjectSettings.getInstance(project)
         if (projectSettings.state.enabled) {
-            projectSettings.state.buttons
+            projectSettings.state.commandBars
         } else {
-            CCBarSettings.getInstance().state.buttons
+            CCBarSettings.getInstance().state.commandBars
         }
     } else {
-        CCBarSettings.getInstance().state.buttons
+        CCBarSettings.getInstance().state.commandBars
     }
 
     // ... 生成 Action
@@ -278,7 +278,7 @@ class CCBarSettingsPanel(private val project: Project?) {
 | `CCBarSettingsConfigurable.kt` | 传入 Project 参数，支持项目级配置 |
 | `CCBarSettingsPanel.kt` | 增加 Tab 切换、项目配置启用/禁用/重置功能 |
 | `CCBarToolbarActionGroup.kt` | 修改配置读取逻辑，优先使用项目配置 |
-| `CCBarButtonAction.kt` | 可能需要适配配置来源 |
+| `CCBarCommandBarAction.kt` | 可能需要适配配置来源 |
 
 ### 4.2 需新增的文件
 
@@ -288,7 +288,7 @@ class CCBarSettingsPanel(private val project: Project?) {
 
 ### 4.3 不受影响的部分
 
-- 配置数据结构（`ButtonConfig`, `OptionConfig`, `SubButtonConfig`）保持不变
+- 配置数据结构（`CommandBarConfig`, `CommandConfig`, `QuickParamConfig`）保持不变
 - 终端创建逻辑
 - 弹出菜单
 - 命令预览对话框

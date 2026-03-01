@@ -9,18 +9,18 @@
 ```
 Button（工具栏按钮，纯容器）
   └── Option（绑定 baseCommand + workingDirectory + defaultTerminalName）
-        └── SubButton（绑定 params）
+        └── QuickParam（绑定 params）
 ```
 
 **点击 Button 行为**：弹出 Option 列表，用户选择后执行命令。
 
 **配置结构**：
 ```kotlin
-data class ButtonConfig(
+data class CommandBarConfig(
     var id: String = "",
     var name: String = "",
     var icon: String = "",
-    var options: MutableList<OptionConfig> = mutableListOf()
+    var commands: MutableList<CommandConfig> = mutableListOf()
 )
 ```
 
@@ -38,7 +38,7 @@ data class ButtonConfig(
 
 ### 2.1 数据模型变更
 
-**ButtonConfig 新增字段**：
+**CommandBarConfig 新增字段**：
 
 | 字段 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
@@ -48,7 +48,7 @@ data class ButtonConfig(
 
 **配置结构**：
 ```kotlin
-data class ButtonConfig(
+data class CommandBarConfig(
     var id: String = "",
     var name: String = "",
     var icon: String = "",
@@ -56,7 +56,7 @@ data class ButtonConfig(
     var command: String = "",           // 直接命令
     var workingDirectory: String = "",  // 工作目录
     var defaultTerminalName: String = "", // 终端名称
-    var options: MutableList<OptionConfig> = mutableListOf()
+    var commands: MutableList<CommandConfig> = mutableListOf()
 )
 ```
 
@@ -70,10 +70,10 @@ data class ButtonConfig(
 
 **命令执行流程（直接命令模式）**：
 1. 点击 Button
-2. 弹出终端命名对话框（默认名称来自 `ButtonConfig.defaultTerminalName`）
+2. 弹出终端命名对话框（默认名称来自 `CommandBarConfig.defaultTerminalName`）
 3. 用户确认名称
-4. 创建终端并执行 `ButtonConfig.command`
-5. 工作目录：优先使用 `ButtonConfig.workingDirectory`，否则使用项目根目录
+4. 创建终端并执行 `CommandBarConfig.command`
+5. 工作目录：优先使用 `CommandBarConfig.workingDirectory`，否则使用项目根目录
 
 ### 2.3 按钮状态
 
@@ -82,13 +82,13 @@ data class ButtonConfig(
 禁用条件: command 为空 AND options 为空
 ```
 
-**CCBarButtonAction.update() 逻辑变更**：
+**CCBarCommandBarAction.update() 逻辑变更**：
 ```kotlin
 override fun update(e: AnActionEvent) {
     e.presentation.text = buttonConfig.name
     e.presentation.icon = CCBarIcons.loadIcon(buttonConfig.icon, e.project)
     // 修改启用条件
-    e.presentation.isEnabled = buttonConfig.command.isNotBlank() || buttonConfig.options.isNotEmpty()
+    e.presentation.isEnabled = buttonConfig.command.isNotBlank() || buttonConfig.commands.isNotEmpty()
 }
 ```
 
@@ -104,7 +104,7 @@ override fun update(e: AnActionEvent) {
 #### 2.4.2 Options 区域显示逻辑
 
 当 `command` 不为空时：
-- **隐藏** Options 配置区域（列表 + 详情 + SubButton 表格）
+- **隐藏** Options 配置区域（列表 + 详情 + QuickParam 表格）
 - 显示提示信息："直接命令模式下，Options 配置不可用"
 
 当 `command` 为空时：
@@ -156,7 +156,7 @@ override fun update(e: AnActionEvent) {
 **文件**：`CCBarSettings.kt`
 
 ```kotlin
-data class ButtonConfig(
+data class CommandBarConfig(
     var id: String = "",
     var name: String = "",
     var icon: String = "",
@@ -164,9 +164,9 @@ data class ButtonConfig(
     var command: String = "",
     var workingDirectory: String = "",
     var defaultTerminalName: String = "",
-    var options: MutableList<OptionConfig> = mutableListOf()
+    var commands: MutableList<CommandConfig> = mutableListOf()
 ) {
-    fun deepCopy(): ButtonConfig = ButtonConfig(
+    fun deepCopy(): CommandBarConfig = CommandBarConfig(
         id = id,
         name = name,
         icon = icon,
@@ -183,7 +183,7 @@ data class ButtonConfig(
 
 ### 3.2 按钮点击逻辑修改
 
-**文件**：`CCBarButtonAction.kt`
+**文件**：`CCBarCommandBarAction.kt`
 
 ```kotlin
 override fun actionPerformed(e: AnActionEvent) {
@@ -191,7 +191,7 @@ override fun actionPerformed(e: AnActionEvent) {
 
     if (buttonConfig.isDirectCommandMode()) {
         // 直接命令模式：执行命令
-        CCBarTerminalService.openTerminalForButton(project, buttonConfig)
+        CCBarTerminalService.openTerminalForCommandBar(project, buttonConfig)
     } else {
         // 选项列表模式：弹出菜单
         val component = e.inputEvent?.component ?: return
@@ -204,7 +204,7 @@ override fun update(e: AnActionEvent) {
     e.presentation.text = buttonConfig.name
     e.presentation.icon = CCBarIcons.loadIcon(buttonConfig.icon, e.project)
     // 修改启用条件
-    e.presentation.isEnabled = buttonConfig.command.isNotBlank() || buttonConfig.options.isNotEmpty()
+    e.presentation.isEnabled = buttonConfig.command.isNotBlank() || buttonConfig.commands.isNotEmpty()
 }
 ```
 
@@ -216,14 +216,14 @@ override fun update(e: AnActionEvent) {
 /**
  * 为 Button 直接命令模式打开终端
  */
-fun openTerminalForButton(project: Project, button: ButtonConfig) {
+fun openTerminalForCommandBar(project: Project, button: CommandBarConfig) {
     val terminalName = showNameDialogForButton(project, button) ?: return
     val command = button.command
     val workingDir = resolveWorkingDirectoryForButton(project, button)
     createTerminalAndExecute(project, command, terminalName, workingDir)
 }
 
-private fun showNameDialogForButton(project: Project, button: ButtonConfig): String? {
+private fun showNameDialogForButton(project: Project, button: CommandBarConfig): String? {
     return Messages.showInputDialog(
         project,
         "请输入终端标签名称：",
@@ -234,7 +234,7 @@ private fun showNameDialogForButton(project: Project, button: ButtonConfig): Str
     )
 }
 
-private fun resolveWorkingDirectoryForButton(project: Project, button: ButtonConfig): String {
+private fun resolveWorkingDirectoryForButton(project: Project, button: CommandBarConfig): String {
     val configuredDir = button.workingDirectory.trim()
 
     if (configuredDir.isNotEmpty()) {
@@ -348,12 +348,12 @@ private fun updateOptionPanelVisibility() {
 fun validate(): List<String> {
     val errors = mutableListOf<String>()
 
-    for ((buttonIndex, button) in editingState.buttons.withIndex()) {
+    for ((buttonIndex, button) in editingState.commandBars.withIndex()) {
         // Button 基础验证
         if (button.name.isBlank()) {
             errors.add("Button ${buttonIndex + 1}: 名称不能为空")
         }
-        if (editingState.buttons.count { it.name == button.name } > 1) {
+        if (editingState.commandBars.count { it.name == button.name } > 1) {
             errors.add("Button '${button.name}': 名称重复")
         }
 
@@ -365,7 +365,7 @@ fun validate(): List<String> {
             // Options 不验证
         } else {
             // 选项列表模式验证（原有逻辑）
-            if (button.options.isEmpty()) {
+            if (button.commands.isEmpty()) {
                 errors.add("Button '${button.name}': 未配置直接命令时，必须至少有一个 Option")
             }
             // 原有 Option 验证逻辑...
@@ -384,14 +384,14 @@ fun validate(): List<String> {
 
 | 文件 | 修改内容 |
 |------|----------|
-| `CCBarSettings.kt` | ButtonConfig 新增字段：command, workingDirectory, defaultTerminalName；修改 deepCopy() |
-| `CCBarButtonAction.kt` | 修改 actionPerformed() 增加直接命令判断；修改 update() 修改启用条件 |
+| `CCBarSettings.kt` | CommandBarConfig 新增字段：command, workingDirectory, defaultTerminalName；修改 deepCopy() |
+| `CCBarCommandBarAction.kt` | 修改 actionPerformed() 增加直接命令判断；修改 update() 修改启用条件 |
 | `CCBarSettingsPanel.kt` | 新增 Button 级别字段编辑；增加 Options 面板显示/隐藏逻辑；修改验证逻辑 |
-| `CCBarTerminalService.kt` | 新增 openTerminalForButton() 方法及相关辅助方法 |
+| `CCBarTerminalService.kt` | 新增 openTerminalForCommandBar() 方法及相关辅助方法 |
 
 ### 4.2 不受影响的部分
 
-- SubButton 配置和逻辑
+- QuickParam 配置和逻辑
 - Option 的命令执行逻辑（非直接命令模式）
 - 弹出菜单样式（CCBarPopupBuilder）
 - 终端创建和命令执行的核心逻辑

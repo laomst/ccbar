@@ -648,7 +648,7 @@ private fun openInToolWindow(project: Project, command: String, tabName: String,
 
 ```kotlin
 data class State(
-    var buttons: MutableList<ButtonConfig> = mutableListOf(),
+    var commandBars: MutableList<CommandBarConfig> = mutableListOf(),
     // 新增：是否在编辑器区域打开终端（默认开启）
     var openTerminalInEditor: Boolean = true
 )

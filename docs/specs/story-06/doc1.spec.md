@@ -32,8 +32,8 @@ private fun createTerminalAndExecute(project, command, tabName, workingDir) {
 
 | 配置层级 | 适用模式 | 说明 |
 |---------|---------|------|
-| ButtonConfig | 直接命令模式 | Button 直接执行命令时的终端打开模式 |
-| OptionConfig | 选项列表模式 | Option 执行命令时的终端打开模式 |
+| CommandBarConfig | 直接命令模式 | Button 直接执行命令时的终端打开模式 |
+| CommandConfig | 选项列表模式 | Option 执行命令时的终端打开模式 |
 
 ### 2.2 终端打开模式
 
@@ -59,21 +59,21 @@ object TerminalMode {
 }
 ```
 
-### 3.2 ButtonConfig 变更
+### 3.2 CommandBarConfig 变更
 
 新增 `terminalMode` 字段：
 ```kotlin
-data class ButtonConfig(
+data class CommandBarConfig(
     // ... 既有字段 ...
     var terminalMode: String = ""  // 终端打开模式
 )
 ```
 
-### 3.3 OptionConfig 变更
+### 3.3 CommandConfig 变更
 
 新增 `terminalMode` 字段：
 ```kotlin
-data class OptionConfig(
+data class CommandConfig(
     // ... 既有字段 ...
     var terminalMode: String = ""  // 终端打开模式
 )
@@ -132,7 +132,7 @@ data class OptionConfig(
 └───────────────────────────────────────────────────────────────────┘
 ```
 
-- 复选框默认值取决于对应配置（ButtonConfig 或 OptionConfig）的 `terminalMode` 字段
+- 复选框默认值取决于对应配置（CommandBarConfig 或 CommandConfig）的 `terminalMode` 字段
 - 用户可在对话框中临时切换，不影响配置的持久值
 
 ---

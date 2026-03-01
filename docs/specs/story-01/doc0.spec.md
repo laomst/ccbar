@@ -15,8 +15,8 @@
 ```
 
 每行由两部分组成：
-- 左侧：选项名称（可点击执行基础命令）
-- 右侧：子按钮列表（内联显示）
+- 左侧：命令名称（可点击执行基础命令）
+- 右侧：快捷参数列表（内联显示）
 
 ### 1.2 用户需求
 
@@ -35,7 +35,7 @@
 2. 新增中间列：命令预览输入框（只读）
 3. 输入框动态显示命令：
    - 默认状态：显示 `Option.baseCommand`（基础命令）
-   - 鼠标悬浮子按钮时：显示完整命令 `Option.baseCommand + SubButton.params`
+   - 鼠标悬浮快捷参数时：显示完整命令 `Option.baseCommand + QuickParam.params`
 
 ---
 
@@ -45,9 +45,9 @@
 
 | 列号 | 内容 | 宽度策略 | 说明 |
 |------|------|----------|------|
-| 第一列 | 选项名称 | 固定/自适应 | 显示 Option.name，可点击执行基础命令 |
+| 第一列 | 命令名称 | 固定/自适应 | 显示 Command.name，可点击执行基础命令 |
 | 第二列 | 命令预览输入框 | 自适应拉伸 | 只读文本框，显示命令预览 |
-| 第三列 | 子按钮列表 | 固定/自适应 | 内联显示所有 SubButton |
+| 第三列 | 快捷参数列表 | 固定/自适应 | 内联显示所有 QuickParam |
 
 ### 2.2 交互行为
 
@@ -55,30 +55,30 @@
 
 | 状态 | 显示内容 | 触发条件 |
 |------|----------|----------|
-| 默认 | `Option.baseCommand` | 弹出框打开时、鼠标离开所有子按钮时 |
-| 悬浮子按钮 | `Option.baseCommand + " " + SubButton.params` | 鼠标进入子按钮区域 |
+| 默认 | `Command.baseCommand` | 弹出框打开时、鼠标离开所有快捷参数时 |
+| 悬浮快捷参数 | `Command.baseCommand + " " + QuickParam.params` | 鼠标进入快捷参数区域 |
 
 **示例：**
-- Option: `{ name: "Model", baseCommand: "claude" }`
-- SubButton: `{ name: "Sonnet", params: "--model sonnet" }`
+- Command: `{ name: "Model", baseCommand: "claude" }`
+- QuickParam: `{ name: "Sonnet", params: "--model sonnet" }`
 
 | 交互状态 | 输入框显示 |
 |----------|-----------|
 | 初始/默认 | `claude` |
 | 悬浮 [Sonnet] | `claude --model sonnet` |
 | 悬浮 [Opus] | `claude --model opus` |
-| 离开子按钮 | `claude` |
+| 离开快捷参数 | `claude` |
 
 #### 2.2.2 点击行为
 
 | 点击目标 | 执行命令 | 说明 |
 |----------|----------|------|
-| 选项名称 | `Option.baseCommand` | 点击文字区域执行基础命令 |
-| 命令预览输入框 | `Option.baseCommand` | **新增**：点击输入框也执行基础命令 |
-| 子按钮 | `Option.baseCommand + SubButton.params` | 执行完整命令 |
+| 命令名称 | `Command.baseCommand` | 点击文字区域执行基础命令 |
+| 命令预览输入框 | `Command.baseCommand` | **新增**：点击输入框也执行基础命令 |
+| 快捷参数 | `Command.baseCommand + QuickParam.params` | 执行完整命令 |
 
 **交互逻辑**：
-- 选项名称和命令预览输入框都是可点击的，点击后执行相同的基础命令
+- 命令名称和命令预览输入框都是可点击的，点击后执行相同的基础命令
 - 输入框虽然是只读的，但仍需响应鼠标点击事件
 - 点击后弹出终端命名对话框，然后执行命令
 
@@ -107,15 +107,15 @@
 | 组件 | 推荐实现 | 说明 |
 |------|----------|------|
 | 行容器 | `JPanel` + `GridBagLayout` 或 `BorderLayout` | 三列布局 |
-| 选项名称 | `JBLabel` | 可点击，显示手型光标 |
+| 命令名称 | `JBLabel` | 可点击，显示手型光标 |
 | 命令预览 | `JTextField` (editable=false) | 只读文本框，**可点击**，显示手型光标 |
-| 子按钮 | `JButton` | 保持现有实现 |
+| 快捷参数 | `JButton` | 保持现有实现 |
 
 ### 3.2 状态管理
 
-需要在每个 Option 行级别维护：
+需要在每个 Command 行级别维护：
 1. **命令预览输入框引用**：用于更新显示内容
-2. **当前悬浮的子按钮状态**：用于判断是否需要更新预览
+2. **当前悬浮的快捷参数状态**：用于判断是否需要更新预览
 
 ### 3.3 事件处理
 
@@ -124,12 +124,12 @@
 subButton.addMouseListener(object : MouseAdapter() {
     override fun mouseEntered(e: MouseEvent) {
         // 更新命令预览为完整命令
-        commandPreviewField.text = "${option.baseCommand} ${subButton.params}"
+        commandPreviewField.text = "${command.baseCommand} ${quickParam.params}"
     }
 
     override fun mouseExited(e: MouseEvent) {
         // 恢复为基础命令
-        commandPreviewField.text = option.baseCommand
+        commandPreviewField.text = command.baseCommand
     }
 })
 ```
@@ -137,7 +137,7 @@ subButton.addMouseListener(object : MouseAdapter() {
 ### 3.4 布局示意代码
 
 ```kotlin
-private fun createOptionRow(project: Project, option: OptionConfig): JPanel {
+private fun createOptionRow(project: Project, command: CommandConfig): JPanel {
     val rowPanel = JPanel(GridBagLayout()).apply {
         border = JBUI.Borders.empty(4, 0)
         isOpaque = false
@@ -148,14 +148,14 @@ private fun createOptionRow(project: Project, option: OptionConfig): JPanel {
         fill = GridBagConstraints.HORIZONTAL
     }
 
-    // 第一列：选项名称（可点击）
+    // 第一列：命令名称（可点击）
     gbc.gridx = 0
     gbc.weightx = 0.0
-    val optionLabel = JBLabel(option.name).apply {
+    val optionLabel = JBLabel(command.name).apply {
         cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
         addMouseListener(object : MouseAdapter() {
             override fun mouseClicked(e: MouseEvent?) {
-                CCBarTerminalService.openTerminal(project, option, null)
+                CCBarTerminalService.openTerminal(project, command, null)
             }
         })
     }
@@ -164,27 +164,27 @@ private fun createOptionRow(project: Project, option: OptionConfig): JPanel {
     // 第二列：命令预览输入框（只读但可点击）
     gbc.gridx = 1
     gbc.weightx = 1.0  // 占用剩余空间
-    val commandPreview = JTextField(option.baseCommand).apply {
+    val commandPreview = JTextField(command.baseCommand).apply {
         editable = false
         font = FontUtil.monospaced()
         cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
-        toolTipText = "点击执行: ${option.baseCommand}"
+        toolTipText = "点击执行: ${command.baseCommand}"
         addMouseListener(object : MouseAdapter() {
             override fun mouseClicked(e: MouseEvent?) {
-                CCBarTerminalService.openTerminal(project, option, null)
+                CCBarTerminalService.openTerminal(project, command, null)
             }
         })
     }
     rowPanel.add(commandPreview, gbc)
 
-    // 第三列：子按钮面板
+    // 第三列：快捷参数面板
     gbc.gridx = 2
     gbc.weightx = 0.0
     val buttonsPanel = JPanel(FlowLayout(FlowLayout.LEFT, 4, 0)).apply {
         isOpaque = false
     }
-    for (subButton in option.subButtons) {
-        buttonsPanel.add(createSubButton(project, option, subButton, commandPreview))
+    for (quickParam in command.quickParams) {
+        buttonsPanel.add(createQuickParam(project, command, quickParam, commandPreview))
     }
     rowPanel.add(buttonsPanel, gbc)
 
@@ -200,11 +200,11 @@ private fun createOptionRow(project: Project, option: OptionConfig): JPanel {
 
 | 文件 | 修改内容 |
 |------|----------|
-| `CCBarPopupBuilder.kt` | 重构 `createOptionRow` 方法，添加命令预览输入框，修改子按钮鼠标事件 |
+| `CCBarPopupBuilder.kt` | 重构 `createOptionRow` 方法，添加命令预览输入框，修改快捷参数鼠标事件 |
 
 ### 4.2 不受影响的部分
 
-- 配置数据结构（`ButtonConfig`, `OptionConfig`, `SubButtonConfig`）
+- 配置数据结构（`CommandBarConfig`, `CommandConfig`, `QuickParamConfig`）
 - 终端服务（`CCBarTerminalService`）
 - 设置界面
 - 点击执行逻辑
@@ -215,20 +215,20 @@ private fun createOptionRow(project: Project, option: OptionConfig): JPanel {
 
 ### 5.1 功能验收
 
-- [ ] 弹出框每行显示三列：选项名称、命令预览、子按钮列表
-- [ ] 命令预览输入框初始显示 `Option.baseCommand`
-- [ ] 鼠标悬浮到子按钮时，命令预览显示完整命令
-- [ ] 鼠标离开子按钮时，命令预览恢复为基础命令
-- [ ] 点击选项名称执行基础命令
+- [ ] 弹出框每行显示三列：命令名称、命令预览、快捷参数列表
+- [ ] 命令预览输入框初始显示 `Command.baseCommand`
+- [ ] 鼠标悬浮到快捷参数时，命令预览显示完整命令
+- [ ] 鼠标离开快捷参数时，命令预览恢复为基础命令
+- [ ] 点击命令名称执行基础命令
 - [ ] **点击命令预览输入框执行基础命令**
-- [ ] 点击子按钮执行完整命令
+- [ ] 点击快捷参数执行完整命令
 
 ### 5.2 UI 验收
 
 - [ ] 命令预览输入框为只读状态（不可编辑）
 - [ ] 命令预览使用等宽字体
 - [ ] 命令预览输入框显示手型光标（表示可点击）
-- [ ] 选项名称显示手型光标（表示可点击）
+- [ ] 命令名称显示手型光标（表示可点击）
 - [ ] 布局整齐，列对齐正确
 - [ ] 响应 IDE 主题切换（亮色/暗色）
 
@@ -245,7 +245,7 @@ private fun createOptionRow(project: Project, option: OptionConfig): JPanel {
 |------|------|----------|
 | 布局在某些主题下显示异常 | 低 | 使用 JBUI 获取主题相关尺寸和颜色 |
 | 长命令导致输入框过宽 | 中 | 设置最大宽度或使用滚动 |
-| 子按钮过多导致行过高 | 低 | 已有换行机制，保持不变 |
+| 快捷参数过多导致行过高 | 低 | 已有换行机制，保持不变 |
 
 ---
 

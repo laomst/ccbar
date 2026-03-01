@@ -18,7 +18,7 @@ import javax.swing.JPanel
  * 命令预览与参数配置对话框
  * 三行布局：
  * - 第一行：终端标签名称输入框
- * - 第二行：环境变量输入框 + [...] 按钮
+ * - 第二行：环境变量输入框 + [...] CommandBar
  * - 第三行：命令输入框（可自由编辑）
  */
 class CommandPreviewDialog(
@@ -119,7 +119,7 @@ class CommandPreviewDialog(
         gbc.anchor = GridBagConstraints.EAST
         panel.add(JBLabel("环境变量:"), gbc)
 
-        // 环境变量输入框 + [...] 按钮组合
+        // 环境变量输入框 + [...] CommandBar组合
         val envPanel = JPanel(GridBagLayout())
         val envGbc = GridBagConstraints().apply {
             fill = GridBagConstraints.HORIZONTAL

@@ -4,13 +4,13 @@
 
 ### 1.1 当前实现
 
-当前点击 Option 或 SubButton 后，会弹出一个简单的 `Messages.showInputDialog` 对话框，仅支持：
+当前点击 Option 或 QuickParam 后，会弹出一个简单的 `Messages.showInputDialog` 对话框，仅支持：
 - 输入终端标签页名称
 - 默认名称来自 `Option.defaultTerminalName` 或 `Button.defaultTerminalName`
 
 代码位置：`CCBarTerminalService.kt`
 ```kotlin
-private fun showNameDialog(project: Project, option: OptionConfig): String? {
+private fun showNameDialog(project: Project, option: CommandConfig): String? {
     return Messages.showInputDialog(
         project,
         "请输入终端标签名称：",
@@ -165,7 +165,7 @@ override fun createCenterPanel(): JComponent {
 
 ### 4.3 不受影响的部分
 
-- 配置数据结构（`ButtonConfig`, `OptionConfig`, `SubButtonConfig`）
+- 配置数据结构（`CommandBarConfig`, `CommandConfig`, `QuickParamConfig`）
 - 设置界面
 - 终端创建逻辑（`createTerminalWidget`, `executeCommandOnWidget`）
 - 弹出菜单（`CCBarPopupBuilder`）

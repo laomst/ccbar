@@ -26,15 +26,15 @@
 
 ### 2.1 数据模型变更
 
-在 `OptionConfig` 和 `ButtonConfig` 中新增 `envVariables` 字段：
+在 `CommandConfig` 和 `CommandBarConfig` 中新增 `envVariables` 字段：
 
 ```kotlin
-data class OptionConfig(
+data class CommandConfig(
     // ... 现有字段 ...
     var envVariables: String = ""  // 环境变量，格式 "KEY1=val1;KEY2=val2"
 )
 
-data class ButtonConfig(
+data class CommandBarConfig(
     // ... 现有字段 ...
     var envVariables: String = ""  // 环境变量，格式 "KEY1=val1;KEY2=val2"
 )
@@ -87,7 +87,7 @@ data class ButtonConfig(
 └──────────────────────────────────────────────────────┘
 ```
 
-- 使用 `JBTable` + `ToolbarDecorator`（与 SubButton 表格风格一致）
+- 使用 `JBTable` + `ToolbarDecorator`（与 QuickParam 表格风格一致）
 - 两列：变量名、值，均可直接编辑
 - 支持添加、删除、上移、下移操作
 - 点击"确定"后将表格数据序列化为 `KEY1=val1;KEY2=val2` 格式回写到 `envVariables` 字段
@@ -244,7 +244,7 @@ val envVariables: String  // 获取环境变量（可能被用户在弹框中修
 
 ```kotlin
 // openTerminal 方法
-fun openTerminal(project: Project, option: OptionConfig, subButton: SubButtonConfig?) {
+fun openTerminal(project: Project, option: CommandConfig, subButton: QuickParamConfig?) {
     val baseCommand = buildCommand(option, subButton)
     val dialog = CommandPreviewDialog(
         project, baseCommand, option.defaultTerminalName,
@@ -265,7 +265,7 @@ fun openTerminal(project: Project, option: OptionConfig, subButton: SubButtonCon
 
 | 文件 | 修改内容 |
 |------|----------|
-| `CCBarSettings.kt` | `OptionConfig` 和 `ButtonConfig` 增加 `envVariables` 字段及 deepCopy |
+| `CCBarSettings.kt` | `CommandConfig` 和 `CommandBarConfig` 增加 `envVariables` 字段及 deepCopy |
 | `CCBarSettingsPanel.kt` | Option 详情和 Button 详情中添加环境变量行 UI |
 | `CommandPreviewDialog.kt` | 增加环境变量行（展示 + 编辑入口） |
 | `CCBarTerminalService.kt` | 命令执行前拼接环境变量 |
