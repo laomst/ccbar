@@ -60,8 +60,7 @@ object BuiltinIconSelector {
                         try {
                             field.isAccessible = true
                             val icon = field.get(null) as? Icon ?: continue
-                            val resourcePath = CCBarIcons.fieldPathToResourcePath("$prefix${field.name}")
-                            val path = "builtin:$resourcePath"
+                            val path = "builtin:$prefix${field.name}"
                             icons.add(Triple(field.name, path, icon))
                         } catch (e: Exception) {
                             // 忽略无法访问的字段

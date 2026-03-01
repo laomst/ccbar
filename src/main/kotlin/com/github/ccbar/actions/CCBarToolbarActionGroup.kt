@@ -59,12 +59,12 @@ class CCBarToolbarActionGroup : ActionGroup(), DumbAware {
             val projectSettings = CCBarProjectSettings.getInstance(project)
             val projectButtons = projectSettings.getEffectiveCommandBars()
             if (projectButtons != null) {
-                return projectButtons
+                return projectButtons.filter { it.enabled }
             }
         }
 
         // 使用系统配置
         val systemSettings = CCBarSettings.getInstance()
-        return systemSettings.state.commandBars
+        return systemSettings.state.commandBars.filter { it.enabled }
     }
 }

@@ -35,8 +35,9 @@ CommandBar（工具栏按钮）
   - **直接命令模式**：CommandBar 绑定 command 字段，点击后直接执行命令（不弹出菜单）
   - **命令列表模式**：CommandBar 不绑定 command，点击后弹出 Command 列表
     - **简易模式**（可选）：开启后弹出菜单仅显示命令名称，不展示命令预览和快捷参数
-- **Command**：按钮下的命令分组，绑定基础命令（baseCommand）和可选的工作目录。**点击 Command 本身直接执行 baseCommand（不带参数）**。
-- **QuickParam**：命令下的快捷参数，绑定参数文本（params）。点击后执行 Command.baseCommand + params。params 为纯文本，第一阶段不支持变量替换。
+  - 支持禁用（`enabled = false`），禁用后数据保留但工具栏不显示该按钮
+- **Command**：按钮下的命令分组，绑定基础命令（baseCommand）和可选的工作目录。**点击 Command 本身直接执行 baseCommand（不带参数）**。支持禁用，禁用后弹出菜单不显示该命令。
+- **QuickParam**：命令下的快捷参数，绑定参数文本（params）。点击后执行 Command.baseCommand + params。params 为纯文本，第一阶段不支持变量替换。支持禁用，禁用后弹出菜单不显示该快捷参数。
 
 ### 2.2 CommandBar 模式切换
 
@@ -46,7 +47,7 @@ CommandBar（工具栏按钮）
 | 命令列表模式 | `CommandBar.command` 为空 | 弹出 Command 列表 |
 | 命令列表模式（简易） | `CommandBar.command` 为空且 `simpleMode = true` | 弹出仅含名称的 Command 列表 |
 
-**按钮启用条件**：`command` 不为空 OR `commands` 不为空
+**按钮启用条件**：`command` 不为空 OR 存在启用的普通 Command（`enabled = true` 且非分割线）
 
 ---
 
@@ -396,17 +397,18 @@ CommandBar（工具栏按钮）
 │  ┌─────────────────────┐  ┌───────────────────────────────────────────────────┐ │
 │  │ Toolbar Buttons     │  │ CommandBar Details                               │ │
 │  │                     │  │                                                   │ │
-│  │ ▶ Claude Code       │  │ Name:       [Claude Code                    ]   │ │
+│  │ ▶ Claude Code       │  │ Name:       [Claude Code               ] [✓] 启用 │ │
 │  │   Dev Tools         │  │ Icon:       [Browse...                      ]   │ │
-│  │                     │  │ Command:    [                              ]   │ │
-│  │ [+][-][↑][↓]       │  │ [✓] 简易模式                                    │ │
-│  └─────────────────────┘  │ ─────────────────────────────────────────────────  │ │
+│  │ [+][-][↑][↓]       │  │ Command:    [                              ]   │ │
+│  └─────────────────────┘  │ [✓] 简易模式                                    │ │
+│                           │ ─────────────────────────────────────────────────  │ │
 │                           │ Commands (分组)                                  │ │
 │  ┌─────────────────────┐  │                                                   │ │
 │  │ Commands            │  │ ┌──────────────────────────────────────────────┐ │ │
 │  │                     │  │ │ Command: Model                              │ │ │
-│  │ ▶ Model             │  │ │ Icon:              [Browse...          ]   │ │ │
-│  │   Workspace         │  │ │ Base Command:      [claude              ]   │ │ │
+│  │ ▶ Model             │  │ │ Name: [Model                    ] [✓] 启用 │ │ │
+│  │   Workspace         │  │ │ Icon:              [Browse...          ]   │ │ │
+│  │                     │  │ │ Base Command:      [claude              ]   │ │ │
 │  │                     │  │ │ Term Name: [Claude - Model              ]   │ │ │
 │  │ [+][-][↑][↓]       │  │ │ [ ] 在编辑器中打开                          │ │ │
 │  └─────────────────────┘  │ │     默认通过终端工具窗口打开                 │ │ │
@@ -429,9 +431,9 @@ CommandBar（工具栏按钮）
 │  ┌─────────────────────┐  ┌───────────────────────────────────────────────────┐ │
 │  │ Toolbar Buttons     │  │ CommandBar Details                               │ │
 │  │                     │  │                                                   │ │
-│  │   Claude Code       │  │ Name:       [NPM Test                       ]   │ │
+│  │   Claude Code       │  │ Name:       [NPM Test                ] [✓] 启用 │ │
 │  │ ▶ NPM Test          │  │ Icon:       [Browse...                      ]   │ │
-│  │   Dev Tools         │  │ Command:    [npm test                       ]   │ │
+│  │   Dev Tools         │  │ Icon:       [Browse...                      ]   │ │
 │  │                     │  │ Term Name:  [NPM Test                       ]   │ │
 │  │ [+][-][↑][↓]       │  │ [ ] 在编辑器中打开                              │ │
 │  └─────────────────────┘  │     默认通过终端工具窗口打开                     │ │
@@ -504,7 +506,12 @@ CommandBar（工具栏按钮）
 
 **模式互斥规则**：
 - 直接命令模式（CommandBar.command 不为空）：Commands 配置被忽略
-- 命令列表模式（CommandBar.command 为空）：必须至少有一个 Command
+- 命令列表模式（CommandBar.command 为空）：必须至少有一个启用的 Command
+
+**禁用项验证规则**：
+- 禁用的 CommandBar 跳过内容验证（仅验证名称和唯一性）
+- 禁用的 Command 跳过必填字段验证
+- 禁用的 QuickParam 跳过验证
 
 ---
 
@@ -540,7 +547,8 @@ data class CommandBarConfig(
     var defaultTerminalName: String = "",  // 直接命令模式的默认终端名称
     var terminalMode: String = "",  // 终端打开模式：""=工具窗口, "editor"=编辑器
     var simpleMode: Boolean = false,  // 简易模式：仅显示命令名称，隐藏命令预览和快捷参数
-    var commands: List<CommandConfig> = emptyList()
+    var commands: List<CommandConfig> = emptyList(),
+    var enabled: Boolean = true  // 是否启用，禁用后工具栏不显示该按钮
 )
 
 data class CommandConfig(
@@ -551,14 +559,16 @@ data class CommandConfig(
     var defaultTerminalName: String = "",  // 命名弹窗中的默认终端名称
     var quickParams: List<QuickParamConfig> = emptyList(),
     var type: String = "",  // 可选，空值或"command"=普通命令, "separator"=分割线
-    var terminalMode: String = ""  // 终端打开模式：""=工具窗口, "editor"=编辑器
+    var terminalMode: String = "",  // 终端打开模式：""=工具窗口, "editor"=编辑器
+    var enabled: Boolean = true  // 是否启用，禁用后弹出菜单不显示该命令
 )
 
 data class QuickParamConfig(
     var id: String = "",
     var name: String = "",
     var params: String = "",
-    var icon: String = ""  // 可选，支持自定义快捷参数图标
+    var icon: String = "",  // 可选，支持自定义快捷参数图标
+    var enabled: Boolean = true  // 是否启用，禁用后弹出菜单不显示该快捷参数
 )
 ```
 

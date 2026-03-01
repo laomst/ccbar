@@ -108,6 +108,13 @@ class CCBarSettingsPanel(private val project: Project?) {
     private lateinit var simpleModePanel: JComponent
     private lateinit var simpleModeCheckbox: JCheckBox
 
+    // Button 启用复选框
+    private lateinit var buttonEnabledCheckbox: JCheckBox
+
+    // Command 启用复选框
+    private lateinit var optionEnabledCheckbox: JCheckBox
+    private lateinit var optionEnabledPanel: JComponent
+
     // Options 面板引用（用于控制显示/隐藏）
     private lateinit var optionPanel: JComponent
 
@@ -547,7 +554,17 @@ class CCBarSettingsPanel(private val project: Project?) {
             border = BorderFactory.createTitledBorder("CommandBar 详情")
         }
 
-        // Name 字段
+        // 启用复选框
+        buttonEnabledCheckbox = JCheckBox("启用").apply {
+            addActionListener {
+                if (!ignoreUpdate) {
+                    selectedCommandBar?.enabled = isSelected
+                    buttonList.repaint()
+                }
+            }
+        }
+
+        // Name 字段 + 启用复选框（同一行）
         val namePanel = JPanel(BorderLayout())
         namePanel.add(JLabel("名称:"), BorderLayout.WEST)
         buttonNameField = JBTextField().apply {
@@ -558,6 +575,7 @@ class CCBarSettingsPanel(private val project: Project?) {
             })
         }
         namePanel.add(buttonNameField, BorderLayout.CENTER)
+        namePanel.add(buttonEnabledCheckbox, BorderLayout.EAST)
         panel.add(namePanel)
 
         // Icon 字段（包含输入框 + 内置图标下拉CommandBar + 文件浏览CommandBar）
@@ -566,7 +584,7 @@ class CCBarSettingsPanel(private val project: Project?) {
 
         // 创建带文件浏览的输入框
         buttonIconField = TextFieldWithBrowseButton().apply {
-            (textField as? JBTextField)?.emptyText?.text = "builtin:/actions/execute.svg"
+            (textField as? JBTextField)?.emptyText?.text = "builtin:AllIcons.Actions.Execute"
             textField.document.addDocumentListener(object : DocumentListener {
                 override fun insertUpdate(e: DocumentEvent?) = updateButtonIcon()
                 override fun removeUpdate(e: DocumentEvent?) = updateButtonIcon()
@@ -825,7 +843,18 @@ class CCBarSettingsPanel(private val project: Project?) {
             border = optionDetailTitledBorder
         }
 
-        // Name（始终显示）
+        // 启用复选框（仅普通 Command显示，分割线不显示）
+        optionEnabledCheckbox = JCheckBox("启用").apply {
+            addActionListener {
+                if (!ignoreUpdate) {
+                    selectedCommand?.enabled = isSelected
+                    optionList.repaint()
+                }
+            }
+        }
+        optionEnabledPanel = optionEnabledCheckbox
+
+        // Name（始终显示）+ 启用复选框（同一行）
         val namePanel = JPanel(BorderLayout())
         namePanel.add(JLabel("名称:"), BorderLayout.WEST)
         optionNameField = JBTextField().apply {
@@ -836,13 +865,14 @@ class CCBarSettingsPanel(private val project: Project?) {
             })
         }
         namePanel.add(optionNameField, BorderLayout.CENTER)
+        namePanel.add(optionEnabledCheckbox, BorderLayout.EAST)
         panel.add(namePanel)
 
         // Icon（仅普通 Command显示）
         optionIconPanel = JPanel(BorderLayout())
         optionIconPanel.add(JLabel("图标:"), BorderLayout.WEST)
         optionIconField = TextFieldWithBrowseButton().apply {
-            (textField as? JBTextField)?.emptyText?.text = "builtin:/actions/execute.svg"
+            (textField as? JBTextField)?.emptyText?.text = "builtin:AllIcons.Actions.Execute"
             textField.document.addDocumentListener(object : DocumentListener {
                 override fun insertUpdate(e: DocumentEvent?) = updateOptionIcon()
                 override fun removeUpdate(e: DocumentEvent?) = updateOptionIcon()
@@ -1115,7 +1145,7 @@ class CCBarSettingsPanel(private val project: Project?) {
         val newButton = CommandBarConfig(
             id = UUID.randomUUID().toString(),
             name = "New CommandBar",
-            icon = "builtin:/actions/execute.svg"
+            icon = "builtin:AllIcons.Actions.Execute"
         )
         buttonListModel.add(newButton)
         editingState.commandBars.add(newButton)
@@ -1207,6 +1237,7 @@ class CCBarSettingsPanel(private val project: Project?) {
         ignoreUpdate = true
         try {
             val button = selectedCommandBar ?: return
+            buttonEnabledCheckbox.isSelected = button.enabled
             buttonNameField.text = button.name
             buttonIconField.text = button.icon
             buttonCommandField.text = button.command
@@ -1228,6 +1259,7 @@ class CCBarSettingsPanel(private val project: Project?) {
     private fun clearButtonDetail() {
         ignoreUpdate = true
         try {
+            buttonEnabledCheckbox.isSelected = true
             buttonNameField.text = ""
             buttonIconField.text = ""
             buttonCommandField.text = ""
@@ -1253,7 +1285,7 @@ class CCBarSettingsPanel(private val project: Project?) {
     private fun updateButtonIcon() {
         if (ignoreUpdate) return
         val text = buttonIconField.text
-        selectedCommandBar?.icon = if (text.isBlank()) "builtin:/actions/execute.svg" else text
+        selectedCommandBar?.icon = if (text.isBlank()) "builtin:AllIcons.Actions.Execute" else text
         // 同步更新列表中的图标显示
         buttonList.repaint()
     }
@@ -1640,6 +1672,9 @@ class CCBarSettingsPanel(private val project: Project?) {
         if (!optionDetailOuterPanel.isVisible) {
             optionDetailOuterPanel.isVisible = true
         }
+        if (optionEnabledPanel.isVisible) {
+            optionEnabledPanel.isVisible = false
+        }
         if (optionIconPanel.isVisible) {
             optionIconPanel.isVisible = false
         }
@@ -1676,6 +1711,9 @@ class CCBarSettingsPanel(private val project: Project?) {
         if (!optionDetailOuterPanel.isVisible) {
             optionDetailOuterPanel.isVisible = true
         }
+        if (!optionEnabledPanel.isVisible) {
+            optionEnabledPanel.isVisible = true
+        }
         if (!optionIconPanel.isVisible) {
             optionIconPanel.isVisible = true
         }
@@ -1711,6 +1749,7 @@ class CCBarSettingsPanel(private val project: Project?) {
         try {
             val option = selectedCommand ?: return
             optionNameField.text = option.name
+            optionEnabledCheckbox.isSelected = option.enabled
             optionIconField.text = option.icon
             baseCommandField.text = option.baseCommand
             optionEnvVariablesField.text = option.envVariables
@@ -1728,6 +1767,7 @@ class CCBarSettingsPanel(private val project: Project?) {
         ignoreUpdate = true
         try {
             optionNameField.text = ""
+            optionEnabledCheckbox.isSelected = true
             optionIconField.text = ""
             baseCommandField.text = ""
             optionEnvVariablesField.text = ""
@@ -1750,7 +1790,7 @@ class CCBarSettingsPanel(private val project: Project?) {
     private fun updateOptionIcon() {
         if (ignoreUpdate) return
         val text = optionIconField.text
-        selectedCommand?.icon = if (text.isBlank()) "builtin:/actions/execute.svg" else text
+        selectedCommand?.icon = if (text.isBlank()) "builtin:AllIcons.Actions.Execute" else text
         optionList.repaint()
     }
 
@@ -1783,7 +1823,7 @@ class CCBarSettingsPanel(private val project: Project?) {
 
     private fun updateQuickParamSummary() {
         if (::quickParamSummaryField.isInitialized) {
-            val names = selectedCommand?.quickParams?.map { it.name } ?: emptyList()
+            val names = selectedCommand?.quickParams?.filter { it.enabled }?.map { it.name } ?: emptyList()
             quickParamSummaryField.text = if (names.isEmpty()) "" else names.joinToString(" | ")
         }
     }
@@ -1956,6 +1996,9 @@ class CCBarSettingsPanel(private val project: Project?) {
                 errors.add("CommandBar '${button.name}': 名称重复")
             }
 
+            // 禁用的 CommandBar 跳过内容验证
+            if (!button.enabled) continue
+
             // 直接命令模式验证
             if (button.isDirectCommandMode()) {
                 if (button.defaultTerminalName.isBlank()) {
@@ -1964,21 +2007,24 @@ class CCBarSettingsPanel(private val project: Project?) {
                 // 直接命令模式下不验证 Options
             } else {
                 // Command 列表模式验证
-                // 过滤掉分割线，只计算普通 Command
-                val normalOptions = button.commands.filter { !it.isSeparator() }
-                if (normalOptions.isEmpty()) {
-                    errors.add("CommandBar '${button.name}': 未配置直接命令时，必须至少有一个普通 Command")
+                // 过滤掉分割线，只计算启用的普通 Command
+                val enabledNormalOptions = button.commands.filter { !it.isSeparator() && it.enabled }
+                if (enabledNormalOptions.isEmpty()) {
+                    errors.add("CommandBar '${button.name}': 未配置直接命令时，必须至少有一个启用的普通 Command")
                 }
 
                 for ((optionIndex, option) in button.commands.withIndex()) {
                     // 跳过分割线类型的验证
                     if (option.isSeparator()) continue
 
+                    // 禁用的 Command 跳过必填字段验证
+                    if (!option.enabled) continue
+
                     if (option.name.isBlank()) {
                         errors.add("CommandBar '${button.name}' Command ${optionIndex + 1}: 名称不能为空")
                     }
-                    // 只检查普通 Command的名称重复
-                    if (normalOptions.count { it.name == option.name } > 1) {
+                    // 只检查启用的普通 Command的名称重复
+                    if (enabledNormalOptions.count { it.name == option.name } > 1) {
                         errors.add("CommandBar '${button.name}' Command '${option.name}': 名称重复")
                     }
                     if (option.baseCommand.isBlank()) {
@@ -1989,10 +2035,13 @@ class CCBarSettingsPanel(private val project: Project?) {
                     }
 
                     for ((quickParamIndex, quickParam) in option.quickParams.withIndex()) {
+                        // 禁用的 QuickParam 跳过验证
+                        if (!quickParam.enabled) continue
+
                         if (quickParam.name.isBlank()) {
                             errors.add("CommandBar '${button.name}' Command '${option.name}' QuickParam ${quickParamIndex + 1}: 名称不能为空")
                         }
-                        if (option.quickParams.count { it.name == quickParam.name } > 1) {
+                        if (option.quickParams.filter { it.enabled }.count { it.name == quickParam.name } > 1) {
                             errors.add("CommandBar '${button.name}' Command '${option.name}' QuickParam '${quickParam.name}': 名称重复")
                         }
                     }
@@ -2061,6 +2110,9 @@ class CCBarSettingsPanel(private val project: Project?) {
             if (value is CommandBarConfig) {
                 text = value.name
                 icon = CCBarIcons.loadIcon(value.icon)
+                if (!value.enabled && !isSelected) {
+                    foreground = com.intellij.ui.JBColor.GRAY
+                }
             }
             return component as JComponent
         }
@@ -2084,6 +2136,9 @@ class CCBarSettingsPanel(private val project: Project?) {
             if (value is CommandConfig) {
                 text = value.name
                 icon = if (value.icon.isNotBlank()) CCBarIcons.loadIcon(value.icon) else null
+                if (!value.enabled && !isSelected) {
+                    foreground = com.intellij.ui.JBColor.GRAY
+                }
             }
             return component as JComponent
         }

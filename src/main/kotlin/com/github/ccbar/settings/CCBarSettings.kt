@@ -55,7 +55,7 @@ class CCBarSettings : PersistentStateComponent<CCBarSettings.State> {
             CommandBarConfig(
                 id = "claude-code-default",
                 name = "Claude Code",
-                icon = "builtin:/actions/execute.svg",
+                icon = "builtin:AllIcons.Actions.Execute",
                 commands = mutableListOf(
                     CommandConfig(
                         id = "model",
@@ -109,7 +109,8 @@ data class QuickParamConfig(
     var id: String = "",
     var name: String = "",
     var params: String = "",
-    var icon: String = ""
+    var icon: String = "",
+    var enabled: Boolean = true
 ) {
     /**
      * 深拷贝
@@ -118,7 +119,8 @@ data class QuickParamConfig(
         id = id,
         name = name,
         params = params,
-        icon = icon
+        icon = icon,
+        enabled = enabled
     )
 }
 
@@ -146,14 +148,15 @@ object CommandType {
 data class CommandConfig(
     var id: String = "",
     var name: String = "",
-    var icon: String = "builtin:/actions/execute.svg",
+    var icon: String = "builtin:AllIcons.Actions.Execute",
     var baseCommand: String = "",
     var envVariables: String = "",
     var workingDirectory: String = "",
     var defaultTerminalName: String = "",
     var quickParams: MutableList<QuickParamConfig> = mutableListOf(),
     var type: String = "",  // 空值或"option"=普通 Command, "separator"=分割线
-    var terminalMode: String = ""  // 终端打开模式：""=工具窗口, "editor"=编辑器
+    var terminalMode: String = "",  // 终端打开模式：""=工具窗口, "editor"=编辑器
+    var enabled: Boolean = true
 ) {
     /**
      * 深拷贝
@@ -168,7 +171,8 @@ data class CommandConfig(
         defaultTerminalName = defaultTerminalName,
         quickParams = quickParams.map { it.deepCopy() }.toMutableList(),
         type = type,
-        terminalMode = terminalMode
+        terminalMode = terminalMode,
+        enabled = enabled
     )
 
     /**
@@ -199,7 +203,8 @@ data class CommandBarConfig(
     var defaultTerminalName: String = "",  // 直接命令模式的默认终端名称
     var terminalMode: String = "",  // 终端打开模式：""=工具窗口, "editor"=编辑器
     var simpleMode: Boolean = false,  // 简易模式：仅显示Command名称，隐藏命令预览和快捷参数
-    var commands: MutableList<CommandConfig> = mutableListOf()
+    var commands: MutableList<CommandConfig> = mutableListOf(),
+    var enabled: Boolean = true
 ) {
     /**
      * 深拷贝
@@ -214,7 +219,8 @@ data class CommandBarConfig(
         defaultTerminalName = defaultTerminalName,
         terminalMode = terminalMode,
         simpleMode = simpleMode,
-        commands = commands.map { it.deepCopy() }.toMutableList()
+        commands = commands.map { it.deepCopy() }.toMutableList(),
+        enabled = enabled
     )
 
     /**

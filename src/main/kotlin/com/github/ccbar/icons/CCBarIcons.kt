@@ -16,9 +16,8 @@ import com.intellij.openapi.util.IconLoader
  * CCBar 图标管理工具
  * 支持加载 IDEA 内置图标和自定义 SVG/PNG/ICO 文件
  *
- * 内置图标持久化格式为 SVG 资源路径：`builtin:/actions/execute.svg`
- * 加载时使用 IconLoader.getIcon(path, AllIcons::class.java)
- * 兼容旧格式 `builtin:AllIcons.Actions.Execute`，加载时自动转换
+ * 内置图标持久化格式为字段路径：`builtin:AllIcons.Actions.Execute`
+ * 加载时通过反射访问 AllIcons 静态字段
  */
 object CCBarIcons {
 
@@ -32,7 +31,7 @@ object CCBarIcons {
      * 加载图标
      *
      * @param iconPath 图标路径
-     *   - 内置图标：`builtin:/actions/execute.svg`（兼容旧格式 `builtin:AllIcons.Actions.Execute`）
+     *   - 内置图标：`builtin:AllIcons.Actions.Execute`
      *   - 自定义文件：`file:/path/to/icon.svg` 或直接文件路径
      * @return 加载的图标，失败时返回默认图标
      */
@@ -63,44 +62,44 @@ object CCBarIcons {
     }
 
     /**
-     * 将字段路径转换为 SVG 资源路径
+     * 加载 IDEA 内置图标
      *
-     * 规则：跳过 AllIcons 前缀，中间类名首字母小写作为目录，末尾字段名首字母小写 + .svg
-     * 例: AllIcons.Actions.Execute → /actions/execute.svg
-     *     AllIcons.Debugger.Db.Foo → /debugger/db/foo.svg
+     * 格式：AllIcons.Actions.Execute（字段路径），通过反射访问 AllIcons 静态字段
      */
-    internal fun fieldPathToResourcePath(fieldPath: String): String {
-        val parts = fieldPath.split(".")
-        // 跳过 "AllIcons" 前缀（如果存在）
-        val startIndex = if (parts.firstOrNull() == "AllIcons") 1 else 0
-        val segments = parts.subList(startIndex, parts.size).map { segment ->
-            segment.replaceFirstChar { it.lowercase() }
+    private fun loadBuiltinIcon(path: String): Icon {
+        if (!path.startsWith("AllIcons.")) {
+            LOG.warn("CCBar: 无法识别的内置图标路径格式: $path")
+            return getDefaultIcon()
         }
-        return "/" + segments.joinToString("/") + ".svg"
+
+        return try {
+            loadIconByReflection(path)
+        } catch (e: Exception) {
+            LOG.warn("CCBar: 反射加载内置图标失败: $path", e)
+            getDefaultIcon()
+        }
     }
 
     /**
-     * 加载 IDEA 内置图标
+     * 通过反射访问 AllIcons 静态字段获取图标
      *
-     * 支持两种格式：
-     * - 新格式（SVG 资源路径）：以 "/" 开头，如 /actions/execute.svg
-     * - 旧格式（字段路径）：以 "AllIcons." 开头，如 AllIcons.Actions.Execute，自动转换后加载
+     * @param fieldPath 字段路径，如 AllIcons.Actions.Execute
      */
-    private fun loadBuiltinIcon(path: String): Icon {
-        return try {
-            val resourcePath = when {
-                path.startsWith("/") -> path
-                path.startsWith("AllIcons.") -> fieldPathToResourcePath(path)
-                else -> {
-                    LOG.warn("CCBar: 无法识别的内置图标路径格式: $path")
-                    return getDefaultIcon()
-                }
-            }
-            IconLoader.getIcon(resourcePath, AllIcons::class.java)
-        } catch (e: Exception) {
-            LOG.warn("CCBar: 加载内置图标失败: $path", e)
-            getDefaultIcon()
+    private fun loadIconByReflection(fieldPath: String): Icon {
+        val parts = fieldPath.split(".")
+        val startIndex = if (parts.firstOrNull() == "AllIcons") 1 else 0
+
+        // 逐层查找内部类
+        var clazz: Class<*> = AllIcons::class.java
+        for (i in startIndex until parts.size - 1) {
+            clazz = clazz.declaredClasses.find { it.simpleName == parts[i] }
+                ?: throw IllegalArgumentException("内部类 ${parts[i]} 不存在于 ${clazz.name}")
         }
+
+        // 获取静态字段
+        val field = clazz.getDeclaredField(parts.last())
+        field.isAccessible = true
+        return field.get(null) as Icon
     }
 
     /**
@@ -366,15 +365,13 @@ object CCBarIcons {
     }
 
     fun getCommonBuiltinIcons(): List<Pair<String, String>> = listOf(
-        "Execute" to "builtin:/actions/execute.svg",
-        "Run" to "builtin:/actions/run.svg",
-        "Build" to "builtin:/actions/build.svg",
-        "Compile" to "builtin:/actions/compile.svg",
-        "Refresh" to "builtin:/actions/refresh.svg",
-        "Gear" to "builtin:/actions/gear.svg",
-        "Settings" to "builtin:/general/settings.svg",
-        "ToolWindowTerminal" to "builtin:/toolWindowToolWindow.svg",
-        "Console" to "builtin:/actions/console.svg",
-        "Lightning" to "builtin:/actions/lightning.svg"
+        "Execute" to "builtin:AllIcons.Actions.Execute",
+        "Run" to "builtin:AllIcons.Actions.Run_anything",
+        "Build" to "builtin:AllIcons.Actions.Compile",
+        "Compile" to "builtin:AllIcons.Actions.Compile",
+        "Refresh" to "builtin:AllIcons.Actions.Refresh",
+        "Settings" to "builtin:AllIcons.General.Settings",
+        "Console" to "builtin:AllIcons.Debugger.Console",
+        "Lightning" to "builtin:AllIcons.Actions.Lightning"
     )
 }

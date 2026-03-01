@@ -57,7 +57,7 @@ class CCBarCommandBarAction(
     override fun update(e: AnActionEvent) {
         e.presentation.text = commandBarConfig.name
         e.presentation.icon = CCBarIcons.loadIcon(commandBarConfig.icon, e.project)
-        // 启用条件：直接命令不为空 OR Command 列表不为空
-        e.presentation.isEnabled = commandBarConfig.command.isNotBlank() || commandBarConfig.commands.isNotEmpty()
+        // 启用条件：直接命令不为空 OR 有启用的普通 Command
+        e.presentation.isEnabled = commandBarConfig.command.isNotBlank() || commandBarConfig.commands.any { it.enabled && it.isCommand() }
     }
 }

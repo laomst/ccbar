@@ -41,11 +41,14 @@ object CCBarPopupBuilder {
     // 命令预览最大宽度
     private const val MAX_PREVIEW_WIDTH = 400
 
+    // 标题最小宽度
+    private const val MIN_LABEL_WIDTH = 200
+
     // 第一行高度
     private const val ROW_HEIGHT = 28
 
     // 第二行高度（快捷参数行，小号文字）
-    private const val QUICK_PARAM_ROW_HEIGHT = 22
+    private const val QUICK_PARAM_ROW_HEIGHT = 18
 
     // 悬浮高亮圆角半径
     private const val HOVER_ARC = 8
@@ -97,6 +100,8 @@ object CCBarPopupBuilder {
         for (option in commandBarConfig.commands) {
             if (option.isSeparator()) {
                 mainPanel.add(createSeparatorRow(option))
+            } else if (!option.enabled) {
+                continue
             } else if (simpleMode) {
                 val row = createSimpleCommandRow(project, option, labelWidth) { popup.closeOk(null) }
                 mainPanel.add(row)
@@ -171,10 +176,10 @@ object CCBarPopupBuilder {
      */
     private fun calculateMaxLabelWidth(commandBarConfig: CommandBarConfig): Int {
         val fontMetrics = JBLabel().getFontMetrics(JBLabel().font)
-        var maxWidth = 60 // 最小宽度
+        var maxWidth = MIN_LABEL_WIDTH // 最小宽度
 
         for (option in commandBarConfig.commands) {
-            if (!option.isSeparator()) {
+            if (!option.isSeparator() && option.enabled) {
                 val textWidth = fontMetrics.stringWidth(option.name)
                 val iconWidth = if (option.icon.isNotBlank()) 16 + 4 else 0  // 图标宽度 + 间距
                 val totalWidth = textWidth + iconWidth + 16
@@ -195,11 +200,11 @@ object CCBarPopupBuilder {
         var maxWidth = 0
 
         for (option in commandBarConfig.commands) {
-            if (!option.isSeparator()) {
+            if (!option.isSeparator() && option.enabled) {
                 // 计算基础命令宽度
                 var textWidth = fontMetrics.stringWidth(option.baseCommand)
                 // 同时考虑带参数的完整命令宽度
-                for (quickParam in option.quickParams) {
+                for (quickParam in option.quickParams.filter { it.enabled }) {
                     val fullCommand = buildFullCommand(option.baseCommand, quickParam.params)
                     val fullWidth = fontMetrics.stringWidth(fullCommand)
                     if (fullWidth > textWidth) {
@@ -316,7 +321,7 @@ object CCBarPopupBuilder {
 
         // 命令预览标签（需要被快捷参数 hover 更新）
         val commandPreview = JBLabel(option.baseCommand).apply {
-            icon = com.github.ccbar.icons.CCBarIcons.loadIcon("builtin:/debugger/executeCurrentStatement.svg")
+            icon = com.github.ccbar.icons.CCBarIcons.loadIcon("builtin:AllIcons.Debugger.ExecuteCurrentStatement")
             preferredSize = Dimension(previewWidth, ROW_HEIGHT)
             horizontalAlignment = SwingConstants.LEFT
             foreground = PREVIEW_FOREGROUND
@@ -339,20 +344,21 @@ object CCBarPopupBuilder {
         firstRow.add(optionLabel)
         hoverPanel.add(firstRow)
 
-        // 第二行：快捷参数列表（仅在有快捷参数时显示）
-        if (option.quickParams.isNotEmpty()) {
-            val secondRow = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
+        // 第二行：快捷参数列表（仅在有启用的快捷参数时显示）
+        val enabledQuickParams = option.quickParams.filter { it.enabled }
+        if (enabledQuickParams.isNotEmpty()) {
+            val secondRow = JPanel(FlowLayout(FlowLayout.RIGHT, 0, 0)).apply {
                 isOpaque = false
-                border = JBUI.Borders.emptyLeft(4)
+                border = JBUI.Borders.emptyTop(-4)
             }
 
-            for ((index, quickParam) in option.quickParams.withIndex()) {
+            for ((index, quickParam) in enabledQuickParams.withIndex()) {
                 val btn = createQuickParamLabel(project, option, quickParam, commandPreview, onClose)
                 secondRow.add(btn)
-                if (index < option.quickParams.size - 1) {
+                if (index < enabledQuickParams.size - 1) {
                     val separator = JBLabel("|").apply {
                         foreground = QUICK_PARAM_SEPARATOR_COLOR
-                        font = font.deriveFont(font.size2D - 2f)
+                        font = font.deriveFont(font.size2D - 1f)
                         preferredSize = Dimension(preferredSize.width, QUICK_PARAM_ROW_HEIGHT)
                     }
                     secondRow.add(separator)
@@ -379,7 +385,7 @@ object CCBarPopupBuilder {
         val fullCommand = buildFullCommand(option.baseCommand, quickParam.params)
 
         return JBLabel(quickParam.name).apply {
-            font = font.deriveFont(font.size2D - 2f)
+            font = font.deriveFont(font.size2D - 1f)
             foreground = QUICK_PARAM_FOREGROUND
             cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
             toolTipText = "执行: $fullCommand"
