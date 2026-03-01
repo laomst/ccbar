@@ -5,23 +5,19 @@ import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBTextField
 import com.intellij.util.ui.JBUI
-import java.awt.BorderLayout
 import java.awt.Dimension
-import java.awt.FlowLayout
 import java.awt.GridBagConstraints
 import java.awt.GridBagLayout
 import java.awt.Insets
 import javax.swing.JCheckBox
 import javax.swing.JComponent
-import javax.swing.JLabel
 import javax.swing.JPanel
-import javax.swing.JTextField
 
 /**
  * 命令预览与参数配置对话框
  * 两行布局：
  * - 第一行：终端标签名称输入框
- * - 第二行：基础命令文本（只读）+ 追加参数输入框
+ * - 第二行：命令输入框（可自由编辑）
  */
 class CommandPreviewDialog(
     project: Project?,
@@ -40,24 +36,16 @@ class CommandPreviewDialog(
         isSelected = defaultOpenInEditor
     }
 
-    // 追加参数输入框
-    private val additionalParamsField = JBTextField().apply {
-        emptyText.text = "追加参数..."
-        preferredSize = Dimension(200, preferredSize.height)
+    // 命令输入框（基础命令 + 末尾空格，用户可自由编辑）
+    private val commandField = JBTextField("$baseCommand ").apply {
+        preferredSize = Dimension(350, preferredSize.height)
     }
 
     /**
-     * 获取完整命令（基础命令 + 追加参数）
+     * 获取完整命令
      */
     val fullCommand: String
-        get() {
-            val additional = additionalParamsField.text.trim()
-            return if (additional.isNotEmpty()) {
-                "$baseCommand $additional"
-            } else {
-                baseCommand
-            }
-        }
+        get() = commandField.text.trim()
 
     /**
      * 获取终端名称
@@ -92,12 +80,14 @@ class CommandPreviewDialog(
         gbc.gridx = 0
         gbc.gridy = 0
         gbc.weightx = 0.0
+        gbc.anchor = GridBagConstraints.EAST
         panel.add(JBLabel("终端标签名称:"), gbc)
 
         gbc.gridx = 1
         gbc.gridy = 0
         gbc.weightx = 1.0
         gbc.gridwidth = 1
+        gbc.anchor = GridBagConstraints.WEST
         panel.add(terminalNameField, gbc)
 
         gbc.gridx = 2
@@ -106,27 +96,20 @@ class CommandPreviewDialog(
         gbc.gridwidth = 1
         panel.add(editorModeCheckBox, gbc)
 
-        // 第二行：基础命令 + 追加参数输入框
+        // 第二行：命令输入框
         gbc.gridx = 0
         gbc.gridy = 1
         gbc.weightx = 0.0
         gbc.gridwidth = 1
+        gbc.anchor = GridBagConstraints.EAST
         panel.add(JBLabel("命令:"), gbc)
 
-        // 基础命令文本（只读）
         gbc.gridx = 1
         gbc.gridy = 1
-        gbc.weightx = 0.0
-        val baseCommandLabel = JBLabel(baseCommand).apply {
-            border = JBUI.Borders.emptyRight(8)
-        }
-        panel.add(baseCommandLabel, gbc)
-
-        // 追加参数输入框
-        gbc.gridx = 2
-        gbc.gridy = 1
         gbc.weightx = 1.0
-        panel.add(additionalParamsField, gbc)
+        gbc.gridwidth = 2
+        gbc.anchor = GridBagConstraints.WEST
+        panel.add(commandField, gbc)
 
         return panel
     }
