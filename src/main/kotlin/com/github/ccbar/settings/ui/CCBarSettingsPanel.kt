@@ -3,6 +3,7 @@ package com.github.ccbar.settings.ui
 import com.github.ccbar.icons.CCBarIcons
 import com.github.ccbar.settings.*
 import com.intellij.icons.AllIcons
+import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.AnActionHolder
 import com.intellij.openapi.actionSystem.ActionWithDelegate
 import com.intellij.openapi.fileChooser.FileChooserDescriptorFactory
@@ -115,6 +116,8 @@ class CCBarSettingsPanel(private val project: Project?) {
 
     // Option 详情字段
     private lateinit var optionNameField: JBTextField
+    private lateinit var optionIconField: TextFieldWithBrowseButton
+    private lateinit var optionIconPanel: JPanel
     private lateinit var baseCommandField: JBTextField
     private lateinit var workingDirectoryField: TextFieldWithBrowseButton
     private lateinit var defaultTerminalNameField: JBTextField
@@ -501,10 +504,18 @@ class CCBarSettingsPanel(private val project: Project?) {
 
         val panel = BorderLayoutPanel().withBorder(JBUI.Borders.empty(8))
         val decorator = com.intellij.ui.ToolbarDecorator.createDecorator(buttonList)
+            .setAddActionName("添加")
+            .setRemoveActionName("删除")
+            .setMoveUpActionName("上移")
+            .setMoveDownActionName("下移")
             .setAddAction { addButton() }
             .setRemoveAction { removeButton() }
             .setMoveUpAction { moveButtonUp() }
             .setMoveDownAction { moveButtonDown() }
+            .addExtraAction(object : com.intellij.ui.AnActionButton("复制", AllIcons.Actions.Copy) {
+                override fun actionPerformed(e: AnActionEvent) = copyButton()
+                override fun isEnabled(): Boolean = buttonList.selectedIndex >= 0
+            })
 
         panel.addToCenter(decorator.createPanel())
         return panel
@@ -515,6 +526,7 @@ class CCBarSettingsPanel(private val project: Project?) {
      */
     private fun createDetailPanel(): JComponent {
         val panel = JPanel(BorderLayout())
+        panel.border = JBUI.Borders.empty(8)
 
         // Button 详情
         val buttonDetailPanel = createButtonDetailPanel()
@@ -558,6 +570,7 @@ class CCBarSettingsPanel(private val project: Project?) {
 
         // 创建带文件浏览的输入框
         buttonIconField = TextFieldWithBrowseButton().apply {
+            (textField as? JBTextField)?.emptyText?.text = "builtin:AllIcons.Actions.Execute"
             textField.document.addDocumentListener(object : DocumentListener {
                 override fun insertUpdate(e: DocumentEvent?) = updateButtonIcon()
                 override fun removeUpdate(e: DocumentEvent?) = updateButtonIcon()
@@ -729,6 +742,10 @@ class CCBarSettingsPanel(private val project: Project?) {
 
         val listPanel = BorderLayoutPanel()
         val decorator = ToolbarDecorator.createDecorator(optionList)
+            .setAddActionName("添加")
+            .setRemoveActionName("删除")
+            .setMoveUpActionName("上移")
+            .setMoveDownActionName("下移")
             .setAddAction { anActionButton ->
                 // 点击时也显示气泡（兼容键盘操作），使用 AnActionButton 官方 API 获取按钮位置
                 anActionButton.preferredPopupPoint?.let { showAddOptionBalloon(it) }
@@ -736,6 +753,10 @@ class CCBarSettingsPanel(private val project: Project?) {
             .setRemoveAction { removeOption() }
             .setMoveUpAction { moveOptionUp() }
             .setMoveDownAction { moveOptionDown() }
+            .addExtraAction(object : com.intellij.ui.AnActionButton("复制", AllIcons.Actions.Copy) {
+                override fun actionPerformed(e: AnActionEvent) = copyOption()
+                override fun isEnabled(): Boolean = optionList.selectedIndex >= 0
+            })
         val decoratorPanel = decorator.createPanel()
 
         // 在添加按钮上设置鼠标悬浮监听
@@ -786,6 +807,48 @@ class CCBarSettingsPanel(private val project: Project?) {
         }
         namePanel.add(optionNameField, BorderLayout.CENTER)
         panel.add(namePanel)
+
+        // Icon（仅普通选项显示）
+        optionIconPanel = JPanel(BorderLayout())
+        optionIconPanel.add(JLabel("图标:"), BorderLayout.WEST)
+        optionIconField = TextFieldWithBrowseButton().apply {
+            (textField as? JBTextField)?.emptyText?.text = "builtin:AllIcons.Actions.Execute"
+            textField.document.addDocumentListener(object : DocumentListener {
+                override fun insertUpdate(e: DocumentEvent?) = updateOptionIcon()
+                override fun removeUpdate(e: DocumentEvent?) = updateOptionIcon()
+                override fun changedUpdate(e: DocumentEvent?) = updateOptionIcon()
+            })
+            addBrowseFolderListener(
+                "选择图标文件",
+                "选择 SVG、PNG 或 ICO 图标文件",
+                null,
+                FileChooserDescriptorFactory.createSingleFileDescriptor()
+            )
+        }
+        val optionBuiltinIconBtn = JButton(AllIcons.General.ArrowDown).apply {
+            toolTipText = "选择内置图标"
+            isBorderPainted = true
+            isFocusPainted = false
+            margin = JBUI.insets(0, 2)
+            cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+            val size = preferredSize.height
+            preferredSize = Dimension(size, size)
+            addActionListener {
+                val popup = BuiltinIconSelector.createPopup(
+                    onIconSelected = { iconPath ->
+                        optionIconField.text = iconPath
+                    },
+                    currentIconPath = optionIconField.text
+                )
+                popup.showUnderneathOf(this)
+            }
+        }
+        val optionIconFieldPanel = JPanel(BorderLayout()).apply {
+            add(optionIconField, BorderLayout.CENTER)
+            add(optionBuiltinIconBtn, BorderLayout.EAST)
+        }
+        optionIconPanel.add(optionIconFieldPanel, BorderLayout.CENTER)
+        panel.add(optionIconPanel)
 
         // Base Command（仅普通选项显示）
         optionCommandPanel = JPanel(BorderLayout())
@@ -888,6 +951,10 @@ class CCBarSettingsPanel(private val project: Project?) {
         }
 
         val decorator = com.intellij.ui.ToolbarDecorator.createDecorator(subButtonTable)
+            .setAddActionName("添加")
+            .setRemoveActionName("删除")
+            .setMoveUpActionName("上移")
+            .setMoveDownActionName("下移")
             .setAddAction { addSubButton() }
             .setRemoveAction { removeSubButton() }
             .setMoveUpAction { moveSubButtonUp() }
@@ -1031,6 +1098,21 @@ class CCBarSettingsPanel(private val project: Project?) {
         }
     }
 
+    private fun copyButton() {
+        val index = buttonList.selectedIndex
+        if (index < 0) return
+        val source = buttonListModel.getElementAt(index)
+        val copy = source.deepCopy().apply {
+            id = UUID.randomUUID().toString()
+            name = source.name + "-copy"
+            options.forEach { it.id = UUID.randomUUID().toString(); it.subButtons.forEach { sb -> sb.id = UUID.randomUUID().toString() } }
+        }
+        val insertIndex = index + 1
+        editingState.buttons.add(insertIndex, copy)
+        buttonListModel.add(insertIndex, copy)
+        buttonList.selectedIndex = insertIndex
+    }
+
     private fun onButtonSelected() {
         if (ignoreUpdate) return
 
@@ -1105,7 +1187,8 @@ class CCBarSettingsPanel(private val project: Project?) {
 
     private fun updateButtonIcon() {
         if (ignoreUpdate) return
-        selectedButton?.icon = buttonIconField.text
+        val text = buttonIconField.text
+        selectedButton?.icon = if (text.isBlank()) "builtin:AllIcons.Actions.Execute" else text
         // 同步更新列表中的图标显示
         buttonList.repaint()
     }
@@ -1395,8 +1478,10 @@ class CCBarSettingsPanel(private val project: Project?) {
         val button = selectedButton ?: return
         val index = optionList.selectedIndex
         if (index >= 0) {
+            val option = optionListModel.getElementAt(index)
+            val typeName = if (option.isSeparator()) "分割线" else "选项"
             val result = Messages.showYesNoDialog(
-                "确定要删除选项 '${optionListModel.getElementAt(index).name}' 吗？",
+                "确定要删除${typeName} '${option.name}' 吗？",
                 "确认删除",
                 null
             )
@@ -1434,6 +1519,22 @@ class CCBarSettingsPanel(private val project: Project?) {
         }
     }
 
+    private fun copyOption() {
+        val button = selectedButton ?: return
+        val index = optionList.selectedIndex
+        if (index < 0) return
+        val source = optionListModel.getElementAt(index)
+        val copy = source.deepCopy().apply {
+            id = UUID.randomUUID().toString()
+            name = source.name + "-copy"
+            subButtons.forEach { sb -> sb.id = UUID.randomUUID().toString() }
+        }
+        val insertIndex = index + 1
+        button.options.add(insertIndex, copy)
+        optionListModel.add(insertIndex, copy)
+        optionList.selectedIndex = insertIndex
+    }
+
     private fun onOptionSelected() {
         if (ignoreUpdate) return
 
@@ -1468,6 +1569,9 @@ class CCBarSettingsPanel(private val project: Project?) {
         if (!optionDetailOuterPanel.isVisible) {
             optionDetailOuterPanel.isVisible = true
         }
+        if (optionIconPanel.isVisible) {
+            optionIconPanel.isVisible = false
+        }
         if (optionCommandPanel.isVisible) {
             optionCommandPanel.isVisible = false
         }
@@ -1498,6 +1602,9 @@ class CCBarSettingsPanel(private val project: Project?) {
         if (!optionDetailOuterPanel.isVisible) {
             optionDetailOuterPanel.isVisible = true
         }
+        if (!optionIconPanel.isVisible) {
+            optionIconPanel.isVisible = true
+        }
         if (!optionCommandPanel.isVisible) {
             optionCommandPanel.isVisible = true
         }
@@ -1527,6 +1634,7 @@ class CCBarSettingsPanel(private val project: Project?) {
         try {
             val option = selectedOption ?: return
             optionNameField.text = option.name
+            optionIconField.text = option.icon
             baseCommandField.text = option.baseCommand
             workingDirectoryField.text = option.workingDirectory
             defaultTerminalNameField.text = option.defaultTerminalName
@@ -1542,6 +1650,7 @@ class CCBarSettingsPanel(private val project: Project?) {
         ignoreUpdate = true
         try {
             optionNameField.text = ""
+            optionIconField.text = ""
             baseCommandField.text = ""
             workingDirectoryField.text = ""
             defaultTerminalNameField.text = ""
@@ -1556,6 +1665,13 @@ class CCBarSettingsPanel(private val project: Project?) {
     private fun updateOptionName() {
         if (ignoreUpdate) return
         selectedOption?.name = optionNameField.text
+        optionList.repaint()
+    }
+
+    private fun updateOptionIcon() {
+        if (ignoreUpdate) return
+        val text = optionIconField.text
+        selectedOption?.icon = if (text.isBlank()) "builtin:AllIcons.Actions.Execute" else text
         optionList.repaint()
     }
 
@@ -1955,6 +2071,7 @@ class CCBarSettingsPanel(private val project: Project?) {
             val component = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus)
             if (value is OptionConfig) {
                 text = value.name
+                icon = if (value.icon.isNotBlank()) CCBarIcons.loadIcon(value.icon) else null
             }
             return component as JComponent
         }

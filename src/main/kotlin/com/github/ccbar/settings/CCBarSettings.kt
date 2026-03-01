@@ -146,6 +146,7 @@ object OptionType {
 data class OptionConfig(
     var id: String = "",
     var name: String = "",
+    var icon: String = "builtin:AllIcons.Actions.Execute",
     var baseCommand: String = "",
     var workingDirectory: String = "",
     var defaultTerminalName: String = "",
@@ -159,6 +160,7 @@ data class OptionConfig(
     fun deepCopy(): OptionConfig = OptionConfig(
         id = id,
         name = name,
+        icon = icon,
         baseCommand = baseCommand,
         workingDirectory = workingDirectory,
         defaultTerminalName = defaultTerminalName,

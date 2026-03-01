@@ -5,6 +5,7 @@ import com.github.ccbar.settings.OptionConfig
 import com.github.ccbar.settings.OptionType
 import com.github.ccbar.settings.SubButtonConfig
 import com.github.ccbar.terminal.CCBarTerminalService
+import com.intellij.icons.AllIcons
 import com.intellij.openapi.project.Project
 import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBLabel
@@ -175,7 +176,8 @@ object CCBarPopupBuilder {
         for (option in buttonConfig.options) {
             if (!option.isSeparator()) {
                 val textWidth = fontMetrics.stringWidth(option.name)
-                val totalWidth = textWidth + 16
+                val iconWidth = if (option.icon.isNotBlank()) 16 + 4 else 0  // 图标宽度 + 间距
+                val totalWidth = textWidth + iconWidth + 16
                 if (totalWidth > maxWidth) {
                     maxWidth = totalWidth
                 }
@@ -204,7 +206,7 @@ object CCBarPopupBuilder {
                         textWidth = fullWidth
                     }
                 }
-                val totalWidth = textWidth + 16
+                val totalWidth = textWidth + 16 + 16 + 4  // 16+4 为终端图标宽度+间距
                 if (totalWidth > maxWidth) {
                     maxWidth = totalWidth
                 }
@@ -291,6 +293,9 @@ object CCBarPopupBuilder {
             preferredSize = Dimension(labelWidth, ROW_HEIGHT)
             horizontalAlignment = SwingConstants.LEFT
             foreground = JBColor.foreground()
+            if (option.icon.isNotBlank()) {
+                icon = com.github.ccbar.icons.CCBarIcons.loadIcon(option.icon)
+            }
         }
 
         row.add(label)
@@ -311,6 +316,7 @@ object CCBarPopupBuilder {
 
         // 命令预览标签（需要被子按钮 hover 更新）
         val commandPreview = JBLabel(option.baseCommand).apply {
+            icon = com.github.ccbar.icons.CCBarIcons.loadIcon("builtin:AllIcons.Debugger.ExecuteCurrentStatement")
             preferredSize = Dimension(previewWidth, ROW_HEIGHT)
             horizontalAlignment = SwingConstants.LEFT
             foreground = PREVIEW_FOREGROUND
@@ -325,6 +331,9 @@ object CCBarPopupBuilder {
             horizontalAlignment = SwingConstants.LEFT
             foreground = LABEL_FOREGROUND
             border = JBUI.Borders.emptyLeft(8)
+            if (option.icon.isNotBlank()) {
+                icon = com.github.ccbar.icons.CCBarIcons.loadIcon(option.icon)
+            }
         }
         firstRow.add(commandPreview)
         firstRow.add(optionLabel)
