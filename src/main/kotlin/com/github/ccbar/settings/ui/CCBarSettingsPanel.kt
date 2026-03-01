@@ -2,6 +2,7 @@ package com.github.ccbar.settings.ui
 
 import com.github.ccbar.icons.CCBarIcons
 import com.github.ccbar.settings.*
+import com.github.ccbar.terminal.EnvVariablesDialog
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.AnActionHolder
@@ -97,6 +98,10 @@ class CCBarSettingsPanel(private val project: Project?) {
     // Button 工作目录面板（用于控制显示/隐藏）
     private lateinit var buttonWorkingDirectoryPanel: JComponent
 
+    // Button 环境变量面板和字段（仅直接命令模式时显示）
+    private lateinit var buttonEnvVariablesPanel: JComponent
+    private lateinit var buttonEnvVariablesField: JBTextField
+
     // Button 终端名称面板（用于控制显示/隐藏）
     private lateinit var buttonTerminalNamePanel: JComponent
 
@@ -119,6 +124,8 @@ class CCBarSettingsPanel(private val project: Project?) {
     private lateinit var optionIconField: TextFieldWithBrowseButton
     private lateinit var optionIconPanel: JPanel
     private lateinit var baseCommandField: JBTextField
+    private lateinit var optionEnvVariablesField: JBTextField
+    private lateinit var optionEnvVariablesPanel: JPanel
     private lateinit var workingDirectoryField: TextFieldWithBrowseButton
     private lateinit var defaultTerminalNameField: JBTextField
 
@@ -649,6 +656,33 @@ class CCBarSettingsPanel(private val project: Project?) {
         commandHintPanel.add(buttonCommandHintLabel, BorderLayout.CENTER)
         panel.add(commandHintPanel)
 
+        // Environment Variables 字段（仅直接命令模式时显示）
+        buttonEnvVariablesPanel = JPanel(BorderLayout())
+        buttonEnvVariablesPanel.add(JLabel("环境变量:"), BorderLayout.WEST)
+        val buttonEnvFieldPanel = JPanel(BorderLayout())
+        buttonEnvVariablesField = JBTextField().apply {
+            emptyText.text = "KEY1=val1;KEY2=val2"
+            document.addDocumentListener(object : DocumentListener {
+                override fun insertUpdate(e: DocumentEvent?) = updateButtonEnvVariables()
+                override fun removeUpdate(e: DocumentEvent?) = updateButtonEnvVariables()
+                override fun changedUpdate(e: DocumentEvent?) = updateButtonEnvVariables()
+            })
+        }
+        buttonEnvFieldPanel.add(buttonEnvVariablesField, BorderLayout.CENTER)
+        val buttonEnvEditButton = JButton("...").apply {
+            toolTipText = "编辑环境变量"
+            addActionListener {
+                val currentProject = project ?: ProjectManager.getInstance().openProjects.firstOrNull()
+                val dialog = EnvVariablesDialog(currentProject, buttonEnvVariablesField.text)
+                if (dialog.showAndGet()) {
+                    buttonEnvVariablesField.text = dialog.envVariablesText
+                }
+            }
+        }
+        buttonEnvFieldPanel.add(buttonEnvEditButton, BorderLayout.EAST)
+        buttonEnvVariablesPanel.add(buttonEnvFieldPanel, BorderLayout.CENTER)
+        panel.add(buttonEnvVariablesPanel)
+
         // Working Directory 字段（仅直接命令模式时显示）
         buttonWorkingDirectoryPanel = JPanel().apply {
             layout = BoxLayout(this, BoxLayout.Y_AXIS)
@@ -870,6 +904,33 @@ class CCBarSettingsPanel(private val project: Project?) {
         }
         optionCommandPanel.add(baseCommandField, BorderLayout.CENTER)
         panel.add(optionCommandPanel)
+
+        // Environment Variables（仅普通选项显示）
+        optionEnvVariablesPanel = JPanel(BorderLayout())
+        optionEnvVariablesPanel.add(JLabel("环境变量:"), BorderLayout.WEST)
+        val optionEnvFieldPanel = JPanel(BorderLayout())
+        optionEnvVariablesField = JBTextField().apply {
+            emptyText.text = "KEY1=val1;KEY2=val2"
+            document.addDocumentListener(object : DocumentListener {
+                override fun insertUpdate(e: DocumentEvent?) = updateOptionEnvVariables()
+                override fun removeUpdate(e: DocumentEvent?) = updateOptionEnvVariables()
+                override fun changedUpdate(e: DocumentEvent?) = updateOptionEnvVariables()
+            })
+        }
+        optionEnvFieldPanel.add(optionEnvVariablesField, BorderLayout.CENTER)
+        val optionEnvEditButton = JButton("...").apply {
+            toolTipText = "编辑环境变量"
+            addActionListener {
+                val currentProject = project ?: ProjectManager.getInstance().openProjects.firstOrNull()
+                val dialog = EnvVariablesDialog(currentProject, optionEnvVariablesField.text)
+                if (dialog.showAndGet()) {
+                    optionEnvVariablesField.text = dialog.envVariablesText
+                }
+            }
+        }
+        optionEnvFieldPanel.add(optionEnvEditButton, BorderLayout.EAST)
+        optionEnvVariablesPanel.add(optionEnvFieldPanel, BorderLayout.CENTER)
+        panel.add(optionEnvVariablesPanel)
 
         // Working Directory（仅普通选项显示）
         optionDirPanel = JPanel(BorderLayout())
@@ -1155,6 +1216,7 @@ class CCBarSettingsPanel(private val project: Project?) {
             buttonNameField.text = button.name
             buttonIconField.text = button.icon
             buttonCommandField.text = button.command
+            buttonEnvVariablesField.text = button.envVariables
             buttonWorkingDirectoryField.text = button.workingDirectory
             buttonTerminalNameField.text = button.defaultTerminalName
             buttonTerminalModeCombo.selectedIndex = if (button.terminalMode == TerminalMode.EDITOR) 1 else 0
@@ -1175,6 +1237,7 @@ class CCBarSettingsPanel(private val project: Project?) {
             buttonNameField.text = ""
             buttonIconField.text = ""
             buttonCommandField.text = ""
+            buttonEnvVariablesField.text = ""
             buttonWorkingDirectoryField.text = ""
             buttonTerminalNameField.text = ""
             buttonTerminalModeCombo.selectedIndex = 0
@@ -1211,6 +1274,11 @@ class CCBarSettingsPanel(private val project: Project?) {
     private fun updateButtonWorkingDirectory() {
         if (ignoreUpdate) return
         selectedButton?.workingDirectory = buttonWorkingDirectoryField.text
+    }
+
+    private fun updateButtonEnvVariables() {
+        if (ignoreUpdate) return
+        selectedButton?.envVariables = buttonEnvVariablesField.text
     }
 
     private fun updateButtonTerminalName() {
@@ -1269,6 +1337,7 @@ class CCBarSettingsPanel(private val project: Project?) {
      */
     private fun updateDirectCommandModeVisibility() {
         val isDirectMode = selectedButton?.isDirectCommandMode() == true
+        buttonEnvVariablesPanel.isVisible = isDirectMode
         buttonWorkingDirectoryPanel.isVisible = isDirectMode
         buttonTerminalNamePanel.isVisible = isDirectMode
         buttonTerminalModePanel.isVisible = isDirectMode
@@ -1583,6 +1652,9 @@ class CCBarSettingsPanel(private val project: Project?) {
         if (optionCommandPanel.isVisible) {
             optionCommandPanel.isVisible = false
         }
+        if (optionEnvVariablesPanel.isVisible) {
+            optionEnvVariablesPanel.isVisible = false
+        }
         if (optionDirPanel.isVisible) {
             optionDirPanel.isVisible = false
         }
@@ -1616,6 +1688,9 @@ class CCBarSettingsPanel(private val project: Project?) {
         if (!optionCommandPanel.isVisible) {
             optionCommandPanel.isVisible = true
         }
+        if (!optionEnvVariablesPanel.isVisible) {
+            optionEnvVariablesPanel.isVisible = true
+        }
         if (!optionDirPanel.isVisible) {
             optionDirPanel.isVisible = true
         }
@@ -1644,6 +1719,7 @@ class CCBarSettingsPanel(private val project: Project?) {
             optionNameField.text = option.name
             optionIconField.text = option.icon
             baseCommandField.text = option.baseCommand
+            optionEnvVariablesField.text = option.envVariables
             workingDirectoryField.text = option.workingDirectory
             defaultTerminalNameField.text = option.defaultTerminalName
             optionTerminalModeCombo.selectedIndex = if (option.terminalMode == TerminalMode.EDITOR) 1 else 0
@@ -1660,6 +1736,7 @@ class CCBarSettingsPanel(private val project: Project?) {
             optionNameField.text = ""
             optionIconField.text = ""
             baseCommandField.text = ""
+            optionEnvVariablesField.text = ""
             workingDirectoryField.text = ""
             defaultTerminalNameField.text = ""
             optionTerminalModeCombo.selectedIndex = 0
@@ -1691,6 +1768,11 @@ class CCBarSettingsPanel(private val project: Project?) {
     private fun updateOptionDirectory() {
         if (ignoreUpdate) return
         selectedOption?.workingDirectory = workingDirectoryField.text
+    }
+
+    private fun updateOptionEnvVariables() {
+        if (ignoreUpdate) return
+        selectedOption?.envVariables = optionEnvVariablesField.text
     }
 
     private fun updateOptionTerminalName() {

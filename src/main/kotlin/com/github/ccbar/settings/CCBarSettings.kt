@@ -148,6 +148,7 @@ data class OptionConfig(
     var name: String = "",
     var icon: String = "builtin:/actions/execute.svg",
     var baseCommand: String = "",
+    var envVariables: String = "",
     var workingDirectory: String = "",
     var defaultTerminalName: String = "",
     var subButtons: MutableList<SubButtonConfig> = mutableListOf(),
@@ -162,6 +163,7 @@ data class OptionConfig(
         name = name,
         icon = icon,
         baseCommand = baseCommand,
+        envVariables = envVariables,
         workingDirectory = workingDirectory,
         defaultTerminalName = defaultTerminalName,
         subButtons = subButtons.map { it.deepCopy() }.toMutableList(),
@@ -192,6 +194,7 @@ data class ButtonConfig(
     var icon: String = "",
     // 直接命令模式字段
     var command: String = "",  // 直接命令，为空则使用选项列表模式
+    var envVariables: String = "",  // 环境变量，格式：KEY1=val1;KEY2=val2
     var workingDirectory: String = "",  // 工作目录，留空使用项目根目录
     var defaultTerminalName: String = "",  // 直接命令模式的默认终端名称
     var terminalMode: String = "",  // 终端打开模式：""=工具窗口, "editor"=编辑器
@@ -206,6 +209,7 @@ data class ButtonConfig(
         name = name,
         icon = icon,
         command = command,
+        envVariables = envVariables,
         workingDirectory = workingDirectory,
         defaultTerminalName = defaultTerminalName,
         terminalMode = terminalMode,

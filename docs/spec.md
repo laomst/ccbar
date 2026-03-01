@@ -140,14 +140,25 @@ Button（工具栏按钮）
 
 ### 3.7 终端命名与参数配置弹窗
 - 点击 Option 或子按钮后，**每次都弹出**命令预览与参数配置对话框
-- 弹框采用简洁的两行布局：
+- 弹框采用三行布局：
   - **第一行**：终端标签名称输入框（默认名称来自 Option 配置的 `defaultTerminalName` 字段）+ "在编辑器中打开"复选框（默认值取决于对应配置的 terminalMode）
-  - **第二行**：基础命令文本（只读）+ 追加参数输入框（可编辑）
-- 最终执行命令 = 基础命令 + 空格 + 追加参数（如果追加参数非空）
+  - **第二行**：环境变量展示框（只读）+ `[…]` 编辑按钮，点击打开环境变量列表编辑对话框
+  - **第三行**：命令输入框（可编辑，预填基础命令 + 空格）
+- 最终执行命令 = 环境变量注入语句 + 命令（如果有环境变量）
 - 点击"执行"创建终端并执行完整命令
 - 点击"取消"取消本次操作，不创建终端
 
-### 3.8 典型使用场景示例
+### 3.8 环境变量配置
+- Option 和 Button（直接命令模式）均支持配置环境变量
+- 环境变量以 `KEY1=val1;KEY2=val2` 格式存储
+- 设置面板中提供可编辑文本框 + `[…]` 按钮，文本框可直接输入编辑，也可点击按钮打开表格形式的编辑对话框
+- 编辑对话框为两列表格（变量名、值），支持添加/删除/上移/下移
+- 命令确认弹框中同样展示环境变量，用户可临时修改
+- 执行时按 `;` 切割，每条按第一个 `=` 分为 key/value，根据 OS 类型选择注入语法：
+  - macOS/Linux（bash/zsh）：`export KEY1=val1; export KEY2=val2; command`
+  - Windows（PowerShell）：`$env:KEY1="val1"; $env:KEY2="val2"; command`
+
+### 3.9 典型使用场景示例
 
 **Claude Code 按钮的完整结构：**
 
@@ -195,9 +206,8 @@ Button（工具栏按钮）
 │               │  命令预览与参数配置                    │                          │
 │               │  ───────────────────────────────────  │                          │
 │               │  终端标签名称: [Claude - Model   ]    │                          │
-│               │                                       │                          │
-│               │  claude --model sonnet [追加参数...]  │                          │
-│               │  ↑ 基础命令(只读)     ↑ 可编辑        │                          │
+│               │  环境变量:  [ANTHROPIC_MODEL=...][…]  │                          │
+│               │  命令: [claude --model sonnet      ]  │                          │
 │               │                                       │                          │
 │               │          [ 取消 ]  [ 执行 ]           │                          │
 │               └───────────────────────────────────────┘                          │
@@ -255,6 +265,7 @@ Button（工具栏按钮）
       "command": "npm test",
       "workingDirectory": "",
       "defaultTerminalName": "NPM Test",
+      "envVariables": "",
       "options": []
     },
     {
@@ -264,6 +275,7 @@ Button（工具栏按钮）
       "command": "",
       "workingDirectory": "",
       "defaultTerminalName": "",
+      "envVariables": "",
       "options": [
         {
           "id": "model",
@@ -271,6 +283,7 @@ Button（工具栏按钮）
           "baseCommand": "claude",
           "workingDirectory": "",
           "defaultTerminalName": "Claude - Model",
+          "envVariables": "ANTHROPIC_MODEL=claude-sonnet-4-20250514",
           "subButtons": [
             {
               "id": "sonnet",
@@ -290,6 +303,7 @@ Button（工具栏按钮）
           "baseCommand": "claude",
           "workingDirectory": "",
           "defaultTerminalName": "Claude - Workspace",
+          "envVariables": "",
           "subButtons": [
             {
               "id": "workspace-a",
@@ -309,6 +323,7 @@ Button（工具栏按钮）
           "baseCommand": "claude",
           "workingDirectory": "",
           "defaultTerminalName": "Claude - System",
+          "envVariables": "",
           "subButtons": [
             {
               "id": "developer",
@@ -330,6 +345,7 @@ Button（工具栏按钮）
           "baseCommand": "npm",
           "workingDirectory": "",
           "defaultTerminalName": "npm Scripts",
+          "envVariables": "",
           "subButtons": [
             {
               "name": "Test",

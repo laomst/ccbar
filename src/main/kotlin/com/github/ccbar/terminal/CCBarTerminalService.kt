@@ -11,6 +11,8 @@ import com.intellij.notification.Notifications
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
+import org.jetbrains.plugins.terminal.TerminalProjectOptionsProvider
+import org.jetbrains.plugins.terminal.TerminalToolWindowManager
 import java.io.File
 
 /**
@@ -28,12 +30,12 @@ object CCBarTerminalService {
     fun openTerminal(project: Project, option: OptionConfig, subButton: SubButtonConfig?) {
         val baseCommand = buildCommand(option, subButton)
         val defaultOpenInEditor = option.terminalMode == TerminalMode.EDITOR
-        val dialog = CommandPreviewDialog(project, baseCommand, option.defaultTerminalName, defaultOpenInEditor)
+        val dialog = CommandPreviewDialog(project, baseCommand, option.defaultTerminalName, defaultOpenInEditor, option.envVariables)
         if (!dialog.showAndGet()) {
             return
         }
         val terminalName = dialog.terminalName
-        val command = dialog.fullCommand
+        val command = buildCommandWithEnv(project, dialog.envVariables, dialog.fullCommand)
         val workingDir = resolveWorkingDirectory(project, option)
         val openInEditor = dialog.openInEditor
         createTerminalAndExecute(project, command, terminalName, workingDir, openInEditor)
@@ -45,12 +47,12 @@ object CCBarTerminalService {
     fun openTerminalForButton(project: Project, button: ButtonConfig) {
         val defaultName = button.defaultTerminalName.ifBlank { button.name }
         val defaultOpenInEditor = button.terminalMode == TerminalMode.EDITOR
-        val dialog = CommandPreviewDialog(project, button.command, defaultName, defaultOpenInEditor)
+        val dialog = CommandPreviewDialog(project, button.command, defaultName, defaultOpenInEditor, button.envVariables)
         if (!dialog.showAndGet()) {
             return
         }
         val terminalName = dialog.terminalName
-        val command = dialog.fullCommand
+        val command = buildCommandWithEnv(project, dialog.envVariables, dialog.fullCommand)
         val workingDir = resolveWorkingDirectoryForButton(project, button)
         val openInEditor = dialog.openInEditor
         createTerminalAndExecute(project, command, terminalName, workingDir, openInEditor)
@@ -60,6 +62,79 @@ object CCBarTerminalService {
         val baseCommand = option.baseCommand
         val params = subButton?.params?.trim() ?: ""
         return if (params.isNotEmpty()) "$baseCommand $params" else baseCommand
+    }
+
+    /**
+     * 解析环境变量字符串为键值对列表
+     * 格式：KEY1=val1;KEY2=val2，按第一个 = 分割
+     */
+    private fun parseEnvVariables(envVars: String): List<Pair<String, String>> {
+        if (envVars.isBlank()) return emptyList()
+        return envVars.split(";").mapNotNull { entry ->
+            val trimmed = entry.trim()
+            if (trimmed.isEmpty()) return@mapNotNull null
+            val eqIndex = trimmed.indexOf('=')
+            if (eqIndex > 0) {
+                trimmed.substring(0, eqIndex).trim() to trimmed.substring(eqIndex + 1).trim()
+            } else {
+                null
+            }
+        }
+    }
+
+    /**
+     * 根据 IDE 配置的 shell 类型构建带环境变量注入的命令
+     * PowerShell: $env:K1="v1"; $env:K2="v2"; command
+     * cmd.exe: set K1=v1&& set K2=v2&& command
+     * bash/zsh/fish 等: export K1=v1; export K2=v2; command
+     */
+    private fun buildCommandWithEnv(project: Project, envVars: String, command: String): String {
+        val vars = parseEnvVariables(envVars)
+        if (vars.isEmpty()) return command
+
+        val shellType = getShellType(project)
+        val envPrefix = vars.joinToString("; ") { (key, value) ->
+            when (shellType) {
+                ShellType.POWERSHELL -> "\$env:$key=\"$value\""
+                ShellType.CMD -> "set $key=$value&&"
+                ShellType.POSIX -> "export $key=$value"
+            }
+        }
+        return if (shellType == ShellType.CMD) {
+            // cmd.exe: set K=V&& command（&& 已在 joinToString 中）
+            "$envPrefix $command"
+        } else {
+            "$envPrefix; $command"
+        }
+    }
+
+    private enum class ShellType {
+        POSIX,       // bash, zsh, sh, fish 等
+        POWERSHELL,  // powershell, pwsh
+        CMD          // cmd.exe
+    }
+
+    /**
+     * 根据 IDE 终端配置的 shell 路径判断 shell 类型
+     */
+    private fun getShellType(project: Project): ShellType {
+        val shellPath = try {
+            TerminalProjectOptionsProvider.getInstance(project).shellPath
+        } catch (e: Exception) {
+            LOG.info("CCBar: 无法获取 IDE 终端 shell 路径，回退到 OS 检测: ${e.message}")
+            return if (System.getProperty("os.name")?.lowercase()?.contains("windows") == true) {
+                ShellType.POWERSHELL
+            } else {
+                ShellType.POSIX
+            }
+        }
+
+        val shellName = shellPath.substringAfterLast("/").substringAfterLast("\\").lowercase()
+        return when {
+            shellName.contains("powershell") || shellName.contains("pwsh") -> ShellType.POWERSHELL
+            shellName.contains("cmd") -> ShellType.CMD
+            else -> ShellType.POSIX  // bash, zsh, sh, fish, etc.
+        }
     }
 
     private fun resolveWorkingDirectory(project: Project, option: OptionConfig): String {
@@ -120,257 +195,15 @@ object CCBarTerminalService {
 
         ApplicationManager.getApplication().invokeLater {
             try {
-                val widget = createTerminalWidget(project, tabName, workingDir)
-                if (widget != null) {
-                    executeCommandOnWidget(project, widget, command)
-                } else {
-                    showNotification(project, "终端创建失败", "无法创建终端，不支持当前 IDE 版本", NotificationType.ERROR)
-                }
+                val manager = TerminalToolWindowManager.getInstance(project)
+                val widget = manager.createShellWidget(workingDir, tabName, true, true)
+                widget.sendCommandToExecute(command)
+                LOG.info("CCBar: 终端创建并执行命令成功: $tabName")
             } catch (e: Exception) {
                 LOG.warn("CCBar: 终端创建/命令执行异常", e)
                 showNotification(project, "终端创建失败", "无法创建终端: ${e.message}", NotificationType.ERROR)
             }
         }
-    }
-
-    /**
-     * 创建终端 widget，依次尝试多种 API
-     */
-    private fun createTerminalWidget(project: Project, tabName: String, workingDir: String): Any? {
-        // 策略1: TerminalView.createLocalShellWidget (2024.2+)
-        try {
-            val viewClass = Class.forName("org.jetbrains.plugins.terminal.TerminalView")
-            val getInstance = viewClass.getMethod("getInstance", Project::class.java)
-            val view = getInstance.invoke(null, project)
-
-            // 尝试带3个参数的版本 (path, tabName, requestFocus)
-            try {
-                val create = viewClass.getMethod(
-                    "createLocalShellWidget",
-                    String::class.java, String::class.java, Boolean::class.java
-                )
-                val widget = create.invoke(view, workingDir, tabName, true)
-                if (widget != null) {
-                    LOG.info("CCBar: 使用 TerminalView.createLocalShellWidget(3) 创建终端成功")
-                    return widget
-                }
-            } catch (_: NoSuchMethodException) {}
-
-            // 尝试带2个参数的版本 (path, tabName)
-            try {
-                val create = viewClass.getMethod(
-                    "createLocalShellWidget",
-                    String::class.java, String::class.java
-                )
-                val widget = create.invoke(view, workingDir, tabName)
-                if (widget != null) {
-                    LOG.info("CCBar: 使用 TerminalView.createLocalShellWidget(2) 创建终端成功")
-                    return widget
-                }
-            } catch (_: NoSuchMethodException) {}
-
-        } catch (e: Exception) {
-            LOG.info("CCBar: TerminalView 策略失败: ${e.message}")
-        }
-
-        // 策略2: TerminalToolWindowManager.createLocalShellWidget
-        try {
-            val mgrClass = Class.forName("org.jetbrains.plugins.terminal.TerminalToolWindowManager")
-            val getInstance = mgrClass.getMethod("getInstance", Project::class.java)
-            val mgr = getInstance.invoke(null, project)
-
-            try {
-                val create = mgrClass.getMethod(
-                    "createLocalShellWidget",
-                    String::class.java, String::class.java
-                )
-                val widget = create.invoke(mgr, workingDir, tabName)
-                if (widget != null) {
-                    LOG.info("CCBar: 使用 TerminalToolWindowManager.createLocalShellWidget 创建终端成功")
-                    return widget
-                }
-            } catch (_: NoSuchMethodException) {}
-
-        } catch (e: Exception) {
-            LOG.info("CCBar: TerminalToolWindowManager 策略失败: ${e.message}")
-        }
-
-        return null
-    }
-
-    /**
-     * 在 widget 上执行命令，依次尝试多种方法
-     */
-    private fun executeCommandOnWidget(project: Project, widget: Any, command: String) {
-        val widgetClass = widget.javaClass
-        LOG.info("CCBar: widget 实际类型: ${widgetClass.name}")
-
-        // 方法1: executeCommand(String) — ShellTerminalWidget 经典方法
-        if (tryInvokeMethod(widget, "executeCommand", command)) {
-            LOG.info("CCBar: 使用 executeCommand 执行命令成功")
-            return
-        }
-
-        // 方法2: typedShellCommand(String) — 部分版本的替代方法
-        if (tryInvokeMethod(widget, "typedShellCommand", command)) {
-            LOG.info("CCBar: 使用 typedShellCommand 执行命令成功")
-            return
-        }
-
-        // 方法3: sendCommandToTerminal(String)
-        if (tryInvokeMethod(widget, "sendCommandToTerminal", command)) {
-            LOG.info("CCBar: 使用 sendCommandToTerminal 执行命令成功")
-            return
-        }
-
-        // 方法4: 通过 TerminalStarter 发送文本
-        if (trySendViaTerminalStarter(widget, command)) {
-            LOG.info("CCBar: 使用 TerminalStarter.sendString 执行命令成功")
-            return
-        }
-
-        // 方法5: 通过 ProcessHandler 的 stdin 写入
-        if (trySendViaProcessInput(widget, command)) {
-            LOG.info("CCBar: 使用 ProcessHandler 写入命令成功")
-            return
-        }
-
-        // 所有方法都失败了，记录可用方法以便排查
-        val methods = widgetClass.methods.map { "${it.name}(${it.parameterTypes.joinToString { p -> p.simpleName }})" }
-        LOG.warn("CCBar: 所有命令执行方式均失败。widget 类: ${widgetClass.name}，可用方法: $methods")
-
-        showNotification(
-            project,
-            "命令执行失败",
-            "终端已创建，但无法自动执行命令。请手动输入命令: $command",
-            NotificationType.WARNING
-        )
-    }
-
-    /**
-     * 尝试通过反射调用 widget 上的单参数 String 方法
-     */
-    private fun tryInvokeMethod(widget: Any, methodName: String, arg: String): Boolean {
-        return try {
-            val method = findMethodInHierarchy(widget.javaClass, methodName, String::class.java)
-            if (method != null) {
-                method.invoke(widget, arg)
-                true
-            } else {
-                false
-            }
-        } catch (e: Exception) {
-            LOG.info("CCBar: 调用 $methodName 失败: ${e.message}")
-            false
-        }
-    }
-
-    /**
-     * 通过 TerminalStarter 发送命令文本
-     */
-    private fun trySendViaTerminalStarter(widget: Any, command: String): Boolean {
-        return try {
-            val getStarter = findMethodInHierarchy(widget.javaClass, "getTerminalStarter")
-                ?: return false
-            val starter = getStarter.invoke(widget) ?: return false
-
-            // 尝试 sendString(String, boolean) 签名
-            try {
-                val sendMethod = starter.javaClass.getMethod("sendString", String::class.java, Boolean::class.javaPrimitiveType)
-                sendMethod.invoke(starter, command + "\n", false)
-                return true
-            } catch (_: NoSuchMethodException) {}
-
-            // 尝试 sendString(String) 签名
-            try {
-                val sendMethod = starter.javaClass.getMethod("sendString", String::class.java)
-                sendMethod.invoke(starter, command + "\n")
-                return true
-            } catch (_: NoSuchMethodException) {}
-
-            false
-        } catch (e: Exception) {
-            LOG.info("CCBar: TerminalStarter 方式失败: ${e.message}")
-            false
-        }
-    }
-
-    /**
-     * 通过 ProcessHandler 的输入流写入命令
-     */
-    private fun trySendViaProcessInput(widget: Any, command: String): Boolean {
-        return try {
-            // 遍历 widget 类层级寻找 getProcessHandler 或 getProcessTtyConnector
-            val handler = tryGetField(widget, "getProcessHandler")
-                ?: tryGetField(widget, "getProcessTtyConnector")
-                ?: return false
-
-            // 尝试通过 ProcessHandler.getProcessInput()
-            try {
-                val getInput = handler.javaClass.getMethod("getProcessInput")
-                val outputStream = getInput.invoke(handler) as? java.io.OutputStream
-                if (outputStream != null) {
-                    outputStream.write((command + "\n").toByteArray())
-                    outputStream.flush()
-                    return true
-                }
-            } catch (_: Exception) {}
-
-            // 尝试通过 TtyConnector.write(String)
-            try {
-                val writeMethod = handler.javaClass.getMethod("write", String::class.java)
-                writeMethod.invoke(handler, command + "\n")
-                return true
-            } catch (_: Exception) {}
-
-            // 尝试通过 TtyConnector.write(ByteArray)
-            try {
-                val writeMethod = handler.javaClass.getMethod("write", ByteArray::class.java)
-                writeMethod.invoke(handler, (command + "\n").toByteArray())
-                return true
-            } catch (_: Exception) {}
-
-            false
-        } catch (e: Exception) {
-            LOG.info("CCBar: ProcessHandler 方式失败: ${e.message}")
-            false
-        }
-    }
-
-    private fun tryGetField(obj: Any, getterName: String): Any? {
-        return try {
-            val method = findMethodInHierarchy(obj.javaClass, getterName)
-            method?.invoke(obj)
-        } catch (_: Exception) {
-            null
-        }
-    }
-
-    /**
-     * 在类层级结构中查找方法（包括父类和接口）
-     */
-    private fun findMethodInHierarchy(clazz: Class<*>, name: String, vararg paramTypes: Class<*>): java.lang.reflect.Method? {
-        var current: Class<*>? = clazz
-        while (current != null) {
-            try {
-                return current.getDeclaredMethod(name, *paramTypes).also { it.isAccessible = true }
-            } catch (_: NoSuchMethodException) {}
-            current = current.superclass
-        }
-        // 也检查所有接口
-        for (method in clazz.methods) {
-            if (method.name == name && method.parameterCount == paramTypes.size) {
-                var match = true
-                for (i in paramTypes.indices) {
-                    if (!method.parameterTypes[i].isAssignableFrom(paramTypes[i])) {
-                        match = false
-                        break
-                    }
-                }
-                if (match) return method
-            }
-        }
-        return null
     }
 
     private fun showNotification(
