@@ -778,13 +778,25 @@ class CCBarSettingsPanel(private val project: Project?) {
         panel.add(commandBarEnvVariablesPanel)
 
         // 简易模式复选框（仅Command 列表模式时显示）
-        simpleModePanel = JPanel(BorderLayout())
-        simpleModeCheckbox = JCheckBox("简易模式（弹出菜单仅显示Command名称）").apply {
+        simpleModePanel = JPanel().apply {
+            layout = BoxLayout(this, BoxLayout.Y_AXIS)
+        }
+        val simpleModeRow = JPanel(BorderLayout())
+        simpleModeCheckbox = JCheckBox("简易模式").apply {
             addActionListener {
                 if (!ignoreUpdate) updateSimpleMode()
             }
         }
-        simpleModePanel.add(simpleModeCheckbox, BorderLayout.WEST)
+        simpleModeRow.add(simpleModeCheckbox, BorderLayout.WEST)
+        simpleModePanel.add(simpleModeRow)
+        val simpleModeHintPanel = JPanel(BorderLayout())
+        val simpleModeCheckboxSpacer = Box.createHorizontalStrut(JCheckBox().preferredSize.width)
+        simpleModeHintPanel.add(simpleModeCheckboxSpacer, BorderLayout.WEST)
+        simpleModeHintPanel.add(JLabel("简易模式下弹出菜单仅展示Command的图标和名称").apply {
+            foreground = com.intellij.ui.JBColor.GRAY
+            font = font.deriveFont(font.size2D - 1f)
+        }, BorderLayout.CENTER)
+        simpleModePanel.add(simpleModeHintPanel)
         panel.add(simpleModePanel)
 
         outerPanel.add(panel, BorderLayout.NORTH)
@@ -1418,6 +1430,7 @@ class CCBarSettingsPanel(private val project: Project?) {
                 selectedCommand = null
                 clearCommandDetail()
                 updateQuickParamSummary()
+                hideCommandDetailPanel()
             }
         }
     }
@@ -1694,8 +1707,15 @@ class CCBarSettingsPanel(private val project: Project?) {
             selectedCommand = null
             clearCommandDetail()
             updateQuickParamSummary()
-            showCommandDetail()
+            hideCommandDetailPanel()
         }
+    }
+
+    /**
+     * 隐藏 Command 详情面板（未选中任何 Command 时）
+     */
+    private fun hideCommandDetailPanel() {
+        commandDetailOuterPanel.isVisible = false
     }
 
     /**
