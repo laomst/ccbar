@@ -150,11 +150,17 @@ CommandBar（工具栏按钮）
 - 点击"取消"取消本次操作，不创建终端
 
 ### 3.8 环境变量配置
-- Command 和 CommandBar（直接命令模式）均支持配置环境变量
+- CommandBar 支持两层环境变量：`commonEnvVariables`（全局）和 `envVariables`（直接命令专用）
+- Command 支持 `envVariables` 环境变量
+- `commonEnvVariables` 作为全局默认，对 CommandBar 下所有 Command 和直接命令生效
+- 合并规则（统一）：
+  - 直接命令模式：最终环境变量 = `CommandBar.commonEnvVariables` 合并 `CommandBar.envVariables`（后者覆盖同名）
+  - Command 列表模式：最终环境变量 = `CommandBar.commonEnvVariables` 合并 `Command.envVariables`（后者覆盖同名）
 - 环境变量以 `KEY1=val1;KEY2=val2` 格式存储
 - 设置面板中提供可编辑文本框 + `[…]` 按钮，文本框可直接输入编辑，也可点击按钮打开表格形式的编辑对话框
+- CommandBar 的全局环境变量字段始终可见，标签为"环境变量(公共):"
 - 编辑对话框为两列表格（变量名、值），支持添加/删除/上移/下移
-- 命令确认弹框中同样展示环境变量，用户可临时修改
+- 命令确认弹框中展示合并后的环境变量，用户可临时修改
 - 执行时按 `;` 切割，每条按第一个 `=` 分为 key/value，根据 OS 类型选择注入语法：
   - macOS/Linux（bash/zsh）：`export KEY1=val1; export KEY2=val2; command`
   - Windows（PowerShell）：`$env:KEY1="val1"; $env:KEY2="val2"; command`
@@ -266,6 +272,7 @@ CommandBar（工具栏按钮）
       "command": "npm test",
       "workingDirectory": "",
       "defaultTerminalName": "NPM Test",
+      "commonEnvVariables": "",
       "envVariables": "",
       "commands": []
     },
@@ -276,6 +283,7 @@ CommandBar（工具栏按钮）
       "command": "",
       "workingDirectory": "",
       "defaultTerminalName": "",
+      "commonEnvVariables": "ANTHROPIC_MODEL=claude-sonnet-4-20250514",
       "envVariables": "",
       "commands": [
         {

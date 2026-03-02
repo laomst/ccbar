@@ -93,6 +93,10 @@ class CCBarSettingsPanel(private val project: Project?) {
     // CommandBar 工作目录面板（用于控制显示/隐藏）
     private lateinit var commandBarWorkingDirPanel: JComponent
 
+    // CommandBar 公共环境变量面板和字段（始终显示）
+    private lateinit var commandBarCommonEnvVariablesPanel: JComponent
+    private lateinit var commandBarCommonEnvVariablesField: JBTextField
+
     // CommandBar 环境变量面板和字段（仅直接命令模式时显示）
     private lateinit var commandBarEnvVariablesPanel: JComponent
     private lateinit var commandBarEnvVariablesField: JBTextField
@@ -750,6 +754,40 @@ class CCBarSettingsPanel(private val project: Project?) {
         commandBarWorkingDirPanel.add(workDirHintPanel)
         panel.add(commandBarWorkingDirPanel)
 
+        // Common Environment Variables 字段（始终显示）
+        commandBarCommonEnvVariablesPanel = JPanel(BorderLayout())
+        commandBarCommonEnvVariablesPanel.add(JLabel("环境变量(公共):"), BorderLayout.WEST)
+        val commandBarCommonEnvFieldPanel = JPanel(BorderLayout())
+        commandBarCommonEnvVariablesField = JBTextField().apply {
+            emptyText.text = "KEY1=val1;KEY2=val2"
+            document.addDocumentListener(object : DocumentListener {
+                override fun insertUpdate(e: DocumentEvent?) = updateCommandBarCommonEnvVariables()
+                override fun removeUpdate(e: DocumentEvent?) = updateCommandBarCommonEnvVariables()
+                override fun changedUpdate(e: DocumentEvent?) = updateCommandBarCommonEnvVariables()
+            })
+        }
+        commandBarCommonEnvFieldPanel.add(commandBarCommonEnvVariablesField, BorderLayout.CENTER)
+        val commandBarCommonEnvEditButton = JButton("...").apply {
+            toolTipText = "编辑公共环境变量"
+            addActionListener {
+                val currentProject = project ?: ProjectManager.getInstance().openProjects.firstOrNull()
+                val dialog = EnvVariablesDialog(currentProject, commandBarCommonEnvVariablesField.text)
+                if (dialog.showAndGet()) {
+                    commandBarCommonEnvVariablesField.text = dialog.envVariablesText
+                }
+            }
+        }
+        commandBarCommonEnvFieldPanel.add(commandBarCommonEnvEditButton, BorderLayout.EAST)
+        commandBarCommonEnvVariablesPanel.add(commandBarCommonEnvFieldPanel, BorderLayout.CENTER)
+        panel.add(commandBarCommonEnvVariablesPanel)
+        // 添加提示标签
+        val commonEnvHintPanel = JPanel(BorderLayout())
+        commonEnvHintPanel.add(Box.createHorizontalStrut(JLabel("环境变量(公共):").preferredSize.width), BorderLayout.WEST)
+        commonEnvHintPanel.add(JLabel("对直接命令和命令列表中的每个命令都生效").apply {
+            foreground = com.intellij.ui.JBColor.GRAY
+        }, BorderLayout.CENTER)
+        panel.add(commonEnvHintPanel)
+
         // Environment Variables 字段（仅直接命令模式时显示）
         commandBarEnvVariablesPanel = JPanel(BorderLayout())
         commandBarEnvVariablesPanel.add(JLabel("环境变量:"), BorderLayout.WEST)
@@ -776,6 +814,13 @@ class CCBarSettingsPanel(private val project: Project?) {
         commandBarEnvFieldPanel.add(commandBarEnvEditButton, BorderLayout.EAST)
         commandBarEnvVariablesPanel.add(commandBarEnvFieldPanel, BorderLayout.CENTER)
         panel.add(commandBarEnvVariablesPanel)
+        // 添加提示标签
+        val commandBarEnvHintPanel = JPanel(BorderLayout())
+        commandBarEnvHintPanel.add(Box.createHorizontalStrut(JLabel("环境变量:").preferredSize.width), BorderLayout.WEST)
+        commandBarEnvHintPanel.add(JLabel("如果和公共环境变量冲突则覆盖公共环境变量").apply {
+            foreground = com.intellij.ui.JBColor.GRAY
+        }, BorderLayout.CENTER)
+        commandBarEnvVariablesPanel.add(commandBarEnvHintPanel, BorderLayout.SOUTH)
 
         // 简易模式复选框（仅Command 列表模式时显示）
         simpleModePanel = JPanel().apply {
@@ -1048,6 +1093,13 @@ class CCBarSettingsPanel(private val project: Project?) {
         commandEnvFieldPanel.add(commandEnvEditButton, BorderLayout.EAST)
         commandEnvVariablesPanel.add(commandEnvFieldPanel, BorderLayout.CENTER)
         panel.add(commandEnvVariablesPanel)
+        // 添加提示标签
+        val commandEnvHintPanel = JPanel(BorderLayout())
+        commandEnvHintPanel.add(Box.createHorizontalStrut(JLabel("环境变量:").preferredSize.width), BorderLayout.WEST)
+        commandEnvHintPanel.add(JLabel("如果和公共环境变量冲突则覆盖公共环境变量").apply {
+            foreground = com.intellij.ui.JBColor.GRAY
+        }, BorderLayout.CENTER)
+        commandEnvVariablesPanel.add(commandEnvHintPanel, BorderLayout.SOUTH)
 
         // QuickParam 列表（单行：标签 + 只读摘要 + 编辑CommandBar）
         quickParamOuterPanel = createQuickParamPanel()
@@ -1275,6 +1327,7 @@ class CCBarSettingsPanel(private val project: Project?) {
             commandBarNameField.text = commandBar.name
             commandBarIconField.text = commandBar.icon
             commandBarCommandField.text = commandBar.command
+            commandBarCommonEnvVariablesField.text = commandBar.commonEnvVariables
             commandBarEnvVariablesField.text = commandBar.envVariables
             commandBarWorkingDirField.text = commandBar.workingDirectory
             commandBarTerminalNameField.text = commandBar.defaultTerminalName
@@ -1297,6 +1350,7 @@ class CCBarSettingsPanel(private val project: Project?) {
             commandBarNameField.text = ""
             commandBarIconField.text = ""
             commandBarCommandField.text = ""
+            commandBarCommonEnvVariablesField.text = ""
             commandBarEnvVariablesField.text = ""
             commandBarWorkingDirField.text = ""
             commandBarTerminalNameField.text = ""
@@ -1334,6 +1388,11 @@ class CCBarSettingsPanel(private val project: Project?) {
     private fun updateCommandBarWorkingDir() {
         if (ignoreUpdate) return
         selectedCommandBar?.workingDirectory = commandBarWorkingDirField.text
+    }
+
+    private fun updateCommandBarCommonEnvVariables() {
+        if (ignoreUpdate) return
+        selectedCommandBar?.commonEnvVariables = commandBarCommonEnvVariablesField.text
     }
 
     private fun updateCommandBarEnvVariables() {

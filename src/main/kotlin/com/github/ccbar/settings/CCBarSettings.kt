@@ -196,6 +196,7 @@ data class CommandBarConfig(
     var id: String = "",
     var name: String = "",
     var icon: String = "",
+    var commonEnvVariables: String = "",  // 公共环境变量，对所有 Command 和直接命令生效
     // 直接命令模式字段
     var command: String = "",  // 直接命令，为空则使用Command 列表模式
     var envVariables: String = "",  // 环境变量，格式：KEY1=val1;KEY2=val2
@@ -213,6 +214,7 @@ data class CommandBarConfig(
         id = id,
         name = name,
         icon = icon,
+        commonEnvVariables = commonEnvVariables,
         command = command,
         envVariables = envVariables,
         workingDirectory = workingDirectory,

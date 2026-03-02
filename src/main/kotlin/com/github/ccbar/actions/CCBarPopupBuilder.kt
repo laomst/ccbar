@@ -96,6 +96,8 @@ object CCBarPopupBuilder {
         // 先创建 popup，后续在回调中使用
         lateinit var popup: JBPopup
 
+        val commonEnvVars = commandBarConfig.commonEnvVariables
+
         // 为每个 Command 创建一行
         for (command in commandBarConfig.commands) {
             if (command.isSeparator()) {
@@ -103,10 +105,10 @@ object CCBarPopupBuilder {
             } else if (!command.enabled) {
                 continue
             } else if (simpleMode) {
-                val row = createSimpleCommandRow(project, command, labelWidth) { popup.closeOk(null) }
+                val row = createSimpleCommandRow(project, command, labelWidth, commonEnvVars) { popup.closeOk(null) }
                 mainPanel.add(row)
             } else {
-                val commandBlock = createCommandBlock(project, command, labelWidth, previewWidth) { popup.closeOk(null) }
+                val commandBlock = createCommandBlock(project, command, labelWidth, previewWidth, commonEnvVars) { popup.closeOk(null) }
                 mainPanel.add(commandBlock)
             }
             // 添加行间距
@@ -283,10 +285,10 @@ object CCBarPopupBuilder {
     /**
      * 创建简易模式的Command行（仅显示名称，整行悬浮高亮）
      */
-    private fun createSimpleCommandRow(project: Project, command: CommandConfig, labelWidth: Int, onClose: () -> Unit): JPanel {
+    private fun createSimpleCommandRow(project: Project, command: CommandConfig, labelWidth: Int, commonEnvVars: String, onClose: () -> Unit): JPanel {
         val hoverPanel = createHoverPanel {
             onClose()
-            CCBarTerminalService.openTerminal(project, command, null)
+            CCBarTerminalService.openTerminal(project, command, null, commonEnvVars)
         }
         hoverPanel.toolTipText = command.baseCommand
 
@@ -313,10 +315,10 @@ object CCBarPopupBuilder {
      * 第一行：命令预览 | 名称
      * 第二行：快捷参数列表（小号文字）
      */
-    private fun createCommandBlock(project: Project, command: CommandConfig, labelWidth: Int, previewWidth: Int, onClose: () -> Unit): JPanel {
+    private fun createCommandBlock(project: Project, command: CommandConfig, labelWidth: Int, previewWidth: Int, commonEnvVars: String, onClose: () -> Unit): JPanel {
         val hoverPanel = createHoverPanel {
             onClose()
-            CCBarTerminalService.openTerminal(project, command, null)
+            CCBarTerminalService.openTerminal(project, command, null, commonEnvVars)
         }
 
         // 命令预览标签（需要被快捷参数 hover 更新）
@@ -353,7 +355,7 @@ object CCBarPopupBuilder {
             }
 
             for ((index, quickParam) in enabledQuickParams.withIndex()) {
-                val btn = createQuickParamLabel(project, command, quickParam, commandPreview, onClose)
+                val btn = createQuickParamLabel(project, command, quickParam, commandPreview, commonEnvVars, onClose)
                 secondRow.add(btn)
                 if (index < enabledQuickParams.size - 1) {
                     val separator = JBLabel("|").apply {
@@ -380,6 +382,7 @@ object CCBarPopupBuilder {
         command: CommandConfig,
         quickParam: QuickParamConfig,
         commandPreview: JBLabel,
+        commonEnvVars: String,
         onClose: () -> Unit
     ): JBLabel {
         val fullCommand = buildFullCommand(command.baseCommand, quickParam.params)
@@ -396,7 +399,7 @@ object CCBarPopupBuilder {
                 override fun mouseClicked(e: MouseEvent?) {
                     e?.consume()
                     onClose()
-                    CCBarTerminalService.openTerminal(project, command, quickParam)
+                    CCBarTerminalService.openTerminal(project, command, quickParam, commonEnvVars)
                 }
 
                 override fun mouseEntered(e: MouseEvent?) {

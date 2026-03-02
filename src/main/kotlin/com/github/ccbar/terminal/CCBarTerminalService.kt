@@ -26,11 +26,13 @@ object CCBarTerminalService {
 
     /**
      * 为 Command 打开终端（Command 列表模式）
+     * @param commonEnvVars CommandBar 级别的公共环境变量
      */
-    fun openTerminal(project: Project, command: CommandConfig, quickParam: QuickParamConfig?) {
+    fun openTerminal(project: Project, command: CommandConfig, quickParam: QuickParamConfig?, commonEnvVars: String = "") {
         val baseCommand = buildCommand(command, quickParam)
         val defaultOpenInEditor = command.terminalMode == TerminalMode.EDITOR
-        val dialog = CommandPreviewDialog(project, baseCommand, command.defaultTerminalName, defaultOpenInEditor, command.envVariables)
+        val mergedEnvVars = mergeEnvVariables(commonEnvVars, command.envVariables)
+        val dialog = CommandPreviewDialog(project, baseCommand, command.defaultTerminalName, defaultOpenInEditor, mergedEnvVars)
         if (!dialog.showAndGet()) {
             return
         }
@@ -47,7 +49,8 @@ object CCBarTerminalService {
     fun openTerminalForCommandBar(project: Project, commandBar: CommandBarConfig) {
         val defaultName = commandBar.defaultTerminalName.ifBlank { commandBar.name }
         val defaultOpenInEditor = commandBar.terminalMode == TerminalMode.EDITOR
-        val dialog = CommandPreviewDialog(project, commandBar.command, defaultName, defaultOpenInEditor, commandBar.envVariables)
+        val mergedEnvVars = mergeEnvVariables(commandBar.commonEnvVariables, commandBar.envVariables)
+        val dialog = CommandPreviewDialog(project, commandBar.command, defaultName, defaultOpenInEditor, mergedEnvVars)
         if (!dialog.showAndGet()) {
             return
         }
@@ -80,6 +83,20 @@ object CCBarTerminalService {
                 null
             }
         }
+    }
+
+    /**
+     * 合并两层环境变量，overrideEnvVars 中的同名变量覆盖 baseEnvVars
+     */
+    private fun mergeEnvVariables(baseEnvVars: String, overrideEnvVars: String): String {
+        val baseVars = parseEnvVariables(baseEnvVars)
+        val overrideVars = parseEnvVariables(overrideEnvVars)
+        if (baseVars.isEmpty()) return overrideEnvVars.trim()
+        if (overrideVars.isEmpty()) return baseEnvVars.trim()
+        val merged = LinkedHashMap<String, String>()
+        baseVars.forEach { (k, v) -> merged[k] = v }
+        overrideVars.forEach { (k, v) -> merged[k] = v }
+        return merged.entries.joinToString(";") { "${it.key}=${it.value}" }
     }
 
     /**
