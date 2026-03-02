@@ -1182,22 +1182,34 @@ class CCBarSettingsPanel(private val project: Project?) {
     private fun moveCommandBarUp() {
         val index = commandBarList.selectedIndex
         if (index > 0) {
-            Collections.swap(editingState.commandBars, index, index - 1)
-            val item = commandBarListModel.getElementAt(index)
-            commandBarListModel.remove(index)
-            commandBarListModel.add(index - 1, item)
-            commandBarList.selectedIndex = index - 1
+            ignoreUpdate = true
+            try {
+                Collections.swap(editingState.commandBars, index, index - 1)
+                val item = commandBarListModel.getElementAt(index)
+                commandBarListModel.remove(index)
+                commandBarListModel.add(index - 1, item)
+                commandBarList.selectedIndex = index - 1
+            } finally {
+                ignoreUpdate = false
+            }
+            onCommandBarSelected()
         }
     }
 
     private fun moveCommandBarDown() {
         val index = commandBarList.selectedIndex
         if (index < commandBarListModel.size - 1) {
-            Collections.swap(editingState.commandBars, index, index + 1)
-            val item = commandBarListModel.getElementAt(index)
-            commandBarListModel.remove(index)
-            commandBarListModel.add(index + 1, item)
-            commandBarList.selectedIndex = index + 1
+            ignoreUpdate = true
+            try {
+                Collections.swap(editingState.commandBars, index, index + 1)
+                val item = commandBarListModel.getElementAt(index)
+                commandBarListModel.remove(index)
+                commandBarListModel.add(index + 1, item)
+                commandBarList.selectedIndex = index + 1
+            } finally {
+                ignoreUpdate = false
+            }
+            onCommandBarSelected()
         }
     }
 
@@ -1612,11 +1624,17 @@ class CCBarSettingsPanel(private val project: Project?) {
         val commandBar = selectedCommandBar ?: return
         val index = commandList.selectedIndex
         if (index > 0) {
-            Collections.swap(commandBar.commands, index, index - 1)
-            val item = commandListModel.getElementAt(index)
-            commandListModel.remove(index)
-            commandListModel.add(index - 1, item)
-            commandList.selectedIndex = index - 1
+            ignoreUpdate = true
+            try {
+                Collections.swap(commandBar.commands, index, index - 1)
+                val item = commandListModel.getElementAt(index)
+                commandListModel.remove(index)
+                commandListModel.add(index - 1, item)
+                commandList.selectedIndex = index - 1
+            } finally {
+                ignoreUpdate = false
+            }
+            onCommandSelected()
         }
     }
 
@@ -1624,11 +1642,17 @@ class CCBarSettingsPanel(private val project: Project?) {
         val commandBar = selectedCommandBar ?: return
         val index = commandList.selectedIndex
         if (index < commandListModel.size - 1) {
-            Collections.swap(commandBar.commands, index, index + 1)
-            val item = commandListModel.getElementAt(index)
-            commandListModel.remove(index)
-            commandListModel.add(index + 1, item)
-            commandList.selectedIndex = index + 1
+            ignoreUpdate = true
+            try {
+                Collections.swap(commandBar.commands, index, index + 1)
+                val item = commandListModel.getElementAt(index)
+                commandListModel.remove(index)
+                commandListModel.add(index + 1, item)
+                commandList.selectedIndex = index + 1
+            } finally {
+                ignoreUpdate = false
+            }
+            onCommandSelected()
         }
     }
 
@@ -1653,7 +1677,7 @@ class CCBarSettingsPanel(private val project: Project?) {
 
         val index = commandList.selectedIndex
         if (index >= 0 && selectedCommandBar != null) {
-            selectedCommand = selectedCommandBar!!.commands[index]
+            selectedCommand = commandListModel.getElementAt(index)
 
             // 先更新表单数据
             updateCommandDetail()
