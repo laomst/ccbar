@@ -97,6 +97,7 @@ object CCBarPopupBuilder {
         lateinit var popup: JBPopup
 
         val commonEnvVars = commandBarConfig.commonEnvVariables
+        val commonQuickParams = commandBarConfig.commonQuickParams
 
         // 为每个 Command 创建一行
         for (command in commandBarConfig.commands) {
@@ -108,7 +109,7 @@ object CCBarPopupBuilder {
                 val row = createSimpleCommandRow(project, command, labelWidth, commonEnvVars) { popup.closeOk(null) }
                 mainPanel.add(row)
             } else {
-                val commandBlock = createCommandBlock(project, command, labelWidth, previewWidth, commonEnvVars) { popup.closeOk(null) }
+                val commandBlock = createCommandBlock(project, command, labelWidth, previewWidth, commonEnvVars, commonQuickParams) { popup.closeOk(null) }
                 mainPanel.add(commandBlock)
             }
             // 添加行间距
@@ -200,13 +201,15 @@ object CCBarPopupBuilder {
     private fun calculateMaxPreviewWidth(commandBarConfig: CommandBarConfig): Int {
         val fontMetrics = JBLabel().getFontMetrics(JBLabel().font)
         var maxWidth = 0
+        val commonQuickParams = commandBarConfig.commonQuickParams
 
         for (command in commandBarConfig.commands) {
             if (!command.isSeparator() && command.enabled) {
                 // 计算基础命令宽度
                 var textWidth = fontMetrics.stringWidth(command.baseCommand)
-                // 同时考虑带参数的完整命令宽度
-                for (quickParam in command.quickParams.filter { it.enabled }) {
+                // 同时考虑带参数的完整命令宽度（使用合并后的快捷参数）
+                val mergedQuickParams = mergeQuickParams(commonQuickParams, command.quickParams)
+                for (quickParam in mergedQuickParams) {
                     val fullCommand = buildFullCommand(command.baseCommand, quickParam.params)
                     val fullWidth = fontMetrics.stringWidth(fullCommand)
                     if (fullWidth > textWidth) {
@@ -315,7 +318,7 @@ object CCBarPopupBuilder {
      * 第一行：命令预览 | 名称
      * 第二行：快捷参数列表（小号文字）
      */
-    private fun createCommandBlock(project: Project, command: CommandConfig, labelWidth: Int, previewWidth: Int, commonEnvVars: String, onClose: () -> Unit): JPanel {
+    private fun createCommandBlock(project: Project, command: CommandConfig, labelWidth: Int, previewWidth: Int, commonEnvVars: String, commonQuickParams: List<QuickParamConfig>, onClose: () -> Unit): JPanel {
         val hoverPanel = createHoverPanel {
             onClose()
             CCBarTerminalService.openTerminal(project, command, null, commonEnvVars)
@@ -347,17 +350,18 @@ object CCBarPopupBuilder {
         hoverPanel.add(firstRow)
 
         // 第二行：快捷参数列表（仅在有启用的快捷参数时显示）
-        val enabledQuickParams = command.quickParams.filter { it.enabled }
-        if (enabledQuickParams.isNotEmpty()) {
+        // 使用合并后的快捷参数
+        val mergedQuickParams = mergeQuickParams(commonQuickParams, command.quickParams)
+        if (mergedQuickParams.isNotEmpty()) {
             val secondRow = JPanel(FlowLayout(FlowLayout.RIGHT, 0, 0)).apply {
                 isOpaque = false
                 border = JBUI.Borders.emptyTop(-4)
             }
 
-            for ((index, quickParam) in enabledQuickParams.withIndex()) {
+            for ((index, quickParam) in mergedQuickParams.withIndex()) {
                 val btn = createQuickParamLabel(project, command, quickParam, commandPreview, commonEnvVars, onClose)
                 secondRow.add(btn)
-                if (index < enabledQuickParams.size - 1) {
+                if (index < mergedQuickParams.size - 1) {
                     val separator = JBLabel("|").apply {
                         foreground = QUICK_PARAM_SEPARATOR_COLOR
                         font = font.deriveFont(font.size2D - 1f)
@@ -424,5 +428,19 @@ object CCBarPopupBuilder {
         } else {
             "$baseCommand $params"
         }
+    }
+
+    /**
+     * 合并公共快捷参数和 Command 自身的快捷参数
+     * 规则：公共快捷参数（未被覆盖的）在前，Command 自身的快捷参数在后
+     * 按 name 判断同名，Command 同名参数覆盖公共参数
+     */
+    private fun mergeQuickParams(
+        commonParams: List<QuickParamConfig>,
+        commandParams: List<QuickParamConfig>
+    ): List<QuickParamConfig> {
+        val commandNames = commandParams.filter { it.enabled }.map { it.name }.toSet()
+        val filteredCommon = commonParams.filter { it.enabled && it.name !in commandNames }
+        return filteredCommon + commandParams.filter { it.enabled }
     }
 }

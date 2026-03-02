@@ -97,6 +97,10 @@ class CCBarSettingsPanel(private val project: Project?) {
     private lateinit var commandBarCommonEnvVariablesPanel: JComponent
     private lateinit var commandBarCommonEnvVariablesField: JBTextField
 
+    // CommandBar 公共快捷参数面板和字段（仅 Command 列表模式时显示）
+    private lateinit var commandBarCommonQuickParamsPanel: JComponent
+    private lateinit var commandBarCommonQuickParamsSummaryField: JBTextField
+
     // CommandBar 环境变量面板和字段（仅直接命令模式时显示）
     private lateinit var commandBarEnvVariablesPanel: JComponent
     private lateinit var commandBarEnvVariablesField: JBTextField
@@ -817,7 +821,7 @@ class CCBarSettingsPanel(private val project: Project?) {
         // 添加提示标签
         val commandBarEnvHintPanel = JPanel(BorderLayout())
         commandBarEnvHintPanel.add(Box.createHorizontalStrut(JLabel("环境变量:").preferredSize.width), BorderLayout.WEST)
-        commandBarEnvHintPanel.add(JLabel("如果和公共环境变量冲突则覆盖公共环境变量").apply {
+        commandBarEnvHintPanel.add(JLabel("若和公共环境变量同名，则覆盖公共环境变量").apply {
             foreground = com.intellij.ui.JBColor.GRAY
         }, BorderLayout.CENTER)
         commandBarEnvVariablesPanel.add(commandBarEnvHintPanel, BorderLayout.SOUTH)
@@ -843,6 +847,34 @@ class CCBarSettingsPanel(private val project: Project?) {
         }, BorderLayout.CENTER)
         simpleModePanel.add(simpleModeHintPanel)
         panel.add(simpleModePanel)
+
+        // Common QuickParams 面板（仅 Command 列表模式且非简易模式时显示）
+        // 使用 BoxLayout 包含主面板和提示标签，便于统一控制显示/隐藏
+        commandBarCommonQuickParamsPanel = JPanel().apply {
+            layout = BoxLayout(this, BoxLayout.Y_AXIS)
+        }
+        val commonQuickParamsRow = JPanel(BorderLayout())
+        commonQuickParamsRow.add(JLabel("快捷参数(公共):"), BorderLayout.WEST)
+        val commonQuickParamsFieldPanel = JPanel(BorderLayout())
+        commandBarCommonQuickParamsSummaryField = JBTextField().apply {
+            isEditable = false
+        }
+        commonQuickParamsFieldPanel.add(commandBarCommonQuickParamsSummaryField, BorderLayout.CENTER)
+        val commonQuickParamsEditButton = JButton(AllIcons.Actions.Edit).apply {
+            toolTipText = "编辑公共快捷参数"
+            addActionListener { openCommonQuickParamEditDialog() }
+        }
+        commonQuickParamsFieldPanel.add(commonQuickParamsEditButton, BorderLayout.EAST)
+        commonQuickParamsRow.add(commonQuickParamsFieldPanel, BorderLayout.CENTER)
+        commandBarCommonQuickParamsPanel.add(commonQuickParamsRow)
+        // 添加提示标签
+        val commonQuickParamsHintPanel = JPanel(BorderLayout())
+        commonQuickParamsHintPanel.add(Box.createHorizontalStrut(JLabel("快捷参数(公共):").preferredSize.width), BorderLayout.WEST)
+        commonQuickParamsHintPanel.add(JLabel("对命令列表中的所有命令生效，对直接命令无效").apply {
+            foreground = com.intellij.ui.JBColor.GRAY
+        }, BorderLayout.CENTER)
+        commandBarCommonQuickParamsPanel.add(commonQuickParamsHintPanel)
+        panel.add(commandBarCommonQuickParamsPanel)
 
         outerPanel.add(panel, BorderLayout.NORTH)
         return outerPanel
@@ -1096,7 +1128,7 @@ class CCBarSettingsPanel(private val project: Project?) {
         // 添加提示标签
         val commandEnvHintPanel = JPanel(BorderLayout())
         commandEnvHintPanel.add(Box.createHorizontalStrut(JLabel("环境变量:").preferredSize.width), BorderLayout.WEST)
-        commandEnvHintPanel.add(JLabel("如果和公共环境变量冲突则覆盖公共环境变量").apply {
+        commandEnvHintPanel.add(JLabel("若和公共环境变量同名，则覆盖公共环境变量").apply {
             foreground = com.intellij.ui.JBColor.GRAY
         }, BorderLayout.CENTER)
         commandEnvVariablesPanel.add(commandEnvHintPanel, BorderLayout.SOUTH)
@@ -1113,22 +1145,35 @@ class CCBarSettingsPanel(private val project: Project?) {
      * 创建 快捷参数表格面板
      */
     private fun createQuickParamPanel(): JComponent {
-        val panel = JPanel(BorderLayout())
+        val outerPanel = JPanel().apply {
+            layout = BoxLayout(this, BoxLayout.Y_AXIS)
+        }
 
-        panel.add(JLabel("快捷参数列表:"), BorderLayout.WEST)
+        val mainPanel = JPanel(BorderLayout())
+        mainPanel.add(JLabel("快捷参数:"), BorderLayout.WEST)
 
         quickParamSummaryField = JBTextField().apply {
             isEditable = false
         }
-        panel.add(quickParamSummaryField, BorderLayout.CENTER)
+        mainPanel.add(quickParamSummaryField, BorderLayout.CENTER)
 
         val editButton = JButton(AllIcons.Actions.Edit).apply {
-            toolTipText = "编辑快捷参数列表"
+            toolTipText = "编辑快捷参数"
             addActionListener { openQuickParamEditDialog() }
         }
-        panel.add(editButton, BorderLayout.EAST)
+        mainPanel.add(editButton, BorderLayout.EAST)
 
-        return panel
+        outerPanel.add(mainPanel)
+
+        // 添加提示标签
+        val hintPanel = JPanel(BorderLayout())
+        hintPanel.add(Box.createHorizontalStrut(JLabel("快捷参数:").preferredSize.width), BorderLayout.WEST)
+        hintPanel.add(JLabel("若和公共参数同名，则覆盖公共参数").apply {
+            foreground = com.intellij.ui.JBColor.GRAY
+        }, BorderLayout.CENTER)
+        outerPanel.add(hintPanel)
+
+        return outerPanel
     }
 
     /**
@@ -1284,6 +1329,7 @@ class CCBarSettingsPanel(private val project: Project?) {
         val copy = source.deepCopy().apply {
             id = UUID.randomUUID().toString()
             name = source.name + "-copy"
+            commonQuickParams.forEach { it.id = UUID.randomUUID().toString() }
             commands.forEach { it.id = UUID.randomUUID().toString(); it.quickParams.forEach { sb -> sb.id = UUID.randomUUID().toString() } }
         }
         val insertIndex = index + 1
@@ -1333,6 +1379,8 @@ class CCBarSettingsPanel(private val project: Project?) {
             commandBarTerminalNameField.text = commandBar.defaultTerminalName
             commandBarTerminalModeCheckbox.isSelected = commandBar.terminalMode == TerminalMode.EDITOR
             simpleModeCheckbox.isSelected = commandBar.simpleMode
+            // 更新公共快捷参数摘要
+            updateCommandBarCommonQuickParamsSummary()
             // 更新直接命令模式相关字段的显示状态
             updateDirectCommandModeVisibility()
             // 更新提示文字状态
@@ -1356,6 +1404,10 @@ class CCBarSettingsPanel(private val project: Project?) {
             commandBarTerminalNameField.text = ""
             commandBarTerminalModeCheckbox.isSelected = false
             simpleModeCheckbox.isSelected = false
+            // 清空公共快捷参数摘要
+            if (::commandBarCommonQuickParamsSummaryField.isInitialized) {
+                commandBarCommonQuickParamsSummaryField.text = ""
+            }
             // 重置提示文字状态
             updateCommandHintVisibility()
             updateWorkDirHintVisibility()
@@ -1469,10 +1521,13 @@ class CCBarSettingsPanel(private val project: Project?) {
 
     /**
      * 更新简易模式下快捷参数面板的显示状态
+     * 简易模式下隐藏 Command 的快捷参数和公共快捷参数
      */
     private fun updateSimpleModeVisibility() {
         val isSimple = selectedCommandBar?.simpleMode == true
         quickParamOuterPanel.isVisible = !isSimple
+        // 公共快捷参数面板仅在非简易模式下显示
+        commandBarCommonQuickParamsPanel.isVisible = !isSimple
     }
 
     // ==================== Command 列表操作 ====================
@@ -1954,6 +2009,28 @@ class CCBarSettingsPanel(private val project: Project?) {
         }
     }
 
+    // ==================== 公共快捷参数操作 ====================
+
+    private fun updateCommandBarCommonQuickParamsSummary() {
+        if (::commandBarCommonQuickParamsSummaryField.isInitialized) {
+            val names = selectedCommandBar?.commonQuickParams?.filter { it.enabled }?.map { it.name } ?: emptyList()
+            commandBarCommonQuickParamsSummaryField.text = if (names.isEmpty()) "" else names.joinToString(" | ")
+        }
+    }
+
+    private fun openCommonQuickParamEditDialog() {
+        val commandBar = selectedCommandBar ?: return
+        val currentProject = project ?: ProjectManager.getInstance().openProjects.firstOrNull()
+        val deepCopy = commandBar.commonQuickParams.map { it.deepCopy() }
+        val dialog = QuickParamEditDialog(currentProject, deepCopy)
+        if (dialog.showAndGet()) {
+            val edited = dialog.getEditedQuickParams()
+            commandBar.commonQuickParams.clear()
+            commandBar.commonQuickParams.addAll(edited)
+            updateCommandBarCommonQuickParamsSummary()
+        }
+    }
+
     // ==================== 配置操作 ====================
 
     private fun importConfig() {
@@ -2124,6 +2201,19 @@ class CCBarSettingsPanel(private val project: Project?) {
                 val enabledNormalCommands = button.commands.filter { !it.isSeparator() && it.enabled }
                 if (enabledNormalCommands.isEmpty()) {
                     errors.add("CommandBar '${button.name}': 未配置直接命令时，必须至少有一个启用的普通 Command")
+                }
+
+                // 验证公共快捷参数
+                for ((quickParamIndex, quickParam) in button.commonQuickParams.withIndex()) {
+                    // 禁用的 QuickParam 跳过验证
+                    if (!quickParam.enabled) continue
+
+                    if (quickParam.name.isBlank()) {
+                        errors.add("CommandBar '${button.name}' 公共快捷参数 ${quickParamIndex + 1}: 名称不能为空")
+                    }
+                    if (button.commonQuickParams.filter { it.enabled }.count { it.name == quickParam.name } > 1) {
+                        errors.add("CommandBar '${button.name}' 公共快捷参数 '${quickParam.name}': 名称重复")
+                    }
                 }
 
                 for ((commandIndex, option) in button.commands.withIndex()) {

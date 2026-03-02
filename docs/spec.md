@@ -98,6 +98,9 @@ CommandBar（工具栏按钮）
 - 每个快捷参数绑定不同的参数变体（纯文本）
 - 点击快捷参数后执行：Command.baseCommand + QuickParam.params
 - 快捷参数可显示图标或文字标签
+- CommandBar 支持公共快捷参数（`commonQuickParams`），仅对 Command 列表模式生效，对直接命令不生效
+- 公共快捷参数对 CommandBar 下所有 Command 统一生效，减少重复配置
+- 合并规则：公共快捷参数（未被覆盖的）在前，Command 自身的快捷参数保持原有顺序在后；按 `name` 判断同名，Command 同名参数覆盖公共参数
 
 ### 3.4 命令配置
 - 支持在设置面板中配置：
@@ -285,6 +288,13 @@ CommandBar（工具栏按钮）
       "defaultTerminalName": "",
       "commonEnvVariables": "ANTHROPIC_MODEL=claude-sonnet-4-20250514",
       "envVariables": "",
+      "commonQuickParams": [
+        {
+          "id": "verbose",
+          "name": "Verbose",
+          "params": "--verbose"
+        }
+      ],
       "commands": [
         {
           "id": "model",
@@ -409,6 +419,9 @@ CommandBar（工具栏按钮）
 │  │   Dev Tools         │  │ Icon:       [Browse...                      ]   │ │
 │  │ [+][-][↑][↓]       │  │ Command:    [                              ]   │ │
 │  └─────────────────────┘  │ [✓] 简易模式                                    │ │
+│                           │ 环境变量(公共): [                       ][…]   │ │
+│                           │ 快捷参数(公共): [Verbose              ][✏️]   │ │
+│                           │ (仅命令列表模式可见，直接命令模式隐藏)            │ │
 │                           │ ─────────────────────────────────────────────────  │ │
 │                           │ Commands (分组)                                  │ │
 │  ┌─────────────────────┐  │                                                   │ │
