@@ -27,6 +27,10 @@
         <!-- 终端编辑器提供者 -->
         <fileEditorProvider
             implementation="com.github.ccbar.terminal.editor.TerminalEditorProvider"/>
+
+        <!-- 终端文件图标提供者 -->
+        <fileIconProvider
+            implementation="com.github.ccbar.terminal.editor.TerminalFileIconProvider"/>
     </extensions>
 
     <actions>

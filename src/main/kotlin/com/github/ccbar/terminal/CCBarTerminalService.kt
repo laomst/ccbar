@@ -1,5 +1,6 @@
 package com.github.ccbar.terminal
 
+import com.github.ccbar.icons.CCBarIcons
 import com.github.ccbar.settings.CommandBarConfig
 import com.github.ccbar.settings.CommandConfig
 import com.github.ccbar.settings.QuickParamConfig
@@ -11,6 +12,7 @@ import com.intellij.notification.Notifications
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.wm.ToolWindowManager
 import org.jetbrains.plugins.terminal.TerminalProjectOptionsProvider
 import org.jetbrains.plugins.terminal.TerminalToolWindowManager
 import java.io.File
@@ -40,7 +42,7 @@ object CCBarTerminalService {
         val finalCommand = buildCommandWithEnv(project, dialog.envVariables, dialog.fullCommand)
         val workingDir = resolveWorkingDirectory(project, command)
         val openInEditor = dialog.openInEditor
-        createTerminalAndExecute(project, finalCommand, terminalName, workingDir, openInEditor)
+        createTerminalAndExecute(project, finalCommand, terminalName, workingDir, openInEditor, command.icon)
     }
 
     /**
@@ -58,7 +60,7 @@ object CCBarTerminalService {
         val finalCommand = buildCommandWithEnv(project, dialog.envVariables, dialog.fullCommand)
         val workingDir = resolveWorkingDirectoryForCommandBar(project, commandBar)
         val openInEditor = dialog.openInEditor
-        createTerminalAndExecute(project, finalCommand, terminalName, workingDir, openInEditor)
+        createTerminalAndExecute(project, finalCommand, terminalName, workingDir, openInEditor, commandBar.icon)
     }
 
     private fun buildCommand(command: CommandConfig, quickParam: QuickParamConfig?): String {
@@ -103,7 +105,7 @@ object CCBarTerminalService {
      * 根据 IDE 配置的 shell 类型构建带环境变量注入的命令
      * PowerShell: $env:K1="v1"; $env:K2="v2"; command
      * cmd.exe: set K1=v1&& set K2=v2&& command
-     * bash/zsh/fish 等: export K1=v1; export K2=v2; command
+     * bash/zsh/fish 等：export K1=v1; export K2=v2; command
      */
     private fun buildCommandWithEnv(project: Project, envVars: String, command: String): String {
         val vars = parseEnvVariables(envVars)
@@ -138,7 +140,7 @@ object CCBarTerminalService {
         val shellPath = try {
             TerminalProjectOptionsProvider.getInstance(project).shellPath
         } catch (e: Exception) {
-            LOG.info("CCBar: 无法获取 IDE 终端 shell 路径，回退到 OS 检测: ${e.message}")
+            LOG.info("CCBar: 无法获取 IDE 终端 shell 路径，回退到 OS 检测：${e.message}")
             return if (System.getProperty("os.name")?.lowercase()?.contains("windows") == true) {
                 ShellType.POWERSHELL
             } else {
@@ -199,11 +201,12 @@ object CCBarTerminalService {
         command: String,
         tabName: String,
         workingDir: String,
-        openInEditor: Boolean = false
+        openInEditor: Boolean = false,
+        iconPath: String? = null
     ) {
         if (openInEditor) {
             try {
-                TerminalEditorService.openInEditor(project, command, tabName, workingDir)
+                TerminalEditorService.openInEditor(project, command, tabName, workingDir, iconPath)
                 return
             } catch (e: Exception) {
                 LOG.warn("CCBar: 编辑器终端打开失败，回退到工具窗口", e)
@@ -213,12 +216,34 @@ object CCBarTerminalService {
         ApplicationManager.getApplication().invokeLater {
             try {
                 val manager = TerminalToolWindowManager.getInstance(project)
+
+                // 获取终端工具窗口的 ContentManager，用于后续设置图标
+                val toolWindow = ToolWindowManager.getInstance(project).getToolWindow("Terminal")
+                val contentManager = toolWindow?.contentManager
+
+                // 创建终端
                 val widget = manager.createShellWidget(workingDir, tabName, true, true)
+
+                // 执行命令
                 widget.sendCommandToExecute(command)
-                LOG.info("CCBar: 终端创建并执行命令成功: $tabName")
+
+                // 设置终端标签页图标 - 通过 ContentManager 获取新创建的 Content
+                // 注意：需要在 EDT 上延迟执行，确保 Content 已完全添加到 ContentManager
+                if (!iconPath.isNullOrBlank() && contentManager != null) {
+                    // 方式 1：延迟查找并设置图标（兼容大多数情况）
+                    ApplicationManager.getApplication().invokeLater {
+                        try {
+                            setTerminalTabIcon(contentManager, tabName, iconPath, project)
+                        } catch (e: Exception) {
+                            LOG.info("CCBar: 设置终端标签页图标失败：${e.message}")
+                        }
+                    }
+                }
+
+                LOG.info("CCBar: 终端创建并执行命令成功：$tabName")
             } catch (e: Exception) {
                 LOG.warn("CCBar: 终端创建/命令执行异常", e)
-                showNotification(project, "终端创建失败", "无法创建终端: ${e.message}", NotificationType.ERROR)
+                showNotification(project, "终端创建失败", "无法创建终端：${e.message}", NotificationType.ERROR)
             }
         }
     }
@@ -231,5 +256,51 @@ object CCBarTerminalService {
     ) {
         val notification = Notification(NOTIFICATION_GROUP_ID, title, content, type)
         Notifications.Bus.notify(notification, project)
+    }
+
+    /**
+     * 设置终端标签页图标
+     * 采用多重策略确保图标设置成功：
+     * 1. 首先尝试通过 tabName 匹配 Content
+     * 2. 备选方案：查找最后一个 Content（假设新创建的）
+     */
+    @Suppress("UNCHECKED_CAST")
+    private fun setTerminalTabIcon(
+        contentManager: Any,
+        terminalName: String,
+        iconPath: String,
+        project: Project
+    ) {
+        // 使用反射访问 ContentManager 的 contents 属性
+        val contentsMethod = contentManager.javaClass.getMethod("getContents")
+        val contents = contentsMethod.invoke(contentManager) as? Array<Any>
+            ?: return
+
+        // 获取 Content 类的 tabName 和 setIcon 方法
+        val getTabNameMethod = Class.forName("com.intellij.openapi.wm.Content")
+            .getMethod("getTabName")
+        val setIconMethod = Class.forName("com.intellij.openapi.wm.Content")
+            .getMethod("setIcon", javax.swing.Icon::class.java)
+
+        // 策略 1：通过 tabName 匹配
+        val contentByName = contents.firstOrNull {
+            getTabNameMethod.invoke(it) as? String == terminalName
+        }
+        if (contentByName != null) {
+            val icon = CCBarIcons.loadIcon(iconPath, project)
+            setIconMethod.invoke(contentByName, icon)
+            LOG.info("CCBar: 已设置终端标签页图标（通过名称匹配）：$terminalName")
+            return
+        }
+
+        // 策略 2：使用最后一个 Content（假设新创建的）
+        if (contents.isNotEmpty()) {
+            val lastContent = contents.last()
+            val icon = CCBarIcons.loadIcon(iconPath, project)
+            setIconMethod.invoke(lastContent, icon)
+            LOG.info("CCBar: 已设置终端标签页图标（通过最后一个 Content）：$terminalName")
+        } else {
+            LOG.warn("CCBar: 未找到 Content 来设置图标：$terminalName")
+        }
     }
 }

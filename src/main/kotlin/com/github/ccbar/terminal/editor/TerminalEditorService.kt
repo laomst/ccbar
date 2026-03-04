@@ -14,19 +14,22 @@ object TerminalEditorService {
 
     /**
      * 在编辑器区域打开终端
+     * @param iconPath 可选的图标路径，支持内置图标(builtin:xxx)、文件路径或网络URL
      */
     fun openInEditor(
         project: Project,
         command: String,
         terminalName: String,
-        workingDir: String?
+        workingDir: String?,
+        iconPath: String? = null
     ) {
         ApplicationManager.getApplication().invokeLater {
             try {
                 val virtualFile = TerminalVirtualFile(
                     terminalName = terminalName,
                     workingDirectory = workingDir,
-                    command = command
+                    command = command,
+                    iconPath = iconPath
                 )
 
                 FileEditorManager.getInstance(project).openFile(virtualFile, true)

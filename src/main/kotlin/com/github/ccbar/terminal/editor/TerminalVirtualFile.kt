@@ -9,7 +9,8 @@ import com.intellij.testFramework.LightVirtualFile
 class TerminalVirtualFile(
     val terminalName: String,
     val workingDirectory: String?,
-    val command: String?
+    val command: String?,
+    val iconPath: String? = null
 ) : LightVirtualFile("$terminalName.terminal", TerminalFileType.INSTANCE, "") {
 
     init {
