@@ -50,6 +50,9 @@ class CommandDetailPanel(
     private lateinit var baseCommandField: JBTextField
     private lateinit var terminalNameField: JBTextField
     private lateinit var terminalModeCheckbox: JCheckBox
+    private lateinit var terminalTabPrefixField: JBTextField
+    private lateinit var showPrefixInEditorCheckbox: JCheckBox
+    private lateinit var showPrefixInTerminalCheckbox: JCheckBox
     private lateinit var workingDirectoryField: TextFieldWithBrowseButton
     private lateinit var workDirHintLabel: JLabel
     private lateinit var envVariablesField: JBTextField
@@ -61,6 +64,7 @@ class CommandDetailPanel(
     private lateinit var baseCommandPanel: JPanel
     private lateinit var terminalNamePanel: JPanel
     private lateinit var terminalModePanel: JPanel
+    private lateinit var terminalTabPrefixPanel: JPanel
     private lateinit var dirPanel: JPanel
     private lateinit var dirHintPanel: JPanel
     private lateinit var envVariablesPanel: JPanel
@@ -116,6 +120,10 @@ class CommandDetailPanel(
         // Terminal Name 字段
         terminalNamePanel = createTerminalNamePanel()
         panel.add(terminalNamePanel)
+
+        // Terminal Tab Prefix 字段
+        terminalTabPrefixPanel = createTerminalTabPrefixPanel()
+        panel.add(terminalTabPrefixPanel)
 
         // Terminal Mode 字段
         terminalModePanel = createTerminalModePanel()
@@ -182,6 +190,9 @@ class CommandDetailPanel(
             workingDirectoryField.text = ""
             terminalNameField.text = ""
             terminalModeCheckbox.isSelected = false
+            terminalTabPrefixField.text = ""
+            showPrefixInEditorCheckbox.isSelected = true
+            showPrefixInTerminalCheckbox.isSelected = true
             updateWorkDirHintVisibility()
         } finally {
             context.ignoreUpdate = false
@@ -216,6 +227,9 @@ class CommandDetailPanel(
             workingDirectoryField.text = command.workingDirectory
             terminalNameField.text = command.defaultTerminalName
             terminalModeCheckbox.isSelected = command.terminalMode == TerminalMode.EDITOR
+            terminalTabPrefixField.text = command.terminalTabPrefix
+            showPrefixInEditorCheckbox.isSelected = command.showPrefixInEditor
+            showPrefixInTerminalCheckbox.isSelected = command.showPrefixInTerminal
             updateWorkDirHintVisibility()
         } finally {
             context.ignoreUpdate = false
@@ -231,6 +245,7 @@ class CommandDetailPanel(
         dirHintPanel.isVisible = false
         terminalNamePanel.isVisible = false
         terminalModePanel.isVisible = false
+        terminalTabPrefixPanel.isVisible = false
         quickParamOuterPanel.isVisible = false
         titledBorder.title = "分割线详情"
     }
@@ -244,6 +259,7 @@ class CommandDetailPanel(
         dirHintPanel.isVisible = true
         terminalNamePanel.isVisible = true
         terminalModePanel.isVisible = true
+        terminalTabPrefixPanel.isVisible = true
 
         // 简易模式下隐藏快捷参数面板
         val shouldShowQuickParams = currentCommandBar?.simpleMode != true
@@ -326,6 +342,64 @@ class CommandDetailPanel(
         }
         panel.add(terminalNameField, BorderLayout.CENTER)
         return panel
+    }
+
+    private fun createTerminalTabPrefixPanel(): JPanel {
+        val outerPanel = JPanel().apply {
+            layout = BoxLayout(this, BoxLayout.Y_AXIS)
+        }
+
+        // 主行：标签 + 输入框 + 复选框
+        val mainRow = JPanel(BorderLayout())
+        mainRow.add(JLabel("终端标签页前缀:"), BorderLayout.WEST)
+
+        val fieldPanel = JPanel(BorderLayout())
+        terminalTabPrefixField = JBTextField().apply {
+            (this as? JBTextField)?.emptyText?.text = "如: [CC] 或 🤖"
+            document.addDocumentListener(object : DocumentListener {
+                override fun insertUpdate(e: DocumentEvent?) = updateTerminalTabPrefix()
+                override fun removeUpdate(e: DocumentEvent?) = updateTerminalTabPrefix()
+                override fun changedUpdate(e: DocumentEvent?) = updateTerminalTabPrefix()
+            })
+        }
+        fieldPanel.add(terminalTabPrefixField, BorderLayout.CENTER)
+
+        // 复选框面板
+        val checkboxPanel = JPanel().apply {
+            layout = BoxLayout(this, BoxLayout.X_AXIS)
+        }
+        showPrefixInEditorCheckbox = JCheckBox("编辑器").apply {
+            toolTipText = "在编辑器标签页显示前缀"
+            isSelected = true
+            addActionListener {
+                if (!context.ignoreUpdate) updateShowPrefixInEditor()
+            }
+        }
+        showPrefixInTerminalCheckbox = JCheckBox("终端窗口").apply {
+            toolTipText = "在终端工具窗口标签页显示前缀"
+            isSelected = true
+            addActionListener {
+                if (!context.ignoreUpdate) updateShowPrefixInTerminal()
+            }
+        }
+        checkboxPanel.add(showPrefixInEditorCheckbox)
+        checkboxPanel.add(Box.createHorizontalStrut(4))
+        checkboxPanel.add(showPrefixInTerminalCheckbox)
+
+        fieldPanel.add(checkboxPanel, BorderLayout.EAST)
+        mainRow.add(fieldPanel, BorderLayout.CENTER)
+        outerPanel.add(mainRow)
+
+        // 提示行
+        val hintPanel = JPanel(BorderLayout())
+        hintPanel.add(Box.createHorizontalStrut(JLabel("终端标签页前缀:").preferredSize.width), BorderLayout.WEST)
+        hintPanel.add(JLabel("前缀显示在终端标签页名称之前").apply {
+            foreground = JBColor.GRAY
+            font = font.deriveFont(font.size2D - 1f)
+        }, BorderLayout.CENTER)
+        outerPanel.add(hintPanel)
+
+        return outerPanel
     }
 
     private fun createTerminalModePanel(): JPanel {
@@ -492,6 +566,21 @@ class CommandDetailPanel(
         if (context.ignoreUpdate) return
         context.selectedCommand?.terminalMode =
             if (terminalModeCheckbox.isSelected) TerminalMode.EDITOR else TerminalMode.TOOL_WINDOW
+    }
+
+    private fun updateTerminalTabPrefix() {
+        if (context.ignoreUpdate) return
+        context.selectedCommand?.terminalTabPrefix = terminalTabPrefixField.text
+    }
+
+    private fun updateShowPrefixInEditor() {
+        if (context.ignoreUpdate) return
+        context.selectedCommand?.showPrefixInEditor = showPrefixInEditorCheckbox.isSelected
+    }
+
+    private fun updateShowPrefixInTerminal() {
+        if (context.ignoreUpdate) return
+        context.selectedCommand?.showPrefixInTerminal = showPrefixInTerminalCheckbox.isSelected
     }
 
     private fun updateDirectory() {

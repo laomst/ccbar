@@ -16,6 +16,7 @@ import com.intellij.openapi.wm.ToolWindowManager
 import org.jetbrains.plugins.terminal.TerminalProjectOptionsProvider
 import org.jetbrains.plugins.terminal.TerminalToolWindowManager
 import java.io.File
+import javax.swing.Icon
 
 /**
  * CCBar 终端服务
@@ -34,15 +35,29 @@ object CCBarTerminalService {
         val baseCommand = buildCommand(command, quickParam)
         val defaultOpenInEditor = command.terminalMode == TerminalMode.EDITOR
         val mergedEnvVars = mergeEnvVariables(commonEnvVars, command.envVariables)
-        val dialog = CommandPreviewDialog(project, baseCommand, command.defaultTerminalName, defaultOpenInEditor, mergedEnvVars)
+
+        // 加载图标
+        val icon = CCBarIcons.loadIcon(command.icon, project)
+
+        val dialog = CommandPreviewDialog(
+            project, baseCommand, command.defaultTerminalName, defaultOpenInEditor, mergedEnvVars,
+            icon = icon,
+            terminalTabPrefix = command.terminalTabPrefix,
+            showPrefixInEditor = command.showPrefixInEditor,
+            showPrefixInTerminal = command.showPrefixInTerminal
+        )
         if (!dialog.showAndGet()) {
             return
         }
-        val terminalName = dialog.terminalName
+
+        // 根据用户选择的打开模式确定是否显示前缀
+        val openInEditor = dialog.openInEditor
+        val showPrefix = if (openInEditor) command.showPrefixInEditor else command.showPrefixInTerminal
+        val terminalName = buildTerminalName(dialog.terminalName, command.terminalTabPrefix, showPrefix)
+
         val finalCommand = buildCommandWithEnv(project, dialog.envVariables, dialog.fullCommand)
         val workingDir = resolveWorkingDirectory(project, command)
-        val openInEditor = dialog.openInEditor
-        createTerminalAndExecute(project, finalCommand, terminalName, workingDir, openInEditor, command.icon)
+        createTerminalAndExecute(project, finalCommand, terminalName, workingDir, openInEditor, icon)
     }
 
     /**
@@ -52,15 +67,37 @@ object CCBarTerminalService {
         val defaultName = commandBar.defaultTerminalName.ifBlank { commandBar.name }
         val defaultOpenInEditor = commandBar.terminalMode == TerminalMode.EDITOR
         val mergedEnvVars = mergeEnvVariables(commandBar.commonEnvVariables, commandBar.envVariables)
-        val dialog = CommandPreviewDialog(project, commandBar.command, defaultName, defaultOpenInEditor, mergedEnvVars)
+
+        // 加载图标
+        val icon = CCBarIcons.loadIcon(commandBar.icon, project)
+
+        val dialog = CommandPreviewDialog(
+            project, commandBar.command, defaultName, defaultOpenInEditor, mergedEnvVars,
+            icon = icon,
+            terminalTabPrefix = commandBar.terminalTabPrefix,
+            showPrefixInEditor = commandBar.showPrefixInEditor,
+            showPrefixInTerminal = commandBar.showPrefixInTerminal
+        )
         if (!dialog.showAndGet()) {
             return
         }
-        val terminalName = dialog.terminalName
+
+        // 根据用户选择的打开模式确定是否显示前缀
+        val openInEditor = dialog.openInEditor
+        val showPrefix = if (openInEditor) commandBar.showPrefixInEditor else commandBar.showPrefixInTerminal
+        val terminalName = buildTerminalName(dialog.terminalName, commandBar.terminalTabPrefix, showPrefix)
+
         val finalCommand = buildCommandWithEnv(project, dialog.envVariables, dialog.fullCommand)
         val workingDir = resolveWorkingDirectoryForCommandBar(project, commandBar)
-        val openInEditor = dialog.openInEditor
-        createTerminalAndExecute(project, finalCommand, terminalName, workingDir, openInEditor, commandBar.icon)
+        createTerminalAndExecute(project, finalCommand, terminalName, workingDir, openInEditor, icon)
+    }
+
+    /**
+     * 构建带前缀的终端名称
+     */
+    private fun buildTerminalName(baseName: String, prefix: String, showPrefix: Boolean): String {
+        if (prefix.isBlank() || !showPrefix) return baseName
+        return "$prefix $baseName"
     }
 
     private fun buildCommand(command: CommandConfig, quickParam: QuickParamConfig?): String {
@@ -202,11 +239,11 @@ object CCBarTerminalService {
         tabName: String,
         workingDir: String,
         openInEditor: Boolean = false,
-        iconPath: String? = null
+        icon: Icon? = null
     ) {
         if (openInEditor) {
             try {
-                TerminalEditorService.openInEditor(project, command, tabName, workingDir, iconPath)
+                TerminalEditorService.openInEditor(project, command, tabName, workingDir, icon)
                 return
             } catch (e: Exception) {
                 LOG.warn("CCBar: 编辑器终端打开失败，回退到工具窗口", e)
@@ -229,11 +266,11 @@ object CCBarTerminalService {
 
                 // 设置终端标签页图标 - 通过 ContentManager 获取新创建的 Content
                 // 注意：需要在 EDT 上延迟执行，确保 Content 已完全添加到 ContentManager
-                if (!iconPath.isNullOrBlank() && contentManager != null) {
+                if (icon != null && contentManager != null) {
                     // 方式 1：延迟查找并设置图标（兼容大多数情况）
                     ApplicationManager.getApplication().invokeLater {
                         try {
-                            setTerminalTabIcon(contentManager, tabName, iconPath, project)
+                            setTerminalTabIcon(contentManager, tabName, icon)
                         } catch (e: Exception) {
                             LOG.info("CCBar: 设置终端标签页图标失败：${e.message}")
                         }
@@ -268,8 +305,7 @@ object CCBarTerminalService {
     private fun setTerminalTabIcon(
         contentManager: Any,
         terminalName: String,
-        iconPath: String,
-        project: Project
+        icon: Icon
     ) {
         // 使用反射访问 ContentManager 的 contents 属性
         val contentsMethod = contentManager.javaClass.getMethod("getContents")
@@ -287,7 +323,6 @@ object CCBarTerminalService {
             getTabNameMethod.invoke(it) as? String == terminalName
         }
         if (contentByName != null) {
-            val icon = CCBarIcons.loadIcon(iconPath, project)
             setIconMethod.invoke(contentByName, icon)
             LOG.info("CCBar: 已设置终端标签页图标（通过名称匹配）：$terminalName")
             return
@@ -296,7 +331,6 @@ object CCBarTerminalService {
         // 策略 2：使用最后一个 Content（假设新创建的）
         if (contents.isNotEmpty()) {
             val lastContent = contents.last()
-            val icon = CCBarIcons.loadIcon(iconPath, project)
             setIconMethod.invoke(lastContent, icon)
             LOG.info("CCBar: 已设置终端标签页图标（通过最后一个 Content）：$terminalName")
         } else {

@@ -156,6 +156,9 @@ data class CommandConfig(
     var quickParams: MutableList<QuickParamConfig> = mutableListOf(),
     var type: String = "",  // 空值或"command"=普通 Command, "separator"=分割线
     var terminalMode: String = "",  // 终端打开模式：""=工具窗口, "editor"=编辑器
+    var terminalTabPrefix: String = "",  // 终端标签页前缀文本
+    var showPrefixInEditor: Boolean = true,  // 是否在编辑器标签页显示前缀
+    var showPrefixInTerminal: Boolean = true,  // 是否在终端工具窗口标签页显示前缀
     var enabled: Boolean = true
 ) {
     /**
@@ -172,6 +175,9 @@ data class CommandConfig(
         quickParams = quickParams.map { it.deepCopy() }.toMutableList(),
         type = type,
         terminalMode = terminalMode,
+        terminalTabPrefix = terminalTabPrefix,
+        showPrefixInEditor = showPrefixInEditor,
+        showPrefixInTerminal = showPrefixInTerminal,
         enabled = enabled
     )
 
@@ -204,6 +210,9 @@ data class CommandBarConfig(
     var workingDirectory: String = "",  // 工作目录，留空使用项目根目录
     var defaultTerminalName: String = "",  // 直接命令模式的默认终端名称
     var terminalMode: String = "",  // 终端打开模式：""=工具窗口, "editor"=编辑器
+    var terminalTabPrefix: String = "",  // 终端标签页前缀文本
+    var showPrefixInEditor: Boolean = true,  // 是否在编辑器标签页显示前缀
+    var showPrefixInTerminal: Boolean = true,  // 是否在终端工具窗口标签页显示前缀
     var simpleMode: Boolean = false,  // 简易模式：仅显示Command名称，隐藏命令预览和快捷参数
     var commands: MutableList<CommandConfig> = mutableListOf(),
     var enabled: Boolean = true
@@ -222,6 +231,9 @@ data class CommandBarConfig(
         workingDirectory = workingDirectory,
         defaultTerminalName = defaultTerminalName,
         terminalMode = terminalMode,
+        terminalTabPrefix = terminalTabPrefix,
+        showPrefixInEditor = showPrefixInEditor,
+        showPrefixInTerminal = showPrefixInTerminal,
         simpleMode = simpleMode,
         commands = commands.map { it.deepCopy() }.toMutableList(),
         enabled = enabled

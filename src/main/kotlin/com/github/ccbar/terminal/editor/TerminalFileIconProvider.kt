@@ -1,6 +1,5 @@
 package com.github.ccbar.terminal.editor
 
-import com.github.ccbar.icons.CCBarIcons
 import com.intellij.ide.FileIconProvider
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
@@ -14,11 +13,7 @@ class TerminalFileIconProvider : FileIconProvider {
 
     override fun getIcon(file: VirtualFile, flags: Int, project: Project?): Icon? {
         if (file is TerminalVirtualFile) {
-            return if (!file.iconPath.isNullOrBlank()) {
-                CCBarIcons.loadIcon(file.iconPath, project)
-            } else {
-                TerminalFileType.INSTANCE.icon
-            }
+            return file.icon ?: TerminalFileType.INSTANCE.icon
         }
         return null
     }

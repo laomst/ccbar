@@ -1,6 +1,7 @@
 package com.github.ccbar.terminal.editor
 
 import com.intellij.testFramework.LightVirtualFile
+import javax.swing.Icon
 
 /**
  * 终端虚拟文件
@@ -10,7 +11,7 @@ class TerminalVirtualFile(
     val terminalName: String,
     val workingDirectory: String?,
     val command: String?,
-    val iconPath: String? = null
+    val icon: Icon? = null
 ) : LightVirtualFile("$terminalName.terminal", TerminalFileType.INSTANCE, "") {
 
     init {
