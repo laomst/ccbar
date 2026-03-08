@@ -95,7 +95,7 @@ class CommandPreviewDialog(
         // 整体左侧留 2px 内边距，与下方标准输入框的文字起始位置对齐
         val prefixPanel = JPanel(GridBagLayout()).apply {
             isOpaque = false
-            border = BorderFactory.createEmptyBorder(0, 2, 0, 0)
+            border = BorderFactory.createEmptyBorder(0, 9, 0, 0)
             val g = GridBagConstraints()
             g.fill = GridBagConstraints.VERTICAL
             g.anchor = GridBagConstraints.WEST
