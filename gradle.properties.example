@@ -1,0 +1,24 @@
+# Plugin Configuration
+pluginGroup = com.github.ccbar
+pluginName = CCBar
+pluginVersion = 1.0.0
+
+# Platform Configuration
+platformType = IC
+platformVersion = 2024.2
+platformBundledPlugins = org.jetbrains.plugins.terminal
+
+# Kotlin Configuration
+kotlin.stdlib.default.dependency = false
+org.gradle.caching = true
+org.gradle.jvmargs = -Xmx2g -XX:MaxMetaspaceSize=512m
+
+# ============================================================
+# Publish Configuration (DO NOT commit this file to Git)
+# ============================================================
+# JetBrains Marketplace Plugin Token
+# Get your token from: https://plugins.jetbrains.com/author/me/tokens
+# publishToken=your_jetbrains_token_here
+
+# Release channel (default: stable)
+# publishChannel=stable

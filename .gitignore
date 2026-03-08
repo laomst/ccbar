@@ -6,6 +6,11 @@ out/
 # Build
 /build/
 .gradle/
+.intellijPlatform/
 
 # Gradle (保留 wrapper)
 local.properties
+
+# Publish Configuration (sensitive)
+gradle.properties
+!gradle.properties.example

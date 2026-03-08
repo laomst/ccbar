@@ -1,4 +1,9 @@
- # CCBar
+# CCBar
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![GitHub stars](https://img.shields.io/github/stars/laomst/ccbar?style=flat)](https://github.com/laomst/ccbar)
+[![IntelliJ IDEA](https://img.shields.io/badge/IntelliJ_IDEA-2024.2+-blue.svg)](https://www.jetbrains.com/idea/)
+[![JetBrains Marketplace](https://img.shields.io/badge/JetBrains-Marketplace-blue.svg)](https://plugins.jetbrains.com/plugin/xxxxx-ccbar)
 
 一个 IntelliJ IDEA 插件，在工具栏中添加可配置的快捷按钮，用于在终端中快速启动命令。主要使用场景是以不同参数组合启动 AI 编程助手（如 Claude Code），也适用于任何需要频繁执行的命令行工具。
 
@@ -514,3 +519,32 @@ cd ccbar
 ## License
 
 MIT
+
+---
+
+## 贡献
+
+欢迎贡献代码、报告问题或提出建议！
+
+- 🐛 [报告 Bug](https://github.com/laomst/ccbar/issues/new?template=bug_report.md)
+- 💡 [功能建议](https://github.com/laomst/ccbar/issues/new?template=feature_request.md)
+- 🔧 [提交 PR](https://github.com/laomst/ccbar/pulls)
+
+### 开发环境设置
+
+```bash
+git clone https://github.com/laomst/ccbar.git
+cd ccbar
+./gradlew runIde
+```
+
+### 构建插件
+
+```bash
+./gradlew buildPlugin
+# 插件包位于 build/distributions/
+```
+
+## 开发者
+
+- [@laomst](https://github.com/laomst)

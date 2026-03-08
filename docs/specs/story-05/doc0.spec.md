@@ -13,7 +13,7 @@
 ```kotlin
 // CCBarSettings.kt
 @State(
-    name = "com.github.ccbar.settings.CCBarSettings",
+    name = "site.laomst.ccbar.settings.CCBarSettings",
     storages = [Storage("ccbar.xml")]
 )
 class CCBarSettings : PersistentStateComponent<CCBarSettings.State>
@@ -194,7 +194,7 @@ data class ProjectState(
  * 存储在 .idea/ccbar.xml
  */
 @State(
-    name = "com.github.ccbar.settings.CCBarProjectSettings",
+    name = "site.laomst.ccbar.settings.CCBarProjectSettings",
     storages = [Storage(StoragePathMacros.WORKSPACE_FILE)]
 )
 class CCBarProjectSettings : PersistentStateComponent<CCBarProjectSettings.ProjectState> {

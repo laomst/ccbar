@@ -114,6 +114,7 @@ intellijPlatform {
 ### 3.3 `plugin.xml`
 
 ```xml
+
 <idea-plugin>
     <id>com.github.ccbar</id>
     <name>CCBar</name>
@@ -126,14 +127,14 @@ intellijPlatform {
     <extensions defaultExtensionNs="com.intellij">
         <!-- 配置持久化 -->
         <applicationService
-            serviceImplementation="com.github.ccbar.settings.CCBarSettings"/>
+                serviceImplementation="site.laomst.ccbar.settings.CCBarSettings"/>
 
         <!-- 设置页面 -->
         <applicationConfigurable
-            parentId="tools"
-            instance="com.github.ccbar.settings.CCBarSettingsConfigurable"
-            id="com.github.ccbar.settings"
-            displayName="CCBar"/>
+                parentId="tools"
+                instance="site.laomst.ccbar.settings.CCBarSettingsConfigurable"
+                id="site.laomst.ccbar.settings"
+                displayName="CCBar"/>
 
         <!-- 通知组 -->
         <notificationGroup id="CCBar" displayType="BALLOON"/>
@@ -353,7 +354,7 @@ private fun openWithClassicTerminal(
 
 ```kotlin
 @State(
-    name = "com.github.ccbar.settings.CCBarSettings",
+    name = "site.laomst.ccbar.settings.CCBarSettings",
     storages = [Storage("ccbar.xml")]
 )
 class CCBarSettings : PersistentStateComponent<CCBarSettings.State> {

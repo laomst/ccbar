@@ -38,4 +38,9 @@ intellijPlatform {
     // 禁用代码插桩以避免下载额外的依赖
     instrumentCode = false
     // verifyPlugin 可以单独运行：./gradlew verifyPlugin
+    pluginVerification {
+        ides {
+            recommended()
+        }
+    }
 }
