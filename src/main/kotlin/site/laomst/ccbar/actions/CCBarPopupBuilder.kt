@@ -99,6 +99,9 @@ object CCBarPopupBuilder {
         val commonEnvVars = commandBarConfig.commonEnvVariables
         val commonQuickParams = commandBarConfig.commonQuickParams
 
+        // 收集使用网络图标的 label，用于异步加载完成后更新
+        val urlIconLabels = mutableListOf<Pair<JBLabel, String>>()
+
         // 为每个 Command 创建一行
         for (command in commandBarConfig.commands) {
             if (command.isSeparator()) {
@@ -106,15 +109,24 @@ object CCBarPopupBuilder {
             } else if (!command.enabled) {
                 continue
             } else if (simpleMode) {
-                val row = createSimpleCommandRow(project, command, labelWidth, commonEnvVars) { popup.closeOk(null) }
+                val row = createSimpleCommandRow(project, command, labelWidth, commonEnvVars, urlIconLabels) { popup.closeOk(null) }
                 mainPanel.add(row)
             } else {
-                val commandBlock = createCommandBlock(project, command, labelWidth, previewWidth, commonEnvVars, commonQuickParams) { popup.closeOk(null) }
+                val commandBlock = createCommandBlock(project, command, labelWidth, previewWidth, commonEnvVars, commonQuickParams, urlIconLabels) { popup.closeOk(null) }
                 mainPanel.add(commandBlock)
             }
             // 添加行间距
             mainPanel.add(Box.createVerticalStrut(6))
         }
+
+        // 注册网络图标加载完成监听器，图标下载完成后更新对应 label 的图标
+        val removeListener = if (urlIconLabels.isNotEmpty()) {
+            CCBarIcons.addIconLoadedListener { url ->
+                urlIconLabels.filter { it.second == url }.forEach { (label, iconPath) ->
+                    label.icon = CCBarIcons.loadIcon(iconPath)
+                }
+            }
+        } else null
 
         popup = JBPopupFactory.getInstance()
             .createComponentPopupBuilder(mainPanel, null)
@@ -124,6 +136,11 @@ object CCBarPopupBuilder {
             .setMovable(false)
             .setResizable(false)
             .setShowBorder(true)
+            .addListener(object : com.intellij.openapi.ui.popup.JBPopupListener {
+                override fun onClosed(event: com.intellij.openapi.ui.popup.LightweightWindowEvent) {
+                    removeListener?.invoke()
+                }
+            })
             .createPopup()
 
         return popup
@@ -288,7 +305,7 @@ object CCBarPopupBuilder {
     /**
      * 创建简易模式的Command行（仅显示名称，整行悬浮高亮）
      */
-    private fun createSimpleCommandRow(project: Project, command: CommandConfig, labelWidth: Int, commonEnvVars: String, onClose: () -> Unit): JPanel {
+    private fun createSimpleCommandRow(project: Project, command: CommandConfig, labelWidth: Int, commonEnvVars: String, urlIconLabels: MutableList<Pair<JBLabel, String>>, onClose: () -> Unit): JPanel {
         val hoverPanel = createHoverPanel {
             onClose()
             CCBarTerminalService.openTerminal(project, command, null, commonEnvVars)
@@ -305,6 +322,9 @@ object CCBarPopupBuilder {
             foreground = JBColor.foreground()
             if (command.icon.isNotBlank()) {
                 icon = CCBarIcons.loadIcon(command.icon)
+                if (command.icon.startsWith("http://") || command.icon.startsWith("https://")) {
+                    urlIconLabels.add(this to command.icon)
+                }
             }
         }
 
@@ -318,7 +338,7 @@ object CCBarPopupBuilder {
      * 第一行：命令预览 | 名称
      * 第二行：快捷参数列表（小号文字）
      */
-    private fun createCommandBlock(project: Project, command: CommandConfig, labelWidth: Int, previewWidth: Int, commonEnvVars: String, commonQuickParams: List<QuickParamConfig>, onClose: () -> Unit): JPanel {
+    private fun createCommandBlock(project: Project, command: CommandConfig, labelWidth: Int, previewWidth: Int, commonEnvVars: String, commonQuickParams: List<QuickParamConfig>, urlIconLabels: MutableList<Pair<JBLabel, String>>, onClose: () -> Unit): JPanel {
         val hoverPanel = createHoverPanel {
             onClose()
             CCBarTerminalService.openTerminal(project, command, null, commonEnvVars)
@@ -343,6 +363,9 @@ object CCBarPopupBuilder {
             border = JBUI.Borders.emptyLeft(8)
             if (command.icon.isNotBlank()) {
                 icon = CCBarIcons.loadIcon(command.icon)
+                if (command.icon.startsWith("http://") || command.icon.startsWith("https://")) {
+                    urlIconLabels.add(this to command.icon)
+                }
             }
         }
         firstRow.add(commandPreview)
