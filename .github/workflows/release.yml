@@ -49,12 +49,22 @@ jobs:
           fi
 
       - name: Sync to Gitee Release
-        if: ${{ secrets.GITEE_ACCESS_TOKEN }}
-        uses: ncipollo/release-action@v1
-        with:
-          tag: ${{ github.ref_name }}
-          token: ${{ secrets.GITEE_ACCESS_TOKEN }}
-          owner: laomst
-          repo: ccbar
-          bodyFile: CHANGELOG.md
-          artifacts: build/distributions/*.zip
+        env:
+          GITEE_TOKEN: ${{ secrets.GITEE_ACCESS_TOKEN }}
+        run: |
+          if [ -n "$GITEE_TOKEN" ]; then
+            echo "Syncing to Gitee Release..."
+            curl -X POST \
+              -H "Content-Type: application/json" \
+              -H "Authorization: token $GITEE_TOKEN" \
+              "https://gitee.com/api/v5/repos/laomst/ccbar/releases" \
+              -d '{
+                "tag_name": "${{ github.ref_name }}",
+                "name": "${{ github.ref_name }}",
+                "body": "See [CHANGELOG.md](https://github.com/laomst/ccbar/blob/main/CHANGELOG.md) for details.",
+                "draft": false,
+                "prerelease": false
+              }'
+          else
+            echo "GITEE_ACCESS_TOKEN not set, skipping Gitee Release"
+          fi
