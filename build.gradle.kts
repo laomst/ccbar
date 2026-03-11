@@ -4,8 +4,8 @@ plugins {
     id("org.jetbrains.intellij.platform") version "2.11.0"
 }
 
-group = providers.gradleProperty("pluginGroup").get()
-version = providers.gradleProperty("pluginVersion").get()
+group = "com.github.ccbar"
+version = "1.0.0"
 
 repositories {
     mavenCentral()
@@ -16,7 +16,7 @@ repositories {
 
 dependencies {
     intellijPlatform {
-        intellijIdeaCommunity(providers.gradleProperty("platformVersion"))
+        intellijIdeaCommunity("2024.2")
         bundledPlugin("org.jetbrains.plugins.terminal")
         pluginVerifier()
     }
@@ -28,8 +28,8 @@ kotlin {
 
 intellijPlatform {
     pluginConfiguration {
-        name = providers.gradleProperty("pluginName")
-        version = providers.gradleProperty("pluginVersion")
+        name = "CCBar"
+        version = "1.0.0"
         ideaVersion {
             sinceBuild = "242"
             untilBuild = provider { null }
