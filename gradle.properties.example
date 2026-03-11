@@ -18,7 +18,8 @@ org.gradle.jvmargs = -Xmx2g -XX:MaxMetaspaceSize=512m
 # ============================================================
 # JetBrains Marketplace Plugin Token
 # Get your token from: https://plugins.jetbrains.com/author/me/tokens
-# publishToken=your_jetbrains_token_here
+# Required for: ./gradlew publishPlugin
+intellijPlatformPublishingToken=
 
-# Release channel (default: stable)
-# publishChannel=stable
+# Release channel (default: stable, options: alpha, beta, eap)
+# intellijPlatformPublishingChannels=stable

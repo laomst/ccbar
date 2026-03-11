@@ -42,7 +42,7 @@ jobs:
           PUBLISH_TOKEN: ${{ secrets.PUBLISH_TOKEN }}
         run: |
           if [ -n "$PUBLISH_TOKEN" ]; then
-            ./gradlew publishPlugin -PpublishToken=$PUBLISH_TOKEN
+            ./gradlew publishPlugin
           else
             echo "PUBLISH_TOKEN not set, skipping JetBrains Marketplace publish"
             echo "Plugin artifact uploaded to GitHub Release"

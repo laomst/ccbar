@@ -43,4 +43,10 @@ intellijPlatform {
             recommended()
         }
     }
+    // JetBrains Marketplace 发布配置
+    publishing {
+        token = providers.gradleProperty("intellijPlatformPublishingToken")
+            .orElse(providers.environmentVariable("PUBLISH_TOKEN"))
+            .orElse("")
+    }
 }
